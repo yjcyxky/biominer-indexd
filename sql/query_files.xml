@@ -1,0 +1,46 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "https://github.com/rbatis/rbatis_sql/raw/main/mybatis-3-mapper.dtd">
+<mapper>
+  <select id="query_files">
+    SELECT
+      guid, filename, size, updated_at, baseid, rev, version,
+      biominer_indexd_file.created_at          as created_at,
+      biominer_indexd_file.status              as status,
+      biominer_indexd_file.uploader            as uploader,
+      json_agg(DISTINCT biominer_indexd_url)   as urls, 
+      json_agg(DISTINCT biominer_indexd_hash)  as hashes,
+      json_agg(DISTINCT biominer_indexd_alias) as aliases
+    FROM
+      biominer_indexd_file
+    JOIN biominer_indexd_url ON biominer_indexd_url.file = biominer_indexd_file.guid
+    JOIN biominer_indexd_hash ON biominer_indexd_hash.file = biominer_indexd_file.guid
+    JOIN biominer_indexd_alias ON biominer_indexd_alias.file = biominer_indexd_file.guid
+    <where>
+      <if test="filename != null && filename != ''">
+        filename LIKE CONCAT('%', #{filename}, '%')
+      </if>
+      <if test="guid != null && guid != ''">
+        AND guid = #{guid}
+      </if>
+      <if test="baseid != null && baseid != ''">
+        AND baseid = #{baseid}
+      </if>
+      <if test="status != null && status != ''">
+        AND status = #{status}
+      </if>
+      <if test="uploader != null && uploader != ''">
+        AND uploader = #{uploader}
+      </if>
+      <if test="hash != null && hash != ''">
+        AND biominer_indexd_hash.hash = #{hash}
+      </if>
+      <if test="alias != null && alias != ''">
+        AND biominer_indexd_alias.alias = #{alias}
+      </if>
+      <if test="url != null && url != ''">
+        AND biominer_indexd_url.url = #{url}
+      </if>
+    </where>
+    ${' '}
+    GROUP BY guid
+  </select>
+</mapper>
