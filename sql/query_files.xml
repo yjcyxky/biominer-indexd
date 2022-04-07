@@ -14,30 +14,45 @@
     JOIN biominer_indexd_url ON biominer_indexd_url.file = biominer_indexd_file.guid
     JOIN biominer_indexd_hash ON biominer_indexd_hash.file = biominer_indexd_file.guid
     JOIN biominer_indexd_alias ON biominer_indexd_alias.file = biominer_indexd_file.guid
+    ${' '}
     <where>
       <if test="filename != null && filename != ''">
         filename LIKE CONCAT('%', #{filename}, '%')
       </if>
       <if test="guid != null && guid != ''">
-        AND guid = #{guid}
+        <trim prefixOverrides="AND ">
+          AND guid = #{guid}
+        </trim>
       </if>
       <if test="baseid != null && baseid != ''">
-        AND baseid = #{baseid}
+        <trim prefixOverrides="AND ">
+          AND baseid = #{baseid}
+        </trim>
       </if>
       <if test="status != null && status != ''">
-        AND status = #{status}
+        <trim prefixOverrides="AND ">
+          AND biominer_indexd_file.status = #{status}
+        </trim>
       </if>
       <if test="uploader != null && uploader != ''">
-        AND uploader = #{uploader}
+        <trim prefixOverrides="AND ">
+          AND uploader = #{uploader}
+        </trim>
       </if>
       <if test="hash != null && hash != ''">
-        AND biominer_indexd_hash.hash = #{hash}
+        <trim prefixOverrides="AND ">
+          AND biominer_indexd_hash.hash = #{hash}
+        </trim>
       </if>
       <if test="alias != null && alias != ''">
-        AND biominer_indexd_alias.alias = #{alias}
+        <trim prefixOverrides="AND ">
+          AND biominer_indexd_alias.alias = #{alias}
+        </trim>
       </if>
       <if test="url != null && url != ''">
-        AND biominer_indexd_url.url = #{url}
+        <trim prefixOverrides="AND ">
+          AND biominer_indexd_url.url = #{url}
+        </trim>
       </if>
     </where>
     ${' '}

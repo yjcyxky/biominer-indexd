@@ -1,6 +1,7 @@
+use fast_log::{self, config::Config};
 use rbatis::{
-  self, crud_table, executor::RbatisExecutor, html_sql, push_index, py_sql, rb_html, rb_py,
-  rbatis::Rbatis, Page, PageRequest,
+  self, crud_table, executor::RbatisExecutor, html_sql, log::LogPlugin, log::RbatisLogPlugin,
+  push_index, py_sql, rb_html, rb_py, rbatis::Rbatis, sql_index, Page, PageRequest,
 };
 use serde::{Deserialize, Serialize};
 
@@ -40,13 +41,71 @@ pub struct File {
   pub status: String,
   pub baseid: String,
   pub uploader: Option<String>,
-  pub urls: Vec<URL>,
-  pub hashes: Vec<Hash>,
-  pub aliases: Vec<Alias>,
+  pub urls: Option<Vec<URL>>,
+  pub hashes: Option<Vec<Hash>>,
+  pub aliases: Option<Vec<Alias>>,
 }
 
+// #[py_sql(
+//   "
+//   SELECT
+//     guid, filename, size, updated_at, baseid, rev, version,
+//     biominer_indexd_file.created_at          as created_at,
+//     biominer_indexd_file.status              as status,
+//     biominer_indexd_file.uploader            as uploader,
+//     json_agg(DISTINCT biominer_indexd_url)   as urls, 
+//     json_agg(DISTINCT biominer_indexd_hash)  as hashes,
+//     json_agg(DISTINCT biominer_indexd_alias) as aliases
+//   FROM
+//     biominer_indexd_file
+//   JOIN biominer_indexd_url ON biominer_indexd_url.file = biominer_indexd_file.guid
+//   JOIN biominer_indexd_hash ON biominer_indexd_hash.file = biominer_indexd_file.guid
+//   JOIN biominer_indexd_alias ON biominer_indexd_alias.file = biominer_indexd_file.guid
+//   where:
+//     if filename != '':
+//       filename LIKE CONCAT('%', #{filename}, '%')
+//     if guid != '':
+//       trim 'AND': 
+//         AND guid = #{guid}
+//     if baseid != '':
+//       trim 'AND': 
+//         AND baseid = #{baseid}
+//     if status != '':
+//       trim 'AND': 
+//         AND biominer_indexd_file.status = #{status}
+//     if uploader != '':
+//       trim 'AND': 
+//         AND uploader = #{uploader}
+//     if hash != '':
+//       trim 'AND': 
+//         AND biominer_indexd_hash.hash = #{hash}
+//     if alias != '':
+//       trim 'AND': 
+//         AND biominer_indexd_alias.name = #{alias}
+//     if url != '':
+//       trim 'AND': 
+//         AND biominer_indexd_url.url = #{url}
+//   ${' '}
+//   GROUP BY guid
+// "
+// )]
+// pub async fn query_files_pysql(
+//   rb: &mut RbatisExecutor<'_, '_>,
+//   page_req: &PageRequest,
+//   guid: &str,
+//   filename: &str,
+//   baseid: &str,
+//   status: &str,
+//   uploader: &str,
+//   hash: &str,
+//   alias: &str,
+//   url: &str,
+// ) -> Page<File> {
+//   todo!()
+// }
+
 #[html_sql("sql/query_files.xml")]
-async fn query_files(
+pub async fn query_files(
   rb: &mut RbatisExecutor<'_, '_>,
   page_req: &PageRequest,
   guid: &str,
@@ -61,10 +120,10 @@ async fn query_files(
   todo!()
 }
 
-async fn query_file(rb: &mut RbatisExecutor<'_, '_>, guid: &str, hash: &str) -> Option<File> {
+pub async fn query_file(rb: &mut RbatisExecutor<'_, '_>, guid: &str, hash: &str) -> Option<File> {
   let files = query_files(
     rb,
-    &PageRequest::new(1, 1),
+    &PageRequest::new(1, 10),
     guid,
     "",
     "",
@@ -84,7 +143,11 @@ async fn query_file(rb: &mut RbatisExecutor<'_, '_>, guid: &str, hash: &str) -> 
   }
 }
 
-async fn init_rbatis(database_url: &str) -> Rbatis {
+pub fn init_log() {
+  fast_log::init(Config::new().console()).unwrap();
+}
+
+pub async fn init_rbatis(database_url: &str) -> Rbatis {
   let rb = Rbatis::new();
   rb.link(&database_url).await.unwrap();
   rb
@@ -113,7 +176,7 @@ mod tests {
       "",
       "",
       "",
-      "",
+      "failed",
       "",
       "",
       "",
