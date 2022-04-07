@@ -1,4 +1,8 @@
 # BioMiner Indexd
+BioMiner Indexd is a hash-based data indexing and tracking service providing globally unique identifiers. Similar to [Indexd](https://github.com/uc-cdis/indexd), but with a more.
+
+## Features
+
 
 ## For Developers
 ### Prerequisites

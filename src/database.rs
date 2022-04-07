@@ -1,4 +1,3 @@
-use fast_log::{self, config::Config};
 use rbatis::{
   self, crud_table, executor::RbatisExecutor, html_sql, log::LogPlugin, log::RbatisLogPlugin,
   push_index, py_sql, rb_html, rb_py, rbatis::Rbatis, sql_index, Page, PageRequest,
@@ -19,7 +18,7 @@ pub struct URL {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Hash {
   pub id: u64,
-  // pub hash_type: String, // Max 128 characters, md5, sha1, sha256, sha512, blake2b, etc.
+  pub hash_type: String, // Max 128 characters, md5, sha1, sha256, sha512, blake2b, etc.
   pub hash: String,
 }
 
@@ -44,6 +43,20 @@ pub struct File {
   pub urls: Option<Vec<URL>>,
   pub hashes: Option<Vec<Hash>>,
   pub aliases: Option<Vec<Alias>>,
+}
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct QueryParamsFile {
+    pub guid: Option<String>,
+    pub filename: Option<String>,
+    pub baseid: Option<String>,
+    pub status: Option<String>,
+    pub uploader: Option<String>,
+    pub hash: Option<String>,
+    pub alias: Option<String>,
+    pub url: Option<String>,
+    pub page_size: Option<u64>,
+    pub page: Option<u64>,
 }
 
 // #[py_sql(
@@ -141,10 +154,6 @@ pub async fn query_file(rb: &mut RbatisExecutor<'_, '_>, guid: &str, hash: &str)
   } else {
     None
   }
-}
-
-pub fn init_log() {
-  fast_log::init(Config::new().console()).unwrap();
 }
 
 pub async fn init_rbatis(database_url: &str) -> Rbatis {
