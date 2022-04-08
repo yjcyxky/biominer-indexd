@@ -9,7 +9,6 @@ use poem_openapi::{
 };
 use rbatis::{rbatis::Rbatis, PageRequest};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::sync::Arc;
 
 #[derive(ApiResponse)]
@@ -24,7 +23,7 @@ enum GetResponse {
 #[derive(ApiResponse)]
 enum PostResponse {
   #[oai(status = 201)]
-  Ok(Json<HashMap<String, String>>),
+  Ok(Json<File>),
 
   #[oai(status = 400)]
   BadRequest(PlainText<String>),
@@ -51,13 +50,15 @@ impl FilesApi {
       return PostResponse::BadRequest(PlainText("Invalid hash value.".to_string()));
     };
 
+    if File::check_hash_exists(&rb_arc, hash).await {
+      return PostResponse::BadRequest(PlainText("The hash value already exists or has been registered.".to_string()));
+    }
+
     let mut file = File::new(&filename, size, &uploader);
-    file.add(&rb_arc, &hash).await.unwrap();
-    let mut output = HashMap::new();
-    output.insert("guid".to_string(), file.guid);
-    output.insert("filename".to_string(), file.filename);
-    output.insert("uploader".to_string(), file.uploader);
-    return PostResponse::Ok(Json(output));
+    match file.add(&rb_arc, &hash).await {
+      Ok(()) => PostResponse::Ok(Json(file)),
+      Err(e) => PostResponse::BadRequest(PlainText(e.to_string())),
+    }
   }
 
   #[oai(path = "/api/v1/files", method = "get")]

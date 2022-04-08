@@ -6,6 +6,7 @@ use rbatis::{
   self, crud_table, executor::RbatisExecutor, html_sql, push_index, rb_html, rbatis::Rbatis, Error,
   Page, PageRequest,
 };
+use rbson::Bson;
 use serde::{Deserialize, Serialize};
 use uuid;
 
@@ -99,12 +100,29 @@ impl File {
     }
   }
 
+  pub async fn check_hash_exists(rb: &Rbatis, hash: &str) -> bool {
+    let mut executor = rb.as_executor();
+    let v: serde_json::Value = executor
+      .fetch(
+        "SELECT count(*) as count FROM biominer_indexd_hash WHERE hash = $1",
+        vec![rbson::to_bson(hash).unwrap()],
+      )
+      .await
+      .unwrap();
+    println!("Value: {:?}", v);
+    // TODO: How to deal with it when has error?
+    // fetch function will return a array, but it always has one element.
+    v[0].get("count").unwrap().as_i64().unwrap() > 0
+  }
+
   pub async fn add(&mut self, rb: &Rbatis, hash: &str) -> rbatis::core::Result<()> {
     // tx will be commit.when func end
     let mut tx = rb.acquire_begin().await?.defer_async(|mut tx1| async move {
       if !tx1.is_done() {
         tx1.rollback().await;
         warn!("Commit rollback success!");
+      } else {
+        info!("Don't need to rollback!")
       }
     });
 
@@ -121,13 +139,19 @@ impl File {
       rbson::to_bson(&self.version).unwrap(),
     ];
 
-    let f = match tx.exec(
-      "INSERT INTO biominer_indexd_file (guid, filename, size, created_at, updated_at, status, baseid, uploader, rev, version)",
-      fvalue
-    ).await {
+    let f = match tx
+      .exec(
+        "INSERT INTO biominer_indexd_file 
+             (guid, filename, size, created_at, updated_at, status, baseid, uploader, rev, version)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+             ON CONFLICT DO NOTHING;",
+        fvalue,
+      )
+      .await
+    {
       Ok(f) => f,
       Err(e) => {
-        warn!("{:?}", e);
+        warn!("Insert File Error: {:?}", e);
         return Err(Error::from(e.to_string()));
       }
     };
@@ -138,17 +162,26 @@ impl File {
       rbson::to_bson(&self.guid).unwrap(),
     ];
 
-    let h = tx
+    let h = match tx
       .exec(
-        "INSERT INTO biominer_indexd_hash (hash, hash_type, file) VALUES (?, ?, ?);",
+        "INSERT INTO biominer_indexd_hash (hash, hash_type, file) VALUES ($1, $2, $3);",
         hvalue,
       )
-      .await;
+      .await
+    {
+      Ok(h) => h,
+      Err(e) => {
+        warn!("Insert Hash Error: {:?}", e);
+        return Err(Error::from(e.to_string()));
+      }
+    };
+
     match tx.commit().await {
       Ok(_) => {
         info!("Commit success!");
       }
       Err(e) => {
+        warn!("Commit error: {:?}", e);
         return Err(Error::from(e.to_string()));
       }
     };
