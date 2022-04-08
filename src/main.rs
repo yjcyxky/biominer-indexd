@@ -14,9 +14,11 @@ use log4rs::config::{Appender, Config, Logger, Root};
 use log4rs::encode::pattern::PatternEncoder;
 use poem::middleware::AddData;
 use poem::EndpointExt;
-use poem::{listener::TcpListener, Route, Server};
+use poem::{listener::TcpListener, middleware::Cors, Route, Server};
+use poem_openapi::OpenApiService;
 use std::error::Error;
 use std::sync::Arc;
+use tokio::{self, time::Duration};
 
 use structopt::StructOpt;
 
@@ -102,13 +104,27 @@ async fn main() -> Result<(), std::io::Error> {
 
   println!("\n\t\t*** Launch biominer-indexd on {}:{} ***", host, port);
 
-  let app = Route::new()
-    .nest_no_strip(
-      "api/v1",
-      Route::new().nest_no_strip("/api/v1/files", api::files::route_config()),
-    )
+  let api_service = OpenApiService::new(api::files::FilesApi, "Files", "1.0.0")
+    .server(format!("http://{}:{}", host, port));
+  let ui = api_service.swagger_ui();
+  let spec = api_service.spec();
+  let route = Route::new()
+    .nest("/", api_service)
+    .nest("/ui", ui)
+    .at("/spec", poem::endpoint::make_sync(move |_| spec.clone()))
+    .with(Cors::new())
     .with(shared_rb);
+
   Server::new(TcpListener::bind(format!("{}:{}", host, port)))
-    .run(app)
+    .run(route)
     .await
+  // Server::new(TcpListener::bind(format!("{}:{}", host, port)))
+  //   .run_with_graceful_shutdown(
+  //     route,
+  //     async move {
+  //       let _ = tokio::signal::ctrl_c().await;
+  //     },
+  //     Some(Duration::from_secs(5)),
+  //   )
+  //   .await
 }

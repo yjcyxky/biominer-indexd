@@ -1,62 +1,159 @@
+use chrono::{self, Utc};
+use log::{info, warn};
+use poem_openapi::Object;
+use rbatis::executor::ExecutorMut;
 use rbatis::{
-  self, crud_table, executor::RbatisExecutor, html_sql, log::LogPlugin, log::RbatisLogPlugin,
-  push_index, py_sql, rb_html, rb_py, rbatis::Rbatis, sql_index, Page, PageRequest,
+  self, crud_table, executor::RbatisExecutor, html_sql, push_index, rb_html, rbatis::Rbatis, Error,
+  Page, PageRequest,
 };
 use serde::{Deserialize, Serialize};
+use uuid;
+
+#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, Object)]
+pub struct FilePage {
+  /// data
+  pub records: Vec<File>,
+  /// total num
+  pub total: u64,
+  /// pages
+  pub pages: u64,
+  /// current page index
+  pub page_no: u64,
+  /// default 10
+  pub page_size: u64,
+  /// is search_count
+  pub search_count: bool,
+}
+
+impl From<rbatis::Page<File>> for FilePage {
+  fn from(page: rbatis::Page<File>) -> Self {
+    let serialised = serde_json::to_string(&page).unwrap();
+    serde_json::from_str(&serialised).unwrap()
+  }
+}
 
 #[crud_table(table_name:biominer_indexd_url)]
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Eq, PartialEq, Clone, Object)]
 pub struct URL {
   pub id: u64,
   pub url: String,
-  pub created_at: rbatis::DateTimeNative,
+  pub created_at: i64,
   pub status: String, // 'pending', 'processing', 'validated', 'failed'
   pub uploader: String,
 }
 
 #[crud_table(table_name:biominer_indexd_hash)]
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Eq, PartialEq, Clone, Object)]
 pub struct Hash {
   pub id: u64,
-  pub hash_type: String, // Max 128 characters, md5, sha1, sha256, sha512, blake2b, etc.
+  pub hash_type: String, // Max 128 characters, md5, sha1, sha256, sha512, crc32, crc64, etag, etc
   pub hash: String,
 }
 
 #[crud_table(table_name:biominer_indexd_alias)]
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Eq, PartialEq, Clone, Object)]
 pub struct Alias {
   pub id: u64,
   pub name: String,
 }
 
 #[crud_table(table_name:biominer_indexd_file)]
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Eq, PartialEq, Clone, Object)]
 pub struct File {
   pub guid: String,
   pub filename: String,
   pub size: u64,
-  pub created_at: rbatis::DateTimeNative,
-  pub updated_at: rbatis::DateTimeNative,
+  pub created_at: i64,
+  pub updated_at: i64,
   pub status: String,
   pub baseid: String,
-  pub uploader: Option<String>,
+  pub rev: String,
+  pub version: usize,
+  pub uploader: String,
   pub urls: Option<Vec<URL>>,
   pub hashes: Option<Vec<Hash>>,
   pub aliases: Option<Vec<Alias>>,
 }
 
-#[derive(Debug, Default, Clone, Serialize, Deserialize)]
-pub struct QueryParamsFile {
-    pub guid: Option<String>,
-    pub filename: Option<String>,
-    pub baseid: Option<String>,
-    pub status: Option<String>,
-    pub uploader: Option<String>,
-    pub hash: Option<String>,
-    pub alias: Option<String>,
-    pub url: Option<String>,
-    pub page_size: Option<u64>,
-    pub page: Option<u64>,
+impl File {
+  pub fn new(filename: &str, size: u64, uploader: &str) -> Self {
+    let guid = uuid::Uuid::new_v4().to_string();
+    let rev = guid[..8].to_string();
+    let baseid = uuid::Uuid::new_v4().to_string();
+    let now_ms = Utc::now().timestamp_millis();
+
+    File {
+      guid: guid,
+      filename: filename.to_string(),
+      size: size,
+      created_at: now_ms,
+      updated_at: now_ms,
+      status: "pending".to_string(),
+      baseid: baseid,
+      uploader: uploader.to_string(),
+      rev: rev,
+      version: 1,
+      urls: None,
+      hashes: None,
+      aliases: None,
+    }
+  }
+
+  pub async fn add(&mut self, rb: &Rbatis, hash: &str) -> rbatis::core::Result<()> {
+    // tx will be commit.when func end
+    let mut tx = rb.acquire_begin().await?.defer_async(|mut tx1| async move {
+      if !tx1.is_done() {
+        tx1.rollback().await;
+        warn!("Commit rollback success!");
+      }
+    });
+
+    let fvalue = vec![
+      rbson::to_bson(&self.guid).unwrap(),
+      rbson::to_bson(&self.filename).unwrap(),
+      rbson::to_bson(&self.size).unwrap(),
+      rbson::to_bson(&self.created_at).unwrap(),
+      rbson::to_bson(&self.updated_at).unwrap(),
+      rbson::to_bson(&self.status).unwrap(),
+      rbson::to_bson(&self.baseid).unwrap(),
+      rbson::to_bson(&self.uploader).unwrap(),
+      rbson::to_bson(&self.rev).unwrap(),
+      rbson::to_bson(&self.version).unwrap(),
+    ];
+
+    let f = match tx.exec(
+      "INSERT INTO biominer_indexd_file (guid, filename, size, created_at, updated_at, status, baseid, uploader, rev, version)",
+      fvalue
+    ).await {
+      Ok(f) => f,
+      Err(e) => {
+        warn!("{:?}", e);
+        return Err(Error::from(e.to_string()));
+      }
+    };
+
+    let hvalue = vec![
+      rbson::to_bson(hash).unwrap(),
+      rbson::to_bson("md5").unwrap(),
+      rbson::to_bson(&self.guid).unwrap(),
+    ];
+
+    let h = tx
+      .exec(
+        "INSERT INTO biominer_indexd_hash (hash, hash_type, file) VALUES (?, ?, ?);",
+        hvalue,
+      )
+      .await;
+    match tx.commit().await {
+      Ok(_) => {
+        info!("Commit success!");
+      }
+      Err(e) => {
+        return Err(Error::from(e.to_string()));
+      }
+    };
+    return Ok(());
+  }
 }
 
 // #[py_sql(
@@ -66,7 +163,7 @@ pub struct QueryParamsFile {
 //     biominer_indexd_file.created_at          as created_at,
 //     biominer_indexd_file.status              as status,
 //     biominer_indexd_file.uploader            as uploader,
-//     json_agg(DISTINCT biominer_indexd_url)   as urls, 
+//     json_agg(DISTINCT biominer_indexd_url)   as urls,
 //     json_agg(DISTINCT biominer_indexd_hash)  as hashes,
 //     json_agg(DISTINCT biominer_indexd_alias) as aliases
 //   FROM
@@ -78,25 +175,25 @@ pub struct QueryParamsFile {
 //     if filename != '':
 //       filename LIKE CONCAT('%', #{filename}, '%')
 //     if guid != '':
-//       trim 'AND': 
+//       trim 'AND':
 //         AND guid = #{guid}
 //     if baseid != '':
-//       trim 'AND': 
+//       trim 'AND':
 //         AND baseid = #{baseid}
 //     if status != '':
-//       trim 'AND': 
+//       trim 'AND':
 //         AND biominer_indexd_file.status = #{status}
 //     if uploader != '':
-//       trim 'AND': 
+//       trim 'AND':
 //         AND uploader = #{uploader}
 //     if hash != '':
-//       trim 'AND': 
+//       trim 'AND':
 //         AND biominer_indexd_hash.hash = #{hash}
 //     if alias != '':
-//       trim 'AND': 
+//       trim 'AND':
 //         AND biominer_indexd_alias.name = #{alias}
 //     if url != '':
-//       trim 'AND': 
+//       trim 'AND':
 //         AND biominer_indexd_url.url = #{url}
 //   ${' '}
 //   GROUP BY guid

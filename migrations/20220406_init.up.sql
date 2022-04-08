@@ -2,8 +2,8 @@ CREATE TABLE IF NOT EXISTS biominer_indexd_file (
   guid VARCHAR(64) PRIMARY KEY, -- The file's global unique identifier
   filename VARCHAR(255) NOT NULL, -- An optional name for the file that will be searchable through Indexd's API
   size BIGINT NOT NULL, -- Size of the file in bytes
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, -- When the file was created
-  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, -- When the file was last updated
+  created_at BIGINT NOT NULL DEFAULT EXTRACT(EPOCH from now()) * 1000, -- When the file was created, milliseconds since epoch
+  updated_at BIGINT NOT NULL DEFAULT EXTRACT(EPOCH from now()) * 1000, -- When the file was last updated, milliseconds since epoch
   status VARCHAR(16) NOT NULL DEFAULT 'pending', -- 'pending', 'processing', 'validated', 'failed'
   rev VARCHAR(8) NOT NULL DEFAULT 'no_rev', -- The current revision (for avoiding conflicts)
   baseid VARCHAR(64) NOT NULL, -- The base identifier linking logically similar GUIDs
@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS biominer_indexd_file (
 CREATE TABLE IF NOT EXISTS biominer_indexd_url (
   id BIGSERIAL PRIMARY KEY, -- The URL's unique identifier
   url VARCHAR(255) NOT NULL UNIQUE, -- The URL to the file, gsa://path/to/file, node://path/to/file, oss://bucket/path/to/file, s3://bucket/path/to/file, etc.
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, -- When the URL was created
+  created_at BIGINT NOT NULL DEFAULT EXTRACT(EPOCH from now()) * 1000, -- When the URL was created, milliseconds since epoch
   status VARCHAR(16) NOT NULL DEFAULT 'pending', -- 'pending', 'processing', 'validated', 'failed'
   uploader VARCHAR(64) NOT NULL DEFAULT 'biominer-admin', -- The user who uploaded the file
 

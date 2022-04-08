@@ -36,7 +36,7 @@
       </if>
       <if test="uploader != null && uploader != ''">
         <trim prefixOverrides="AND ">
-          AND uploader = #{uploader}
+          AND biominer_indexd_file.uploader = #{uploader}
         </trim>
       </if>
       <if test="hash != null && hash != ''">
@@ -46,7 +46,7 @@
       </if>
       <if test="alias != null && alias != ''">
         <trim prefixOverrides="AND ">
-          AND biominer_indexd_alias.alias = #{alias}
+          AND biominer_indexd_alias.name = #{alias}
         </trim>
       </if>
       <if test="url != null && url != ''">
