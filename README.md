@@ -1,5 +1,5 @@
 <h2 align="center">BioMiner Indexd</h2>
-<p align="center">BioMiner Indexd is a hash-based data indexing and tracking service providing globally unique identifiers. Similar to [Indexd](https://github.com/uc-cdis/indexd), but with a more.</p>
+<p align="center">BioMiner Indexd is a hash-based data indexing and tracking service providing globally unique identifiers. <br/>Similar to [Indexd](https://github.com/uc-cdis/indexd), but with a more.</p>
 
 <p align="center">
 <img alt="GitHub Workflow Status" src="https://img.shields.io/github/workflow/status/yjcyxky/biominer-indexd/test-pack-and-release?label=Build Status">
@@ -7,14 +7,20 @@
 <a href="https://github.com/yjcyxky/biominer-indexd/releases"><img alt="Latest Release" src="https://img.shields.io/github/release/yjcyxky/biominer-indexd.svg?label=Latest%20Release"/></a>
 </p>
 
+<p align="center">NOTE: NOT READY FOR PRODUCTION YET.</p>
+
 ## Features
-- [x] Manage & retrieve files: index each file by UUID (e.g. biominer.fudan-pgx/b14563ac-dbc1-49e8-b484-3dad89de1a54) and record all repository locations, file names, MD5 values, DOI numbers, repository links, version numbers, sizes, etc. of files
+- [ ] Manage & retrieve files: index each file by UUID (e.g. biominer.fudan-pgx/b14563ac-dbc1-49e8-b484-3dad89de1a54) and record all repository locations, file names, MD5 values, DOI numbers, repository links, version numbers, sizes, etc. of files
 
-- [x] Track file location: for the same file released in multiple repositories (OSS, S3, GSA, NODE, SRA, ENA.), provide a mechanism to register & track file location.
+- [ ] Track file location: provide a mechanism to register & track file location, for the same file released in multiple repositories (OSS, S3, GSA, NODE, SRA, ENA.)
 
-- [x] Manage multi-version files: For different versions of Pipeline analysis to generate multiple versions of Level2/3 files, Biominer Indexd provide Base UUID indexing of different versions of files (i.e., get the Base UUID, you can query all the historical versions of a file in the system)
+- [ ] Track file status: whether the file is in the index, or has been deleted, or has been updated, or can be downloaded.
+
+- [ ] Manage multi-version files: provide Base UUID indexing of different versions of files (i.e., get the Base UUID, you can query all the historical versions of a file in the system) for different versions of Pipeline analysis to generate multiple versions of Level2/3 files.
 
 - [ ] Bulk get download links: query specified files by UUID/MD5 and get download links of specified repositories.
+
+- [ ] More features...
 
 ## Quick Start
 - Get Latest BioMiner Indexd: [Download](https://github.com/yjcyxky/biominer-indexd/releases)
