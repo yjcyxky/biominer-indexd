@@ -6,53 +6,50 @@
       biominer_indexd_file.created_at          as created_at,
       biominer_indexd_file.status              as status,
       biominer_indexd_file.uploader            as uploader,
+      <if test="contain_url != 0">
       json_agg(DISTINCT biominer_indexd_url)   as urls, 
-      json_agg(DISTINCT biominer_indexd_hash)  as hashes,
-      json_agg(DISTINCT biominer_indexd_alias) as aliases
+      </if>
+      <if test="contain_alias != 0">
+      json_agg(DISTINCT biominer_indexd_alias) as aliases,
+      </if>
+      json_agg(DISTINCT biominer_indexd_hash)  as hashes
     FROM
       biominer_indexd_file
+    ${' '}
+    <if test="contain_url != 0">
     JOIN biominer_indexd_url ON biominer_indexd_url.file = biominer_indexd_file.guid
-    JOIN biominer_indexd_hash ON biominer_indexd_hash.file = biominer_indexd_file.guid
+    </if>
+    <if test="contain_alias != 0">
     JOIN biominer_indexd_alias ON biominer_indexd_alias.file = biominer_indexd_file.guid
+    </if>
+    JOIN biominer_indexd_hash ON biominer_indexd_hash.file = biominer_indexd_file.guid
     ${' '}
     <where>
       <if test="filename != null && filename != ''">
         filename LIKE CONCAT('%', #{filename}, '%')
       </if>
       <if test="guid != null && guid != ''">
-        <trim prefixOverrides="AND ">
-          AND guid = #{guid}
-        </trim>
+        and guid = #{guid}
       </if>
       <if test="baseid != null && baseid != ''">
-        <trim prefixOverrides="AND ">
-          AND baseid = #{baseid}
-        </trim>
+        and baseid = #{baseid}
       </if>
       <if test="status != null && status != ''">
-        <trim prefixOverrides="AND ">
-          AND biominer_indexd_file.status = #{status}
-        </trim>
+        and biominer_indexd_file.status = #{status}
       </if>
       <if test="uploader != null && uploader != ''">
-        <trim prefixOverrides="AND ">
-          AND biominer_indexd_file.uploader = #{uploader}
-        </trim>
+        and biominer_indexd_file.uploader = #{uploader}
       </if>
       <if test="hash != null && hash != ''">
-        <trim prefixOverrides="AND ">
-          AND biominer_indexd_hash.hash = #{hash}
-        </trim>
+        and biominer_indexd_hash.hash = #{hash}
       </if>
-      <if test="alias != null && alias != ''">
-        <trim prefixOverrides="AND ">
-          AND biominer_indexd_alias.name = #{alias}
-        </trim>
+      <!-- biominer_indexd_alias table will be joined only when contain_alias is true. -->
+      <if test="contain_alias != 0 && alias != null && alias != ''">
+        and biominer_indexd_alias.name = #{alias}
       </if>
-      <if test="url != null && url != ''">
-        <trim prefixOverrides="AND ">
-          AND biominer_indexd_url.url = #{url}
-        </trim>
+      <!-- biominer_indexd_url table will be joined only when contain_url is true. -->
+      <if test="contain_url != 0 && url != null && url != ''">
+        and biominer_indexd_url.url = #{url}
       </if>
     </where>
     ${' '}

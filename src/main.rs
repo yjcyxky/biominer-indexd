@@ -5,7 +5,7 @@ extern crate log;
 #[macro_use]
 extern crate lazy_static;
 
-use biominer_indexd::{api, database::init_rbatis};
+use biominer_indexd::{api, database, database::init_rbatis};
 use dotenv::dotenv;
 use log::{error, LevelFilter};
 use log4rs;
@@ -84,6 +84,9 @@ async fn main() -> Result<(), std::io::Error> {
 
   let host = args.host;
   let port = args.port;
+
+  println!("\n\t\t*** Launch biominer-indexd on {}:{} ***", host, port);
+
   let database_url = args.database_url;
 
   let database_url = if database_url.is_none() {
@@ -102,7 +105,9 @@ async fn main() -> Result<(), std::io::Error> {
   let arc_rb = Arc::new(rb);
   let shared_rb = AddData::new(arc_rb.clone());
 
-  println!("\n\t\t*** Launch biominer-indexd on {}:{} ***", host, port);
+  let config = database::Config::init_config(&arc_rb.clone()).await;
+  info!("Initialize Config with `{:?}`", config);
+  let shared_config = AddData::new(Arc::new(config));
 
   let api_service = OpenApiService::new(api::files::FilesApi, "Files", "1.0.0")
     .server(format!("http://{}:{}", host, port));
@@ -113,7 +118,8 @@ async fn main() -> Result<(), std::io::Error> {
     .nest("/ui", ui)
     .at("/spec", poem::endpoint::make_sync(move |_| spec.clone()))
     .with(Cors::new())
-    .with(shared_rb);
+    .with(shared_rb)
+    .with(shared_config);
 
   Server::new(TcpListener::bind(format!("{}:{}", host, port)))
     .run(route)

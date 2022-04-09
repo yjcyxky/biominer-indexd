@@ -38,3 +38,8 @@ CREATE TABLE IF NOT EXISTS biominer_indexd_alias (
   file VARCHAR(64) NOT NULL, -- The file's global unique identifier
   FOREIGN KEY (file) REFERENCES biominer_indexd_file(guid)
 );
+
+CREATE TABLE IF NOT EXISTS biominer_indexd_config (
+  id BIGSERIAL PRIMARY KEY, -- The config's unique identifier
+  registry_id VARCHAR(16) NOT NULL UNIQUE -- The registry's unique identifier
+);

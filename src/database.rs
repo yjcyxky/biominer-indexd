@@ -1,12 +1,12 @@
 use chrono::{self, Utc};
-use log::{info, warn};
+use log::{debug, info, warn};
 use poem_openapi::Object;
 use rbatis::executor::ExecutorMut;
 use rbatis::{
   self, crud_table, executor::RbatisExecutor, html_sql, push_index, rb_html, rbatis::Rbatis, Error,
   Page, PageRequest,
 };
-use rbson::Bson;
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 use uuid;
 
@@ -46,16 +46,85 @@ pub struct URL {
 #[crud_table(table_name:biominer_indexd_hash)]
 #[derive(Serialize, Deserialize, Debug, Eq, PartialEq, Clone, Object)]
 pub struct Hash {
+  #[oai(read_only)]
   pub id: u64,
-  pub hash_type: String, // Max 128 characters, md5, sha1, sha256, sha512, crc32, crc64, etag, etc
-  pub hash: String,
+  #[oai(validator(max_length = 16))]
+  pub hash_type: String, // Max 16 characters, md5, sha1, sha256, sha512, crc32, crc64, etag, etc
+  #[oai(validator(max_length = 128))]
+  pub hash: String, // Max 128 characters
 }
 
 #[crud_table(table_name:biominer_indexd_alias)]
 #[derive(Serialize, Deserialize, Debug, Eq, PartialEq, Clone, Object)]
 pub struct Alias {
+  #[oai(read_only)]
   pub id: u64,
+  #[oai(validator(max_length = 255))]
   pub name: String,
+}
+
+#[crud_table(table_name:biominer_indexd_config)]
+#[derive(Serialize, Deserialize, Debug, Eq, PartialEq, Clone, Object)]
+pub struct Config {
+  #[oai(read_only)]
+  pub id: u64,
+  #[oai(validator(max_length = 16, pattern = "^[0-9a-z-]{16}$"))]
+  pub registry_id: String,
+}
+
+impl Config {
+  pub fn new(registry_id: String) -> Self {
+    Config {
+      id: 0,
+      registry_id: registry_id,
+    }
+  }
+
+  fn get_registry_id() -> String {
+    let registry_id = match std::env::var("BIOMIER_REGISTRY_ID") {
+      Ok(v) => v,
+      Err(_) => "fudan-pgx".to_string(),
+    };
+
+    let registry_id_regex = Regex::new(r"^[0-9a-z-]{16}$").unwrap();
+    if !registry_id_regex.is_match(&registry_id) {
+      warn!("Environment variable `BIOMIER_REGISTRY_ID` is not valid (Regex: ^[0-9a-z-]{{16}}$), use default value: fudan-pgx");
+    }
+
+    return registry_id;
+  }
+
+  pub async fn init_config(rb: &Rbatis) -> Config {
+    let mut executor = rb.as_executor();
+    let registry_id = Config::get_registry_id();
+    let configs: serde_json::Value = executor
+      .fetch("SELECT * FROM biominer_indexd_config", vec![])
+      .await
+      .unwrap();
+
+    debug!("Config: {:?}", configs);
+
+    // Configs always be an array, maybe have one or zero record.
+    let configs = configs.as_array().unwrap();
+    if configs.len() > 0 {
+      warn!("Config already exists, if you want to change the registry_id, 
+             please rebuild the database first.");
+      let config: Config = serde_json::from_value(configs[0].clone()).unwrap();
+      config
+    } else {
+      let v = executor
+        .exec(
+          "INSERT INTO biominer_indexd_config (registry_id) VALUES ($1);",
+          vec![rbson::to_bson(&registry_id).unwrap()],
+        )
+        .await
+        .unwrap();
+      if v.rows_affected == 1 {
+        info!("Set registry_id to {}", registry_id);
+      }
+      Config::new(registry_id)
+    }
+  }
 }
 
 #[crud_table(table_name:biominer_indexd_file)]
@@ -77,14 +146,14 @@ pub struct File {
 }
 
 impl File {
-  pub fn new(filename: &str, size: u64, uploader: &str) -> Self {
+  pub fn new(filename: &str, size: u64, uploader: &str, registry_id: &str) -> Self {
     let guid = uuid::Uuid::new_v4().to_string();
     let rev = guid[..8].to_string();
     let baseid = uuid::Uuid::new_v4().to_string();
     let now_ms = Utc::now().timestamp_millis();
 
     File {
-      guid: guid,
+      guid: format!("{}.{}/{}", "biominer", registry_id, guid),
       filename: filename.to_string(),
       size: size,
       created_at: now_ms,
@@ -109,7 +178,6 @@ impl File {
       )
       .await
       .unwrap();
-    println!("Value: {:?}", v);
     // TODO: How to deal with it when has error?
     // fetch function will return a array, but it always has one element.
     v[0].get("count").unwrap().as_i64().unwrap() > 0
@@ -259,11 +327,19 @@ pub async fn query_files(
   hash: &str,
   alias: &str,
   url: &str,
+  contain_alias: &usize,
+  contain_url: &usize,
 ) -> Page<File> {
   todo!()
 }
 
-pub async fn query_file(rb: &mut RbatisExecutor<'_, '_>, guid: &str, hash: &str) -> Option<File> {
+pub async fn query_file(
+  rb: &mut RbatisExecutor<'_, '_>,
+  guid: &str,
+  hash: &str,
+  contain_alias: &usize,
+  contain_url: &usize,
+) -> Option<File> {
   let files = query_files(
     rb,
     &PageRequest::new(1, 10),
@@ -275,6 +351,8 @@ pub async fn query_file(rb: &mut RbatisExecutor<'_, '_>, guid: &str, hash: &str)
     hash,
     "",
     "",
+    contain_alias,
+    contain_url,
   )
   .await
   .unwrap();
@@ -320,6 +398,8 @@ mod tests {
       "",
       "",
       "",
+      &1,
+      &1,
     )
     .await
     .unwrap();
@@ -330,7 +410,9 @@ mod tests {
   #[tokio::test]
   async fn test_query_file() {
     let rb = init().await;
-    let file = query_file(&mut rb.as_executor(), "abcd", "").await.unwrap();
+    let file = query_file(&mut rb.as_executor(), "abcd", "", &1, &1)
+      .await
+      .unwrap();
 
     assert!(file.guid == "abcd");
   }

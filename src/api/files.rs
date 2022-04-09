@@ -1,5 +1,5 @@
 use super::util;
-use crate::database::{query_files, File, FilePage};
+use crate::database::{query_files, Config, File, FilePage};
 use log::{debug, info};
 use poem::web::Data;
 use poem_openapi::{
@@ -34,10 +34,16 @@ pub struct FilesApi;
 #[OpenApi]
 impl FilesApi {
   #[oai(path = "/api/v1/files", method = "post")]
-  async fn create_file(&self, rb: Data<&Arc<Rbatis>>, params: Json<PostFile>) -> PostResponse {
+  async fn create_file(
+    &self,
+    rb: Data<&Arc<Rbatis>>,
+    config: Data<&Arc<Config>>,
+    params: Json<PostFile>,
+  ) -> PostResponse {
     let rb_arc = rb.clone();
     info!("Creating file with params: {:?}", params);
 
+    let registry_id = config.registry_id.clone();
     let filename = &params.filename.clone().unwrap_or_else(|| "".to_string());
     let uploader = &params
       .uploader
@@ -51,10 +57,12 @@ impl FilesApi {
     };
 
     if File::check_hash_exists(&rb_arc, hash).await {
-      return PostResponse::BadRequest(PlainText("The hash value already exists or has been registered.".to_string()));
+      return PostResponse::BadRequest(PlainText(
+        "The hash value already exists or has been registered.".to_string(),
+      ));
     }
 
-    let mut file = File::new(&filename, size, &uploader);
+    let mut file = File::new(&filename, size, &uploader, &registry_id);
     match file.add(&rb_arc, &hash).await {
       Ok(()) => PostResponse::Ok(Json(file)),
       Err(e) => PostResponse::BadRequest(PlainText(e.to_string())),
@@ -75,6 +83,8 @@ impl FilesApi {
     hash: Query<Option<String>>,
     alias: Query<Option<String>>,
     url: Query<Option<String>>,
+    contain_alias: Query<Option<bool>>,
+    contain_url: Query<Option<bool>>,
   ) -> GetResponse {
     let rb_arc = rb.clone();
     let mut rb = rb_arc.acquire().await.unwrap();
@@ -89,6 +99,8 @@ impl FilesApi {
     let hash = hash.clone().unwrap_or_else(|| "".to_string());
     let alias = alias.clone().unwrap_or_else(|| "".to_string());
     let url = url.clone().unwrap_or_else(|| "".to_string());
+    let contain_alias = contain_alias.clone().unwrap_or_else(|| false) as usize;
+    let contain_url = contain_url.clone().unwrap_or_else(|| false) as usize;
 
     info!(
       "Query with (guid: {:?}, filename: {:?}, baseid: {:?}, status: {:?}, 
@@ -107,6 +119,8 @@ impl FilesApi {
       &hash,
       &alias,
       &url,
+      &contain_alias,
+      &contain_url,
     )
     .await
     .unwrap();
