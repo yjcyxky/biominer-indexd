@@ -23,15 +23,15 @@
 - [ ] More features...
 
 ## Quick Start
-- Get Latest BioMiner Indexd: [Download](https://github.com/yjcyxky/biominer-indexd/releases)
+- Get BioMiner Indexd ([Download Latest Version](https://github.com/yjcyxky/biominer-indexd/releases))
 - Install PostgreSQL (Recommended version: 10.x)
 - Set Environment Variables
 
-      ```bash
-      export DATABASE_URL=postgres:://user:password@localhost:5432/biominer_indexd
-      # NOTE: BIOMIER_REGISTRY_ID only allow to set one time. If you want to change it, you need to rebuild the database.
-      export BIOMIER_REGISTRY_ID=fudan-pgx
-      ```
+  ```bash
+  export DATABASE_URL=postgres:://user:password@localhost:5432/biominer_indexd
+  # NOTE: BIOMIER_REGISTRY_ID only allow to set one time. If you want to change it, you need to rebuild the database.
+  export BIOMIER_REGISTRY_ID=fudan-pgx
+  ```
 
 - Start BioMiner Indexd
 
@@ -58,16 +58,51 @@
   ```
 
 ## For Developers
-### Prerequisites
 
-1. Install sqlx-cli
+1. Install PostgreSQL Client
+
+  ```bash
+  # Ubuntu
+  sudo apt-get install postgresql-client
+
+  # MacOS
+  brew install postgresql
+  ```
+
+2. Install sqlx-cli
 
   ```bash
   cargo install sqlx-cli
   ```
 
-2. Install docker
+3. Install docker
 
   ```bash
+  # Ubuntu
   sudo apt-get install docker.io
+
+  # MacOS
+  brew install docker
   ```
+
+4. Test
+
+  ```bash
+  # It will build a testing database with docker and run the `cargo test`.
+  make test
+  ```
+
+5. Build & Run
+
+  ```bash
+  export DATABASE_URL=postgres://postgres:password@localhost:5432/test_biominer_indexd 
+  cargo run -- --help
+  ```
+
+## Contributing
+Comming soon...
+
+## License
+Copyright © 2022 Jingcheng Yang
+
+Distributed under the terms of the GNU Affero General Public License v3.0.
