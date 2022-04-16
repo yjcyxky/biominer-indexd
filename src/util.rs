@@ -22,3 +22,12 @@ pub fn validate_hash(hash: &str, algorithm: &str) -> bool {
     None => false,
   }
 }
+
+pub fn which_hash_type(hash: &str) -> Option<&'static str> {
+  for (algorithm, regex) in ACCEPTABLE_HASHES.iter() {
+    if regex.is_match(hash) {
+      return Some(algorithm);
+    }
+  }
+  None
+}

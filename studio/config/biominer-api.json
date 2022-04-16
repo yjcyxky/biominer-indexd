@@ -1,0 +1,632 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "BioMiner Indexd",
+    "summary": "A RESTful API for BioMiner Indexd",
+    "description": "BioMiner Indexd is a hash-based data indexing and tracking service providing globally unique identifiers.",
+    "version": "v0.1.0",
+    "license": {
+      "name": "GNU AFFERO GENERAL PUBLIC LICENSE v3"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:3000"
+    }
+  ],
+  "tags": [
+    {
+      "name": "AddAlias"
+    },
+    {
+      "name": "AddHash"
+    },
+    {
+      "name": "AddUrl"
+    },
+    {
+      "name": "CreateFile"
+    },
+    {
+      "name": "DeleteFile"
+    },
+    {
+      "name": "GetFile"
+    },
+    {
+      "name": "ListFiles"
+    }
+  ],
+  "paths": {
+    "/api/v1/files": {
+      "post": {
+        "tags": [
+          "CreateFile"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostFile"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/File"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "ListFiles"
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "format": "uint64"
+            },
+            "in": "query",
+            "required": false,
+            "deprecated": false
+          },
+          {
+            "name": "page_size",
+            "schema": {
+              "type": "integer",
+              "format": "uint64"
+            },
+            "in": "query",
+            "required": false,
+            "deprecated": false
+          },
+          {
+            "name": "guid",
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "required": false,
+            "deprecated": false
+          },
+          {
+            "name": "filename",
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "required": false,
+            "deprecated": false
+          },
+          {
+            "name": "baseid",
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "required": false,
+            "deprecated": false
+          },
+          {
+            "name": "status",
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "required": false,
+            "deprecated": false
+          },
+          {
+            "name": "uploader",
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "required": false,
+            "deprecated": false
+          },
+          {
+            "name": "hash",
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "required": false,
+            "deprecated": false
+          },
+          {
+            "name": "alias",
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "required": false,
+            "deprecated": false
+          },
+          {
+            "name": "url",
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "required": false,
+            "deprecated": false
+          },
+          {
+            "name": "contain_alias",
+            "schema": {
+              "type": "boolean"
+            },
+            "in": "query",
+            "required": false,
+            "deprecated": false
+          },
+          {
+            "name": "contain_url",
+            "schema": {
+              "type": "boolean"
+            },
+            "in": "query",
+            "required": false,
+            "deprecated": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FilePage"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/files/{id}/url": {
+      "put": {
+        "tags": [
+          "AddUrl"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "in": "path",
+            "required": true,
+            "deprecated": false
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutFileUrl"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/files/{id}/alias": {
+      "put": {
+        "tags": [
+          "AddAlias"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "in": "path",
+            "required": true,
+            "deprecated": false
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutFileAlias"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/files/{id}/hash": {
+      "put": {
+        "tags": [
+          "AddHash"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "in": "path",
+            "required": true,
+            "deprecated": false
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutFileHash"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Alias": {
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "uint64",
+            "readOnly": true
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 255
+          }
+        }
+      },
+      "File": {
+        "type": "object",
+        "required": [
+          "guid",
+          "filename",
+          "size",
+          "created_at",
+          "updated_at",
+          "status",
+          "baseid",
+          "rev",
+          "version",
+          "uploader"
+        ],
+        "properties": {
+          "guid": {
+            "type": "string"
+          },
+          "filename": {
+            "type": "string"
+          },
+          "size": {
+            "type": "integer",
+            "format": "uint64"
+          },
+          "created_at": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "updated_at": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "status": {
+            "type": "string"
+          },
+          "baseid": {
+            "type": "string"
+          },
+          "rev": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer",
+            "format": "uint64"
+          },
+          "uploader": {
+            "type": "string"
+          },
+          "urls": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/URL"
+            }
+          },
+          "hashes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Hash"
+            }
+          },
+          "aliases": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Alias"
+            }
+          }
+        }
+      },
+      "FilePage": {
+        "type": "object",
+        "required": [
+          "records",
+          "total",
+          "pages",
+          "page_no",
+          "page_size",
+          "search_count"
+        ],
+        "properties": {
+          "records": {
+            "type": "array",
+            "description": "data",
+            "items": {
+              "$ref": "#/components/schemas/File"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "format": "uint64",
+            "description": "total num"
+          },
+          "pages": {
+            "type": "integer",
+            "format": "uint64",
+            "description": "pages"
+          },
+          "page_no": {
+            "type": "integer",
+            "format": "uint64",
+            "description": "current page index"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "uint64",
+            "description": "default 10"
+          },
+          "search_count": {
+            "type": "boolean",
+            "description": "is search_count"
+          }
+        }
+      },
+      "Hash": {
+        "type": "object",
+        "required": [
+          "id",
+          "hash_type",
+          "hash"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "uint64",
+            "readOnly": true
+          },
+          "hash_type": {
+            "type": "string",
+            "maxLength": 16
+          },
+          "hash": {
+            "type": "string",
+            "maxLength": 128
+          }
+        }
+      },
+      "PostFile": {
+        "type": "object",
+        "required": [
+          "hash",
+          "size"
+        ],
+        "properties": {
+          "filename": {
+            "type": "string"
+          },
+          "uploader": {
+            "type": "string"
+          },
+          "hash": {
+            "type": "string"
+          },
+          "size": {
+            "type": "integer",
+            "format": "uint64"
+          }
+        }
+      },
+      "PutFileAlias": {
+        "type": "object",
+        "required": [
+          "alias"
+        ],
+        "properties": {
+          "alias": {
+            "type": "string"
+          }
+        }
+      },
+      "PutFileHash": {
+        "type": "object",
+        "required": [
+          "hash"
+        ],
+        "properties": {
+          "hash": {
+            "type": "string"
+          }
+        }
+      },
+      "PutFileUrl": {
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "uploader": {
+            "type": "string"
+          }
+        }
+      },
+      "StatusResponse": {
+        "type": "object",
+        "required": [
+          "msg"
+        ],
+        "properties": {
+          "msg": {
+            "type": "string"
+          }
+        }
+      },
+      "URL": {
+        "type": "object",
+        "required": [
+          "id",
+          "url",
+          "created_at",
+          "status",
+          "uploader"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "uint64"
+          },
+          "url": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "status": {
+            "type": "string"
+          },
+          "uploader": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

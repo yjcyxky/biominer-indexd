@@ -1,3 +1,4 @@
+use super::util;
 use chrono::{self, Utc};
 use log::{debug, info, warn};
 use poem_openapi::Object;
@@ -107,8 +108,10 @@ impl Config {
     // Configs always be an array, maybe have one or zero record.
     let configs = configs.as_array().unwrap();
     if configs.len() > 0 {
-      warn!("Config already exists, if you want to change the registry_id, 
-             please rebuild the database first.");
+      warn!(
+        "Config already exists, if you want to change the registry_id, 
+             please rebuild the database first."
+      );
       let config: Config = serde_json::from_value(configs[0].clone()).unwrap();
       config
     } else {
@@ -181,6 +184,140 @@ impl File {
     // TODO: How to deal with it when has error?
     // fetch function will return a array, but it always has one element.
     v[0].get("count").unwrap().as_i64().unwrap() > 0
+  }
+
+  pub async fn add_url(
+    rb: &Rbatis,
+    uuid: &uuid::Uuid,
+    url: &str,
+    uploader: &str,
+    status: &str,
+  ) -> rbatis::core::Result<()> {
+    let mut executor = rb.as_executor();
+    let uuid_str = uuid.to_string();
+
+    let v: serde_json::Value = executor
+      .fetch(
+        "SELECT * FROM biominer_indexd_url WHERE file = $1",
+        vec![rbson::to_bson(&uuid_str).unwrap()],
+      )
+      .await
+      .unwrap();
+
+    let status = if ["pending", "processing", "validated", "failed"].contains(&status) {
+      status.to_string()
+    } else {
+      "pending".to_string()
+    };
+
+    if v.as_array().unwrap().len() == 1 {
+      let v = executor
+        .exec(
+          "INSERT INTO biominer_indexd_url (file, url, status, uploader) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING;;",
+          vec![
+            rbson::to_bson(&uuid_str).unwrap(),
+            rbson::to_bson(url).unwrap(),
+            rbson::to_bson(&status).unwrap(),
+            rbson::to_bson(uploader).unwrap(),
+          ],
+        )
+        .await
+        .unwrap();
+
+      if v.rows_affected == 1 {
+        info!("Add url {} to file {}", url, uuid);
+        return Ok(());
+      } else {
+        info!("Url {} already exists in file {}.", url, uuid);
+        return Ok(());
+      }
+    } else {
+      warn!("Cannot find the file {}.", uuid);
+      return Err(Error::from(format!("Cannot find the file with {}", uuid)));
+    }
+  }
+
+  pub async fn add_alias(rb: &Rbatis, uuid: &uuid::Uuid, alias: &str) -> rbatis::core::Result<()> {
+    let mut executor = rb.as_executor();
+    let uuid_str = uuid.to_string();
+
+    let v: serde_json::Value = executor
+      .fetch(
+        "SELECT * FROM biominer_indexd_alias WHERE file = $1",
+        vec![rbson::to_bson(&uuid_str).unwrap()],
+      )
+      .await
+      .unwrap();
+
+    if v.as_array().unwrap().len() == 1 {
+      let v = executor
+        .exec(
+          "INSERT INTO biominer_indexd_alias (file, name) VALUES ($1, $2) ON CONFLICT DO NOTHING;;",
+          vec![
+            rbson::to_bson(&uuid_str).unwrap(),
+            rbson::to_bson(alias).unwrap(),
+          ],
+        )
+        .await
+        .unwrap();
+
+      if v.rows_affected == 1 {
+        info!("Add alias {} to file {}", alias, uuid);
+        return Ok(());
+      } else {
+        info!("Alias {} already exists in file {}.", alias, uuid);
+        return Ok(());
+      }
+    } else {
+      warn!("Cannot find the file {}.", uuid);
+      return Err(Error::from(format!("Cannot find the file with {}", uuid)));
+    }
+  }
+
+  pub async fn add_hash(rb: &Rbatis, uuid: &uuid::Uuid, hash: &str) -> rbatis::core::Result<()> {
+    let mut executor = rb.as_executor();
+    let uuid_str = uuid.to_string();
+
+    let v: serde_json::Value = executor
+      .fetch(
+        "SELECT * FROM biominer_indexd_alias WHERE file = $1",
+        vec![rbson::to_bson(&uuid_str).unwrap()],
+      )
+      .await
+      .unwrap();
+
+    let hash_type = match util::which_hash_type(hash) {
+      Some(hash_type) => hash_type,
+      None => {
+        warn!("Cannot find the hash type of {}", hash);
+        return Err(Error::from(format!("Cannot find the hash type of {}, only support md5, sha1, sha256, sha512, crc32, etag, crc64.", hash)));
+      }
+    };
+
+    if v.as_array().unwrap().len() == 1 {
+      let v = executor
+        .exec(
+          "INSERT INTO biominer_indexd_hash (file, hash_type, hash) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING;;",
+          vec![
+            rbson::to_bson(&uuid_str).unwrap(),
+            rbson::to_bson(hash_type).unwrap(),
+            rbson::to_bson(hash).unwrap(),
+          ],
+        )
+        .await
+        .unwrap();
+
+      if v.rows_affected == 1 {
+        info!("Add hash {} to file {}", hash, uuid);
+        return Ok(());
+      } else {
+        info!("Alias {} already exists in file {}.", hash, uuid);
+        return Ok(());
+      }
+    } else {
+      warn!("Cannot find the file {}.", uuid);
+      return Err(Error::from(format!("Cannot find the file with {}", uuid)));
+    }
   }
 
   pub async fn add(&mut self, rb: &Rbatis, hash: &str) -> rbatis::core::Result<()> {

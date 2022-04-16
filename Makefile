@@ -16,3 +16,17 @@ clean-test-db:
 	@-docker stop biominer-indexd
 	@printf "Clean "
 	@-docker rm biominer-indexd
+
+build-all: build-studio build-indexd
+	@printf "\nBuilding...\n"
+
+build-studio:
+	@cd studio && yarn && yarn build:embed && cd ..
+
+build-indexd:
+	@cargo build --release
+
+build-service:
+	@printf "Building service based on openapi...\n"
+	@curl -H "Accept: application/json" http://localhost:3000/spec -o studio/config/biominer-api.json
+	@cd studio && yarn && yarn openapi && cd ..

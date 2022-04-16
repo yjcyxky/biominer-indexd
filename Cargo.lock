@@ -185,6 +185,7 @@ dependencies = [
  "rbatis",
  "rbson",
  "regex",
+ "rust-embed",
  "serde",
  "serde_json",
  "structopt",
@@ -790,6 +791,12 @@ dependencies = [
 
 [[package]]
 name = "hashbrown"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d7afe4a420e3fe79967a00898cc1f4db7c8a49a9333a29f8a4bd76a253d5cd04"
+
+[[package]]
+name = "hashbrown"
 version = "0.11.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ab5ef0d4909ef3724cc8cce6ccc8572c5c817592e9285f5464f8e86f8bd3726e"
@@ -803,7 +810,7 @@ version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7249a3129cbc1ffccd74857f81464a323a152173cdb134e0fd81bc803b29facf"
 dependencies = [
- "hashbrown",
+ "hashbrown 0.11.2",
 ]
 
 [[package]]
@@ -981,12 +988,12 @@ dependencies = [
 
 [[package]]
 name = "indexmap"
-version = "1.8.1"
+version = "1.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0f647032dfaa1f8b6dc29bd3edb7bbef4861b8b8007ebb118d6db284fd59f6ee"
+checksum = "824845a0bf897a9042383849b02c1bc219c2383772efcd5c6f9766fa4b81aef3"
 dependencies = [
  "autocfg 1.1.0",
- "hashbrown",
+ "hashbrown 0.9.1",
 ]
 
 [[package]]
@@ -1145,6 +1152,16 @@ name = "mime"
 version = "0.3.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2a60c7ce501c71e03a9c9c0d35b861413ae925bd979cc7a4e30d060069aaac8d"
+
+[[package]]
+name = "mime_guess"
+version = "2.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4192263c238a5f0d0c6bfd21f336a313a4ce1c450542449ca191bb657b4642ef"
+dependencies = [
+ "mime",
+ "unicase",
+]
 
 [[package]]
 name = "minimal-lexical"
@@ -1469,9 +1486,9 @@ dependencies = [
 
 [[package]]
 name = "poem"
-version = "1.3.21"
+version = "1.3.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2cd2266fe87f491078c2f64a01aee8dae621c5c7866c771197266405c5fa0731"
+checksum = "71c38fff256db5ab64f3011960da27b9860445397afa638e8deeaad7cc7860cd"
 dependencies = [
  "async-trait",
  "bytes",
@@ -1479,15 +1496,18 @@ dependencies = [
  "cookie",
  "futures-util",
  "headers",
+ "hex",
  "http",
  "hyper",
  "mime",
+ "mime_guess",
  "multer",
  "parking_lot 0.12.0",
  "percent-encoding",
  "pin-project-lite",
  "poem-derive",
  "regex",
+ "rust-embed",
  "serde",
  "serde_json",
  "serde_urlencoded",
@@ -1503,9 +1523,9 @@ dependencies = [
 
 [[package]]
 name = "poem-derive"
-version = "1.3.21"
+version = "1.3.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2e70dc35992bc62325e7a1eff2e11fd829b193920926bcf88a2f595b5d21c647"
+checksum = "03a47de14ca979ca05bfd3a66f4a1bd2a3fcf52252d4ab92a6b8fa3d4ddc18b3"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",
@@ -1515,9 +1535,9 @@ dependencies = [
 
 [[package]]
 name = "poem-openapi"
-version = "1.3.21"
+version = "1.3.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "281098f97d0ef89183fb78683f91fde75521509726dd1102f50ac04ab2d0c0d3"
+checksum = "d4106b038aba8dd1a31584ff4178bb074052dbb0578f1055a75fb1e98e2b9b7a"
 dependencies = [
  "base64",
  "bytes",
@@ -1534,13 +1554,14 @@ dependencies = [
  "serde_urlencoded",
  "thiserror",
  "tokio",
+ "uuid",
 ]
 
 [[package]]
 name = "poem-openapi-derive"
-version = "1.3.21"
+version = "1.3.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4de4d9780fafa6265f5b41daa68f8a31ab01197c2adb45e5d51f7689bf319639"
+checksum = "a23cdebbaa887ddd77531a9dccbba3b6253518f60035616b5466122e8c90c944"
 dependencies = [
  "Inflector",
  "darling",
@@ -1879,6 +1900,40 @@ dependencies = [
 ]
 
 [[package]]
+name = "rust-embed"
+version = "6.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9a17e5ac65b318f397182ae94e532da0ba56b88dd1200b774715d36c4943b1c3"
+dependencies = [
+ "rust-embed-impl",
+ "rust-embed-utils",
+ "walkdir",
+]
+
+[[package]]
+name = "rust-embed-impl"
+version = "6.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "94e763e24ba2bf0c72bc6be883f967f794a019fafd1b86ba1daff9c91a7edd30"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "rust-embed-utils",
+ "syn",
+ "walkdir",
+]
+
+[[package]]
+name = "rust-embed-utils"
+version = "7.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "756feca3afcbb1487a1d01f4ecd94cf8ec98ea074c55a69e7136d29fb6166029"
+dependencies = [
+ "sha2 0.9.9",
+ "walkdir",
+]
+
+[[package]]
 name = "rust_decimal"
 version = "1.23.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1925,6 +1980,15 @@ name = "ryu"
 version = "1.0.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "73b4b750c782965c211b42f022f59af1fbceabdd026623714f104152f1ec149f"
+
+[[package]]
+name = "same-file"
+version = "1.0.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "93fc1dc3aaa9bfed95e02e6eadabb4baf7e3078b0bd1b4d7b6b0b68378900502"
+dependencies = [
+ "winapi-util",
+]
 
 [[package]]
 name = "scopeguard"
@@ -2663,6 +2727,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "56dee185309b50d1f11bfedef0fe6d036842e3fb77413abef29f8f8d1c5d4c1c"
 
 [[package]]
+name = "unicase"
+version = "2.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "50f37be617794602aabbeee0be4f259dc1778fabe05e2d67ee8f79326d5cb4f6"
+dependencies = [
+ "version_check",
+]
+
+[[package]]
 name = "unicode-bidi"
 version = "0.3.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2759,6 +2832,17 @@ name = "version_check"
 version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "49874b5167b65d7193b8aba1567f5c7d93d001cafc34600cee003eda787e483f"
+
+[[package]]
+name = "walkdir"
+version = "2.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "808cf2735cd4b6866113f648b791c6adc5714537bc222d9347bb203386ffda56"
+dependencies = [
+ "same-file",
+ "winapi",
+ "winapi-util",
+]
 
 [[package]]
 name = "want"
@@ -2890,6 +2974,15 @@ name = "winapi-i686-pc-windows-gnu"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ac3b87c63620426dd9b991e5ce0329eff545bccbbb34f3be09ff6fb6ab51b7b6"
+
+[[package]]
+name = "winapi-util"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "70ec6ce85bb158151cae5e5c87f95a8e97d2c0c4b001223f33a334e3ce5de178"
+dependencies = [
+ "winapi",
+]
 
 [[package]]
 name = "winapi-x86_64-pc-windows-gnu"

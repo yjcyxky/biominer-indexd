@@ -1,7 +1,7 @@
 [package]
 authors = ["Jingcheng Yang <yjcyxky@163.com>"]
 # build = "build/build.rs"
-documentation = ""
+documentation = "https://github.com/yjcyxky/biominer-indexd/blob/master/README.md"
 edition = "2021"
 homepage = "https://github.com/yjcyxky/biominer-indexd"
 keywords = ["biominer", "indexd"]
@@ -19,8 +19,8 @@ dotenv = "0.15.0"
 lazy_static = "1.3"
 log = "0.4"
 log4rs = "1.0.0"
-poem = "1.3"
-poem-openapi = {version = "1.3", features = ["swagger-ui", "chrono"]}
+poem = { version="1.3.27", features = ["embed"] }
+poem-openapi = {version = "1.3.27", features = ["swagger-ui", "chrono", "uuid"]}
 rbatis = {version = "3.0.32", default-features = false, features = ["mysql", "postgres", "runtime-tokio-rustls", "debug_mode", "upper_case_sql_keyword"]}
 rbson = "2.0"
 regex = "1"
@@ -29,3 +29,4 @@ serde_json = "1.0.79"
 structopt = {version = "0.3", default-features = false}
 tokio = {version = "1.17.0", features = ["rt-multi-thread", "macros", "signal"]}
 uuid = {version = "^0", features = ["serde", "v4"]}
+rust-embed = "6.3.0"
