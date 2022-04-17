@@ -7,10 +7,10 @@ const Settings: LayoutSettings & {
   navTheme: 'light',
   // 拂晓蓝
   primaryColor: '#1890ff',
-  layout: 'mix',
+  layout: 'top',
   contentWidth: 'Fluid',
   fixedHeader: false,
-  fixSiderbar: true,
+  fixSiderbar: false,
   colorWeak: false,
   title: 'Ant Design Pro',
   pwa: false,

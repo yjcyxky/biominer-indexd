@@ -1,6 +1,7 @@
 import { useIntl } from 'umi';
 import { GithubOutlined } from '@ant-design/icons';
 import { DefaultFooter } from '@ant-design/pro-layout';
+import "./index.less";
 
 const Footer: React.FC = () => {
   const intl = useIntl();
@@ -13,6 +14,8 @@ const Footer: React.FC = () => {
 
   return (
     <DefaultFooter
+      className="biominer-footer"
+      style={{ margin: '0px' }}
       copyright={`${currentYear} ${defaultMessage}`}
       links={[
         {

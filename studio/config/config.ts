@@ -46,6 +46,9 @@ export default defineConfig({
   // esbuild is father build tools
   // https://umijs.org/plugins/plugin-esbuild
   esbuild: {},
+  request: {
+    dataField: 'records',
+  },
   title: false,
   ignoreMomentLocale: true,
   proxy: proxy[REACT_APP_ENV || 'dev'],
