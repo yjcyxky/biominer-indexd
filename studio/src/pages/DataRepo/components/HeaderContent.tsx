@@ -1,35 +1,52 @@
 import { IconLink } from './IconLink';
 import { Typography } from 'antd';
+import { useIntl } from 'umi';
 
 import { GithubOutlined, InfoCircleOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 
 const { Paragraph } = Typography;
 
-const content = (
-  <>
-    <Paragraph>
-      BioMiner is dedicated to building a data mining platform that integrates high-quality
-      multi-omics data management, distribution and exploratory analysis.
-    </Paragraph>
-    {/* <Paragraph>Please add a description...</Paragraph> */}
-    <div>
-      <IconLink
-        href="https://docs.3steps.cn"
-        avatarSrc={<InfoCircleOutlined />}
-        text="Product Doc"
-      />
-      <IconLink
-        href="https://github.com/biominer-lab/docs.3steps.cn/issues"
-        avatarSrc={<QuestionCircleOutlined />}
-        text="Issues"
-      />
-      <IconLink
-        href="https://github.com/biominer-lab"
-        avatarSrc={<GithubOutlined />}
-        text=" GitHub Repo"
-      />
-    </div>
-  </>
-);
+const HeaderContent: React.FC = () => {
+  const intl = useIntl();
 
-export default content;
+  return (
+    <>
+      <Paragraph>
+        {intl.formatMessage({
+          id: 'data-repo.header-content.description',
+          defaultMessage:
+            'BioMiner is dedicated to building a data mining platform that integrates high-quality multi-omics data management, distribution and exploratory analysis.',
+        })}
+      </Paragraph>
+      {/* <Paragraph>Please add a description...</Paragraph> */}
+      <div>
+        <IconLink
+          href="https://docs.3steps.cn"
+          avatarSrc={<InfoCircleOutlined />}
+          text={intl.formatMessage({
+            id: 'data-repo.header-content.productDoc',
+            defaultMessage: 'Docs',
+          })}
+        />
+        <IconLink
+          href="https://github.com/biominer-lab/docs.3steps.cn/issues"
+          avatarSrc={<QuestionCircleOutlined />}
+          text={intl.formatMessage({
+            id: 'data-repo.header-content.issues',
+            defaultMessage: 'Issues',
+          })}
+        />
+        <IconLink
+          href="https://github.com/biominer-lab"
+          avatarSrc={<GithubOutlined />}
+          text={intl.formatMessage({
+            id: 'data-repo.header-content.githubRepo',
+            defaultMessage: 'GitHub Repo',
+          })}
+        />
+      </div>
+    </>
+  );
+};
+
+export default HeaderContent;

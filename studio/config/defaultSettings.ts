@@ -12,9 +12,9 @@ const Settings: LayoutSettings & {
   fixedHeader: false,
   fixSiderbar: false,
   colorWeak: false,
-  title: 'Ant Design Pro',
+  title: 'BioMiner Indexd',
   pwa: false,
-  logo: 'https://gw.alipayobjects.com/zos/rmsportal/KDpgvguMpGfqaHPjicRK.svg',
+  logo: '/logo.png',
   iconfontUrl: '',
 };
 

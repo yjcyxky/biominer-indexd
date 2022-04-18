@@ -1,6 +1,6 @@
-import { CopyFilled, DownloadOutlined } from '@ant-design/icons';
+import { DownloadOutlined } from '@ant-design/icons';
 import { Button, message, Drawer, Typography, Divider, Tag, Row, Col } from 'antd';
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useIntl, FormattedMessage } from 'umi';
 import { PageContainer, FooterToolbar } from '@ant-design/pro-layout';
 import type { ProColumns, ActionType } from '@ant-design/pro-table';
@@ -20,6 +20,13 @@ const FileList: React.FC = () => {
   const [showDetail, setShowDetail] = useState<boolean>(false);
   const [enableSearch, setEnableSearch] = useState<boolean>(false);
 
+  const [fileStat, setFileStat] = useState<API.FileStat>({
+    total_size: 0,
+    version: '',
+    num_of_files: 0,
+    num_of_baseid: 0,
+    registry_id: '',
+  });
   const [params, setParams] = useState<API.getApiV1FilesParams>({});
 
   const actionRef = useRef<ActionType>();
@@ -33,6 +40,18 @@ const FileList: React.FC = () => {
     } else {
     }
   };
+
+  useEffect(() => {
+    if (fileStat.total_size === 0 || fileStat.num_of_files === 0) {
+      biominerAPI.GetStat.getStat()
+        .then((res) => {
+          setFileStat(res);
+        })
+        .catch((err) => {
+          console.log(err);
+        });
+    }
+  });
 
   /**
    * @en-US International configuration
@@ -64,8 +83,11 @@ const FileList: React.FC = () => {
       dataIndex: 'guid',
       fixed: 'left',
       copyable: true,
-      width: 200,
-      tip: 'The guid is the unique key',
+      width: 220,
+      tip: intl.formatMessage({
+        id: 'pages.dataRepo.guidTip',
+        defaultMessage: 'A global unique identifier for the file',
+      }),
       render: (dom, entity) => {
         return (
           <a
@@ -84,11 +106,19 @@ const FileList: React.FC = () => {
       dataIndex: 'hashes',
       align: 'center',
       width: 200,
+      tip: intl.formatMessage({
+        id: 'pages.dataRepo.md5sumTip',
+        defaultMessage: 'The MD5 checksum of the file',
+      }),
       render: (dom, entity) => {
         return entity.hashes
           ?.filter((hash) => hash.hash_type === 'md5')
           .map((hash) => {
-            return <Typography.Text copyable>{hash.hash}</Typography.Text>;
+            return (
+              <Typography.Text key={hash.hash} copyable>
+                {hash.hash}
+              </Typography.Text>
+            );
           });
       },
     },
@@ -96,7 +126,11 @@ const FileList: React.FC = () => {
       title: <FormattedMessage id="pages.dataRepo.filename" defaultMessage="File Name" />,
       dataIndex: 'filename',
       copyable: true,
-      width: 200,
+      width: 250,
+      tip: intl.formatMessage({
+        id: 'pages.dataRepo.filenameTip',
+        defaultMessage: 'The name of the file',
+      }),
       align: 'center',
       valueType: 'textarea',
     },
@@ -105,13 +139,49 @@ const FileList: React.FC = () => {
       dataIndex: 'size',
       align: 'center',
       width: 150,
+      tip: intl.formatMessage({
+        id: 'pages.dataRepo.filesizeTip',
+        defaultMessage: 'The size of the file',
+      }),
       sorter: true,
       hideInSearch: true,
       renderText: (val: string) =>
         `${val} ${intl.formatMessage({
-          id: 'pages.dataRepo.bytes',
-          defaultMessage: ' B',
+          id: 'pages.dataRepo.megaBytes',
+          defaultMessage: ' MB',
         })}`,
+    },
+    {
+      title: <FormattedMessage id="pages.dataRepo.tags" defaultMessage="Tags" />,
+      dataIndex: 'tags',
+      align: 'center',
+      width: 200,
+      tip: intl.formatMessage({
+        id: 'pages.dataRepo.tagsTip',
+        defaultMessage: 'The tags of the file',
+      }),
+      hideInTable: true,
+      hideInForm: true,
+      hideInSearch: true,
+      hideInSetting: true,
+      render: (dom, entity) => {
+        return (
+          <Row style={{ display: 'flex', flexDirection: 'row', width: '100%' }}>
+            {entity.tags?.map((tag) => {
+              return (
+                <Col
+                  key={tag.field_name}
+                  span={8}
+                  style={{ marginBottom: '5px', marginRight: '10px' }}
+                >
+                  <Tag>{tag.field_name}</Tag>
+                  <span>{tag.field_value}</span>
+                </Col>
+              );
+            })}
+          </Row>
+        );
+      },
     },
     {
       title: <FormattedMessage id="pages.dataRepo.status" defaultMessage="Status" />,
@@ -119,26 +189,26 @@ const FileList: React.FC = () => {
       width: 100,
       align: 'center',
       hideInForm: true,
+      tip: intl.formatMessage({
+        id: 'pages.dataRepo.statusTip',
+        defaultMessage: 'The status of the file',
+      }),
       valueEnum: {
-        0: {
+        pending: {
           text: <FormattedMessage id="pages.dataRepo.status.pending" defaultMessage="Pending" />,
-          status: 'pending',
         },
-        1: {
+        processing: {
           text: (
             <FormattedMessage id="pages.dataRepo.status.processing" defaultMessage="Processing" />
           ),
-          status: 'processing',
         },
-        2: {
+        validated: {
           text: (
             <FormattedMessage id="pages.dataRepo.status.validated" defaultMessage="Validated" />
           ),
-          status: 'validated',
         },
-        3: {
+        failed: {
           text: <FormattedMessage id="pages.dataRepo.status.failed" defaultMessage="Failed" />,
-          status: 'failed',
         },
       },
     },
@@ -147,6 +217,10 @@ const FileList: React.FC = () => {
       sorter: true,
       align: 'center',
       width: 200,
+      tip: intl.formatMessage({
+        id: 'pages.dataRepo.createdAtTip',
+        defaultMessage: 'The time when the file was created',
+      }),
       hideInSearch: true,
       dataIndex: 'created_at',
       valueType: 'dateTime',
@@ -154,6 +228,10 @@ const FileList: React.FC = () => {
     {
       title: <FormattedMessage id="pages.dataRepo.updatedAt" defaultMessage="Updated At" />,
       dataIndex: 'updated_at',
+      tip: intl.formatMessage({
+        id: 'pages.dataRepo.updatedAtTip',
+        defaultMessage: 'The time when the file was updated',
+      }),
       width: 200,
       align: 'center',
       hideInSearch: true,
@@ -162,6 +240,10 @@ const FileList: React.FC = () => {
     {
       title: <FormattedMessage id="pages.dataRepo.baseid" defaultMessage="BaseId" />,
       dataIndex: 'baseid',
+      tip: intl.formatMessage({
+        id: 'pages.dataRepo.baseidTip',
+        defaultMessage: 'The base id of the file',
+      }),
       width: 200,
       copyable: true,
       align: 'center',
@@ -170,6 +252,10 @@ const FileList: React.FC = () => {
       title: <FormattedMessage id="pages.dataRepo.revision" defaultMessage="Revision" />,
       hideInSearch: true,
       hideInTable: true,
+      tip: intl.formatMessage({
+        id: 'pages.dataRepo.revisionTip',
+        defaultMessage: 'The revision of the file',
+      }),
       width: 100,
       align: 'center',
       dataIndex: 'rev',
@@ -178,31 +264,63 @@ const FileList: React.FC = () => {
       title: <FormattedMessage id="pages.dataRepo.version" defaultMessage="Version" />,
       hideInSearch: true,
       width: 100,
+      tip: intl.formatMessage({
+        id: 'pages.dataRepo.versionTip',
+        defaultMessage: 'The version of the file',
+      }),
       align: 'center',
       dataIndex: 'version',
     },
     {
       title: <FormattedMessage id="pages.dataRepo.uploader" defaultMessage="Uploader" />,
       dataIndex: 'uploader',
+      tip: intl.formatMessage({
+        id: 'pages.dataRepo.uploaderTip',
+        defaultMessage: 'The uploader of the file',
+      }),
       width: 100,
       align: 'center',
     },
     {
       title: <FormattedMessage id="pages.dataRepo.alias" defaultMessage="Alias" />,
       dataIndex: 'aliases',
+      tip: intl.formatMessage({
+        id: 'pages.dataRepo.aliasTip',
+        defaultMessage: 'The alias of the file',
+      }),
       width: 200,
+      hideInSetting: true,
+      hideInDescriptions: true,
       copyable: true,
       align: 'center',
       render: (dom, entity) => {
-        return entity.aliases?.map((alias) => {
-          return <span>{alias.name};</span>;
-        });
+        let alias = entity.aliases ? entity.aliases[0] : undefined;
+        return <span>{alias?.name}</span>;
+      },
+    },
+    {
+      title: <FormattedMessage id="pages.dataRepo.containTag" defaultMessage="Contain Tag?" />,
+      dataIndex: 'contain_tag',
+      width: 100,
+      align: 'center',
+      initialValue: true,
+      hideInTable: true,
+      hideInDescriptions: true,
+      hideInSetting: true,
+      valueEnum: {
+        true: {
+          text: <FormattedMessage id="pages.dataRepo.containTag.true" defaultMessage="Yes" />,
+        },
+        false: {
+          text: <FormattedMessage id="pages.dataRepo.containTag.false" defaultMessage="No" />,
+        },
       },
     },
     {
       title: <FormattedMessage id="pages.dataRepo.containAlias" defaultMessage="Contain Alias?" />,
       dataIndex: 'contain_alias',
       width: 100,
+      initialValue: true,
       align: 'center',
       hideInTable: true,
       hideInDescriptions: true,
@@ -220,6 +338,7 @@ const FileList: React.FC = () => {
       title: <FormattedMessage id="pages.dataRepo.containURL" defaultMessage="Contain URL?" />,
       dataIndex: 'contain_url',
       width: 100,
+      initialValue: true,
       align: 'center',
       hideInTable: true,
       hideInDescriptions: true,
@@ -234,32 +353,12 @@ const FileList: React.FC = () => {
       },
     },
     {
-      title: <FormattedMessage id="pages.dataRepo.hashes" defaultMessage="Hashes" />,
-      dataIndex: 'hashes',
-      align: 'center',
-      width: 200,
-      hideInTable: true,
-      hideInForm: true,
-      hideInSearch: true,
-      hideInSetting: true,
-      render: (dom, entity) => {
-        return (
-          <Row style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-            {entity.hashes?.map((hash) => {
-              return (
-                <Col style={{ marginBottom: '5px' }}>
-                  <Tag>{hash.hash_type}</Tag>
-                  <span>{hash.hash}</span>
-                </Col>
-              );
-            })}
-          </Row>
-        );
-      },
-    },
-    {
       title: <FormattedMessage id="pages.dataRepo.aliases" defaultMessage="Aliases" />,
       dataIndex: 'aliases',
+      tip: intl.formatMessage({
+        id: 'pages.dataRepo.aliasesTip',
+        defaultMessage: 'The aliases of the file',
+      }),
       align: 'center',
       width: 200,
       hideInTable: true,
@@ -271,8 +370,38 @@ const FileList: React.FC = () => {
           <Row style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
             {entity.aliases?.map((alias) => {
               return (
-                <Col style={{ marginBottom: '5px' }}>
+                <Col key={alias.name} style={{ marginBottom: '5px' }}>
                   <Tag>{alias.name}</Tag>
+                </Col>
+              );
+            })}
+          </Row>
+        );
+      },
+    },
+    {
+      title: <FormattedMessage id="pages.dataRepo.hashes" defaultMessage="Hashes" />,
+      dataIndex: 'hashes',
+      tip: intl.formatMessage({
+        id: 'pages.dataRepo.hashesTip',
+        defaultMessage: 'hashes of the file',
+      }),
+      align: 'center',
+      width: 200,
+      hideInTable: true,
+      hideInForm: true,
+      hideInSearch: true,
+      hideInSetting: true,
+      render: (dom, entity) => {
+        return (
+          <Row style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+            {entity.hashes?.map((hash) => {
+              return (
+                <Col key={hash.hash} style={{ marginBottom: '5px' }}>
+                  <Tag>{hash.hash_type}</Tag>
+                  <Typography.Text key={hash.hash} copyable>
+                    {hash.hash}
+                  </Typography.Text>
                 </Col>
               );
             })}
@@ -283,6 +412,10 @@ const FileList: React.FC = () => {
     {
       title: <FormattedMessage id="pages.dataRepo.urls" defaultMessage="URLs" />,
       dataIndex: 'urls',
+      tip: intl.formatMessage({
+        id: 'pages.dataRepo.urlsTip',
+        defaultMessage: 'URLs of the file',
+      }),
       align: 'center',
       width: 200,
       hideInTable: true,
@@ -294,9 +427,11 @@ const FileList: React.FC = () => {
           <Row style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
             {entity.urls?.map((url) => {
               return (
-                <Col style={{ marginBottom: '5px' }}>
+                <Col key={url.url} style={{ marginBottom: '5px' }}>
                   <Tag>{url.uploader}</Tag>
-                  <span>{url.url}</span>
+                  <Typography.Text key={url.url} copyable>
+                    {url.url}
+                  </Typography.Text>
                 </Col>
               );
             })}
@@ -309,7 +444,7 @@ const FileList: React.FC = () => {
       dataIndex: 'actions',
       align: 'center',
       fixed: 'right',
-      width: 200,
+      width: 80,
       valueType: 'option',
       render: (_, entity) => {
         return (
@@ -322,6 +457,7 @@ const FileList: React.FC = () => {
             >
               <FormattedMessage id="pages.dataRepo.view" defaultMessage="View" />
             </a>
+            {/* 
             <Divider type="vertical" />
             <a
               onClick={() => {
@@ -331,6 +467,7 @@ const FileList: React.FC = () => {
             >
               <FormattedMessage id="pages.dataRepo.search" defaultMessage="Search" />
             </a>
+             */}
           </>
         );
       },
@@ -345,6 +482,7 @@ const FileList: React.FC = () => {
       }}
       content={
         <CustomPageHeader
+          fileStat={fileStat}
           setEnableSearch={() => {
             setEnableSearch(!enableSearch);
           }}
@@ -391,7 +529,7 @@ const FileList: React.FC = () => {
               <span>
                 <FormattedMessage id="pages.dataRepo.totalSize" defaultMessage="Total Size" />{' '}
                 {selectedRowsState.reduce((pre, item) => pre + item.size!, 0)}{' '}
-                <FormattedMessage id="pages.dataRepo.bytes" defaultMessage="B" />
+                <FormattedMessage id="pages.dataRepo.megaBytes" defaultMessage="MB" />
               </span>
             </div>
           }
@@ -409,7 +547,7 @@ const FileList: React.FC = () => {
         </FooterToolbar>
       )}
       <Drawer
-        width={800}
+        width={'70%'}
         visible={showDetail}
         onClose={() => {
           setCurrentRow(undefined);
@@ -419,7 +557,8 @@ const FileList: React.FC = () => {
       >
         {currentRow?.guid && (
           <ProDescriptions<API.File>
-            column={2}
+            column={1}
+            bordered
             title={currentRow?.filename}
             request={async () => ({
               data: currentRow || {},

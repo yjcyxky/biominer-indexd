@@ -1,7 +1,33 @@
 declare namespace API {
+  type AddFileAlias = {
+    alias: string;
+  };
+
+  type AddFileHash = {
+    hash: string;
+  };
+
+  type AddFileTag = {
+    field_name: string;
+    field_value: string;
+  };
+
+  type AddFileUrl = {
+    url: string;
+    status?: string;
+    uploader?: string;
+  };
+
   type Alias = {
     id: number;
     name: string;
+  };
+
+  type CreateFile = {
+    filename?: string;
+    uploader?: string;
+    hash: string;
+    size: number;
   };
 
   type File = {
@@ -18,6 +44,7 @@ declare namespace API {
     urls?: URL[];
     hashes?: Hash[];
     aliases?: Alias[];
+    tags?: Tag[];
   };
 
   type FilePage = {
@@ -35,35 +62,32 @@ declare namespace API {
     search_count: boolean;
   };
 
+  type FileStat = {
+    total_size: number;
+    num_of_files: number;
+    num_of_baseid: number;
+    version: string;
+    registry_id: string;
+  };
+
+  type FileTags = {
+    field_names: string[];
+  };
+
   type Hash = {
     id: number;
     hash_type: string;
     hash: string;
   };
 
-  type PostFile = {
-    filename?: string;
-    uploader?: string;
-    hash: string;
-    size: number;
-  };
-
-  type PutFileAlias = {
-    alias: string;
-  };
-
-  type PutFileHash = {
-    hash: string;
-  };
-
-  type PutFileUrl = {
-    url: string;
-    status?: string;
-    uploader?: string;
-  };
-
   type StatusResponse = {
     msg: string;
+  };
+
+  type Tag = {
+    id: number;
+    field_name: string;
+    field_value: string;
   };
 
   type URL = {
@@ -85,19 +109,26 @@ declare namespace API {
     hash?: string;
     alias?: string;
     url?: string;
+    field_name?: string;
+    field_value?: string;
     contain_alias?: boolean;
     contain_url?: boolean;
+    contain_tag?: boolean;
   };
 
-  type putUrlParams = {
+  type putByIdUrlParams = {
     id: string;
   };
 
-  type putAliasParams = {
+  type putByIdAliasParams = {
     id: string;
   };
 
-  type putHashParams = {
+  type putByIdHashParams = {
+    id: string;
+  };
+
+  type putByIdTagParams = {
     id: string;
   };
 }

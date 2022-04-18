@@ -3,7 +3,7 @@
 import { request } from 'umi';
 
 /** 此处后端没有提供注释 POST /api/v1/files */
-export async function postApiV1Files(body: API.PostFile, options?: { [key: string]: any }) {
+export async function postApiV1Files(body: API.CreateFile, options?: { [key: string]: any }) {
   return request<any>('/api/v1/files', {
     method: 'POST',
     headers: {

@@ -1,6 +1,7 @@
 import { Space } from 'antd';
 import { StatisticCard } from '@ant-design/pro-card';
 const { Statistic } = StatisticCard;
+import { useIntl } from 'umi';
 
 export type DataStatisticsCardProps = {
   totalSize: number;
@@ -12,20 +13,35 @@ const DataStatisticsCard: React.FC<DataStatisticsCardProps> = ({
   totalSize,
   version,
   numOfFiles,
-}) => (
-  <StatisticCard
-    statistic={{
-      value: totalSize,
-      suffix: 'GB',
-      description: (
-        <Space>
-          <Statistic title="Version" value={version} />
-          <Statistic title="Files" value={numOfFiles} />
-        </Space>
-      ),
-    }}
-    style={{ width: 268, padding: '0px', textAlign: 'right' }}
-  />
-);
+}) => {
+  const intl = useIntl();
+  return (
+    <StatisticCard
+      statistic={{
+        value: totalSize / 1024,
+        suffix: 'GB',
+        description: (
+          <Space>
+            <Statistic
+              title={intl.formatMessage({
+                id: 'data-repo.data-statistics-card.version',
+                defaultMessage: 'Version',
+              })}
+              value={version}
+            />
+            <Statistic
+              title={intl.formatMessage({
+                id: 'data-repo.data-statistics-card.files',
+                defaultMessage: 'Files',
+              })}
+              value={numOfFiles}
+            />
+          </Space>
+        ),
+      }}
+      style={{ width: 268, padding: '0px', textAlign: 'right' }}
+    />
+  );
+};
 
 export default DataStatisticsCard;

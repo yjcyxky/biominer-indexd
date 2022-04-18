@@ -7,7 +7,7 @@ const Footer: React.FC = () => {
   const intl = useIntl();
   const defaultMessage = intl.formatMessage({
     id: 'app.copyright.produced',
-    defaultMessage: '蚂蚁集团体验技术部出品',
+    defaultMessage: 'BioMiner ©2022 Created by Jingcheng Yang',
   });
 
   const currentYear = new Date().getFullYear();
@@ -19,21 +19,21 @@ const Footer: React.FC = () => {
       copyright={`${currentYear} ${defaultMessage}`}
       links={[
         {
-          key: 'Ant Design Pro',
-          title: 'Ant Design Pro',
-          href: 'https://pro.ant.design',
+          key: 'quartet-data-portal',
+          title: 'Quartet Data Portal',
+          href: 'https://chinese-quartet.org',
           blankTarget: true,
         },
         {
           key: 'github',
           title: <GithubOutlined />,
-          href: 'https://github.com/ant-design/ant-design-pro',
+          href: 'https://github.com/biominer-lab',
           blankTarget: true,
         },
         {
-          key: 'Ant Design',
-          title: 'Ant Design',
-          href: 'https://ant.design',
+          key: 'biominer',
+          title: 'BioMiner',
+          href: 'https://biominer.3steps.cn',
           blankTarget: true,
         },
       ]}

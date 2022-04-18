@@ -1,4 +1,5 @@
-import { ReactNode } from 'react';
+import React, { ReactNode } from 'react';
+import { useIntl } from 'umi';
 import { FileSearchOutlined, ImportOutlined, ShareAltOutlined } from '@ant-design/icons';
 import { Tag, Button, Row, PageHeader } from 'antd';
 import HeaderContent from './HeaderContent';
@@ -12,48 +13,73 @@ const Content = ({ children, extraContent }: { children: ReactNode; extraContent
 );
 
 export type PageHeaderProps = {
+  fileStat: API.FileStat;
   enableSearch: boolean;
   setEnableSearch: (enableSearch: boolean) => void;
 };
 
-const CustomPageHeader: React.FC<PageHeaderProps> = ({ enableSearch, setEnableSearch }) => (
-  <PageHeader
-    title="BioMiner Data Repo"
-    className="datarepo-page-header"
-    subTitle="For Managing and Mining Cancer Associated Omics Data."
-    tags={<Tag color="blue">Running</Tag>}
-    extra={[
-      <Button
-        icon={<FileSearchOutlined />}
-        onClick={() => {
-          setEnableSearch(enableSearch);
-        }}
-        key="3"
-        type="primary"
-      >
-        {enableSearch ? 'Hide Query' : 'Show Query'}
-      </Button>,
-      <Button icon={<ImportOutlined />} key="2" type="primary">
-        Batch Import
-      </Button>,
-      <Button icon={<ShareAltOutlined />} key="1" type="primary">
-        Share
-      </Button>,
-    ]}
-    avatar={{ src: require('@/assets/images/database.png'), shape: 'square' }}
-  >
-    <Content
-      extraContent={
-        <DataStatisticsCard
-          totalSize={1102893}
-          numOfFiles={6000}
-          version={'v20220406'}
-        ></DataStatisticsCard>
-      }
+const CustomPageHeader: React.FC<PageHeaderProps> = (props: PageHeaderProps) => {
+  const intl = useIntl();
+
+  return (
+    <PageHeader
+      title={intl.formatMessage({
+        id: 'data-repo.custom-page-header.title',
+        defaultMessage: 'BioMiner DataRepo',
+      })}
+      className="datarepo-page-header"
+      subTitle={intl.formatMessage({
+        id: 'data-repo.custom-page-header.subtitle',
+        defaultMessage: 'For Managing and Mining Cancer Associated Omics Data.',
+      })}
+      tags={<Tag color="blue">{props.fileStat.registry_id}</Tag>}
+      extra={[
+        <Button
+          icon={<FileSearchOutlined />}
+          onClick={() => {
+            props.setEnableSearch(props.enableSearch);
+          }}
+          key="3"
+          type="primary"
+        >
+          {props.enableSearch
+            ? intl.formatMessage({
+                id: 'data-repo.custom-page-header.hideQuery',
+                defaultMessage: 'Hide Query',
+              })
+            : intl.formatMessage({
+                id: 'data-repo.custom-page-header.showQuery',
+                defaultMessage: 'Show Query',
+              })}
+        </Button>,
+        <Button icon={<ImportOutlined />} key="2" type="primary">
+          {intl.formatMessage({
+            id: 'data-repo.custom-page-header.batchImport',
+            defaultMessage: 'Batch Import',
+          })}
+        </Button>,
+        <Button icon={<ShareAltOutlined />} key="1" type="primary">
+          {intl.formatMessage({
+            id: 'data-repo.custom-page-header.share',
+            defaultMessage: 'Share',
+          })}
+        </Button>,
+      ]}
+      avatar={{ src: require('@/assets/images/database.png'), shape: 'square' }}
     >
-      {HeaderContent}
-    </Content>
-  </PageHeader>
-);
+      <Content
+        extraContent={
+          <DataStatisticsCard
+            totalSize={props.fileStat.total_size}
+            numOfFiles={props.fileStat.num_of_files}
+            version={props.fileStat.version}
+          ></DataStatisticsCard>
+        }
+      >
+        <HeaderContent></HeaderContent>
+      </Content>
+    </PageHeader>
+  );
+};
 
 export default CustomPageHeader;

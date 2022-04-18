@@ -43,3 +43,12 @@ CREATE TABLE IF NOT EXISTS biominer_indexd_config (
   id BIGSERIAL PRIMARY KEY, -- The config's unique identifier
   registry_id VARCHAR(16) NOT NULL UNIQUE -- The registry's unique identifier
 );
+
+CREATE TABLE IF NOT EXISTS biominer_indexd_tag (
+  id BIGSERIAL PRIMARY KEY, -- The tag's unique identifier
+  field_name VARCHAR(128) NOT NULL, -- The name of the field, max 128 characters, e.g. 'project_name', 'patient_id', 'sample_id', etc.
+  field_value VARCHAR(128) NOT NULL, -- The value of the field, max 128 characters, e.g. 'Quartet', '12345', 'ABC123', etc.
+
+  file VARCHAR(64) NOT NULL, -- The file's global unique identifier
+  FOREIGN KEY (file) REFERENCES biominer_indexd_file(guid)
+);

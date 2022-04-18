@@ -1,27 +1,29 @@
+use crate::database::{query_files, Config, File, FilePage, FileStat, FileTags};
 use crate::util;
-use crate::database::{query_files, Config, File, FilePage};
 use log::{debug, info};
 use poem::web::Data;
 use poem_openapi::{
-  Tags,
   param::Path,
   param::Query,
   payload::{Json, PlainText},
-  ApiResponse, Object, OpenApi,
+  ApiResponse, Object, OpenApi, Tags,
 };
 use rbatis::{rbatis::Rbatis, PageRequest};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 #[derive(Tags)]
-enum FileTags {
+enum FileApiTags {
   GetFile,
   ListFiles,
   CreateFile,
   AddUrl,
   AddAlias,
   AddHash,
+  AddTag,
+  ListTags,
   DeleteFile,
+  GetStat,
 }
 
 #[derive(ApiResponse)]
@@ -31,6 +33,24 @@ enum GetResponse {
 
   #[oai(status = 404)]
   NotFound(PlainText<String>),
+}
+
+#[derive(ApiResponse)]
+enum GetTagsResponse {
+  #[oai(status = 200)]
+  Ok(Json<FileTags>),
+
+  #[oai(status = 500)]
+  InternalError(PlainText<String>),
+}
+
+#[derive(ApiResponse)]
+enum GetStatResponse {
+  #[oai(status = 200)]
+  Ok(Json<FileStat>),
+
+  #[oai(status = 500)]
+  InternalError(PlainText<String>),
 }
 
 #[derive(ApiResponse)]
@@ -55,12 +75,16 @@ pub struct FilesApi;
 
 #[OpenApi]
 impl FilesApi {
-  #[oai(path = "/api/v1/files", method = "post", tag = "FileTags::CreateFile")]
+  #[oai(
+    path = "/api/v1/files",
+    method = "post",
+    tag = "FileApiTags::CreateFile"
+  )]
   async fn create_file(
     &self,
     rb: Data<&Arc<Rbatis>>,
     config: Data<&Arc<Config>>,
-    params: Json<PostFile>,
+    params: Json<CreateFile>,
   ) -> PostResponse {
     let rb_arc = rb.clone();
     info!("Creating file with params: {:?}", params);
@@ -91,7 +115,7 @@ impl FilesApi {
     }
   }
 
-  #[oai(path = "/api/v1/files", method = "get", tag = "FileTags::ListFiles")]
+  #[oai(path = "/api/v1/files", method = "get", tag = "FileApiTags::ListFiles")]
   async fn fetch_files(
     &self,
     rb: Data<&Arc<Rbatis>>,
@@ -105,8 +129,11 @@ impl FilesApi {
     hash: Query<Option<String>>,
     alias: Query<Option<String>>,
     url: Query<Option<String>>,
+    field_name: Query<Option<String>>,
+    field_value: Query<Option<String>>,
     contain_alias: Query<Option<bool>>,
     contain_url: Query<Option<bool>>,
+    contain_tag: Query<Option<bool>>,
   ) -> GetResponse {
     let rb_arc = rb.clone();
     let mut rb = rb_arc.acquire().await.unwrap();
@@ -121,8 +148,11 @@ impl FilesApi {
     let hash = hash.clone().unwrap_or_else(|| "".to_string());
     let alias = alias.clone().unwrap_or_else(|| "".to_string());
     let url = url.clone().unwrap_or_else(|| "".to_string());
+    let field_name = field_name.clone().unwrap_or_else(|| "".to_string());
+    let field_value = field_value.clone().unwrap_or_else(|| "".to_string());
     let contain_alias = contain_alias.clone().unwrap_or_else(|| false) as usize;
     let contain_url = contain_url.clone().unwrap_or_else(|| false) as usize;
+    let contain_tag = contain_tag.clone().unwrap_or_else(|| false) as usize;
 
     info!(
       "Query with (guid: {:?}, filename: {:?}, baseid: {:?}, status: {:?}, 
@@ -141,8 +171,11 @@ impl FilesApi {
       &hash,
       &alias,
       &url,
+      &field_name,
+      &field_value,
       &contain_alias,
       &contain_url,
+      &contain_tag,
     )
     .await
     .unwrap();
@@ -151,12 +184,16 @@ impl FilesApi {
     GetResponse::Ok(Json(FilePage::from(files)))
   }
 
-  #[oai(path = "/api/v1/files/:id/url", method = "put", tag = "FileTags::AddUrl")]
+  #[oai(
+    path = "/api/v1/files/:id/url",
+    method = "put",
+    tag = "FileApiTags::AddUrl"
+  )]
   async fn add_url(
     &self,
     rb: Data<&Arc<Rbatis>>,
     id: Path<uuid::Uuid>,
-    params: Json<PutFileUrl>,
+    params: Json<AddFileUrl>,
   ) -> PutResponse {
     let rb_arc = rb.clone();
     info!("Updating file ({:?}) with params: {:?}", id.0, params);
@@ -174,46 +211,110 @@ impl FilesApi {
     };
 
     match File::add_url(&rb_arc, &id.0, &params.url, &uploader, &status).await {
-      Ok(()) => PutResponse::Ok(Json(StatusResponse { msg: "Success".to_string()})),
+      Ok(()) => PutResponse::Ok(Json(StatusResponse {
+        msg: "Success".to_string(),
+      })),
       Err(e) => PutResponse::BadRequest(PlainText(e.to_string())),
     }
   }
 
-  #[oai(path = "/api/v1/files/:id/alias", method = "put", tag = "FileTags::AddAlias")]
+  #[oai(
+    path = "/api/v1/files/:id/alias",
+    method = "put",
+    tag = "FileApiTags::AddAlias"
+  )]
   async fn add_alias(
     &self,
     rb: Data<&Arc<Rbatis>>,
     id: Path<uuid::Uuid>,
-    params: Json<PutFileAlias>,
+    params: Json<AddFileAlias>,
   ) -> PutResponse {
     let rb_arc = rb.clone();
     info!("Updating file ({:?}) with params: {:?}", id.0, params);
 
     match File::add_alias(&rb_arc, &id.0, &params.alias).await {
-      Ok(()) => PutResponse::Ok(Json(StatusResponse { msg: "Success".to_string()})),
+      Ok(()) => PutResponse::Ok(Json(StatusResponse {
+        msg: "Success".to_string(),
+      })),
       Err(e) => PutResponse::BadRequest(PlainText(e.to_string())),
     }
   }
 
-  #[oai(path = "/api/v1/files/:id/hash", method = "put", tag = "FileTags::AddHash")]
+  #[oai(
+    path = "/api/v1/files/:id/hash",
+    method = "put",
+    tag = "FileApiTags::AddHash"
+  )]
   async fn add_hash(
     &self,
     rb: Data<&Arc<Rbatis>>,
     id: Path<uuid::Uuid>,
-    params: Json<PutFileHash>,
+    params: Json<AddFileHash>,
   ) -> PutResponse {
     let rb_arc = rb.clone();
     info!("Updating file ({:?}) with params: {:?}", id.0, params);
 
     match File::add_hash(&rb_arc, &id.0, &params.hash).await {
-      Ok(()) => PutResponse::Ok(Json(StatusResponse { msg: "Success".to_string()})),
+      Ok(()) => PutResponse::Ok(Json(StatusResponse {
+        msg: "Success".to_string(),
+      })),
       Err(e) => PutResponse::BadRequest(PlainText(e.to_string())),
+    }
+  }
+
+  #[oai(
+    path = "/api/v1/files/:id/tag",
+    method = "put",
+    tag = "FileApiTags::AddTag"
+  )]
+  async fn add_tag(
+    &self,
+    rb: Data<&Arc<Rbatis>>,
+    id: Path<uuid::Uuid>,
+    params: Json<AddFileTag>,
+  ) -> PutResponse {
+    let rb_arc = rb.clone();
+    info!("Updating file ({:?}) with params: {:?}", id.0, params);
+
+    match File::add_tag(&rb_arc, &id.0, &params.field_name, &params.field_value).await {
+      Ok(()) => PutResponse::Ok(Json(StatusResponse {
+        msg: "Success".to_string(),
+      })),
+      Err(e) => PutResponse::BadRequest(PlainText(e.to_string())),
+    }
+  }
+
+  #[oai(
+    path = "/api/v1/files/tags",
+    method = "get",
+    tag = "FileApiTags::ListTags"
+  )]
+  async fn list_tags(&self, rb: Data<&Arc<Rbatis>>) -> GetTagsResponse {
+    let rb_arc = rb.clone();
+
+    match FileTags::get_fields(&rb_arc).await {
+      Ok(tags) => GetTagsResponse::Ok(Json(tags)),
+      Err(e) => GetTagsResponse::InternalError(PlainText(e.to_string())),
+    }
+  }
+
+  #[oai(
+    path = "/api/v1/files/stat",
+    method = "get",
+    tag = "FileApiTags::GetStat"
+  )]
+  async fn get_stat(&self, rb: Data<&Arc<Rbatis>>) -> GetStatResponse {
+    let rb_arc = rb.clone();
+
+    match FileStat::get_stat(&rb_arc).await {
+      Ok(stat) => GetStatResponse::Ok(Json(stat)),
+      Err(e) => GetStatResponse::InternalError(PlainText(e.to_string())),
     }
   }
 }
 
 #[derive(Debug, Default, Clone, Serialize, Eq, PartialEq, Deserialize, Object)]
-pub struct PostFile {
+pub struct CreateFile {
   pub filename: Option<String>,
   pub uploader: Option<String>,
   pub hash: String,
@@ -221,20 +322,26 @@ pub struct PostFile {
 }
 
 #[derive(Debug, Default, Clone, Serialize, Eq, PartialEq, Deserialize, Object)]
-pub struct PutFileUrl {
+pub struct AddFileUrl {
   pub url: String,
   pub status: Option<String>,
   pub uploader: Option<String>,
 }
 
 #[derive(Debug, Default, Clone, Serialize, Eq, PartialEq, Deserialize, Object)]
-pub struct PutFileAlias {
+pub struct AddFileAlias {
   pub alias: String,
 }
 
 #[derive(Debug, Default, Clone, Serialize, Eq, PartialEq, Deserialize, Object)]
-pub struct PutFileHash {
+pub struct AddFileHash {
   pub hash: String,
+}
+
+#[derive(Debug, Default, Clone, Serialize, Eq, PartialEq, Deserialize, Object)]
+pub struct AddFileTag {
+  pub field_name: String,
+  pub field_value: String,
 }
 
 #[derive(Debug, Default, Clone, Serialize, Eq, PartialEq, Deserialize, Object)]

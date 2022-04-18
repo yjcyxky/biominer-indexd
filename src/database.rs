@@ -11,6 +11,55 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 use uuid;
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Object)]
+pub struct FileStat {
+  pub total_size: u64,
+  pub num_of_files: u64,
+  pub num_of_baseid: u64,
+  // SELECT REPLACE(CONCAT_WS('', 'v', DATE(TO_TIMESTAMP(updated_at / 1000))), '-', '') FROM biominer_indexd_file ORDER BY updated_at DESC LIMIT 1;
+  pub version: String,
+  pub registry_id: String,
+}
+
+impl FileStat {
+  pub async fn get_stat(rb: &Rbatis) -> Result<FileStat, Error> {
+    let mut executor = rb.as_executor();
+    let stat = executor
+      .fetch(
+        "
+        SELECT 
+          SUM(size)::BIGINT AS total_size, 
+          COUNT (guid)::BIGINT AS num_of_files, 
+          COUNT(DISTINCT(baseid))::BIGINT AS num_of_baseid,
+          (SELECT REPLACE(CONCAT_WS('', 'v', DATE(TO_TIMESTAMP(updated_at / 1000))), '-', '') 
+            FROM biominer_indexd_file ORDER BY updated_at DESC LIMIT 1) AS version,
+          (SELECT registry_id FROM biominer_indexd_config LIMIT 1) AS registry_id
+        FROM biominer_indexd_file",
+        vec![],
+      )
+      .await;
+    stat
+  }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Object)]
+pub struct FileTags {
+  pub field_names: Vec<String>,
+}
+
+impl FileTags {
+  pub async fn get_fields(rb: &Rbatis) -> Result<FileTags, Error> {
+    let mut executor = rb.as_executor();
+    let field_names = executor
+      .fetch(
+        "SELECT DISTINCT(field_name) AS field_names FROM biominer_indexd_tag",
+        vec![],
+      )
+      .await;
+    field_names
+  }
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, Object)]
 pub struct FilePage {
   /// data
@@ -53,6 +102,17 @@ pub struct Hash {
   pub hash_type: String, // Max 16 characters, md5, sha1, sha256, sha512, crc32, crc64, etag, etc
   #[oai(validator(max_length = 128))]
   pub hash: String, // Max 128 characters
+}
+
+#[crud_table(table_name:biominer_indexd_tag)]
+#[derive(Serialize, Deserialize, Debug, Eq, PartialEq, Clone, Object)]
+pub struct Tag {
+  #[oai(read_only)]
+  pub id: u64,
+  #[oai(validator(max_length = 128))]
+  pub field_name: String, // Max 128 characters
+  #[oai(validator(max_length = 128))]
+  pub field_value: String, // Max 128 characters
 }
 
 #[crud_table(table_name:biominer_indexd_alias)]
@@ -146,6 +206,7 @@ pub struct File {
   pub urls: Option<Vec<URL>>,
   pub hashes: Option<Vec<Hash>>,
   pub aliases: Option<Vec<Alias>>,
+  pub tags: Option<Vec<Tag>>,
 }
 
 impl File {
@@ -156,6 +217,7 @@ impl File {
     let now_ms = Utc::now().timestamp_millis();
 
     File {
+      // biominer.fudan-pgx/3ec4d151-061b-4bcb-ad3a-425c712bfc88
       guid: format!("{}.{}/{}", "biominer", registry_id, guid),
       filename: filename.to_string(),
       size: size,
@@ -169,6 +231,7 @@ impl File {
       urls: None,
       hashes: None,
       aliases: None,
+      tags: None,
     }
   }
 
@@ -213,7 +276,7 @@ impl File {
     if v.as_array().unwrap().len() == 1 {
       let v = executor
         .exec(
-          "INSERT INTO biominer_indexd_url (file, url, status, uploader) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING;;",
+          "INSERT INTO biominer_indexd_url (file, url, status, uploader) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING;",
           vec![
             rbson::to_bson(&uuid_str).unwrap(),
             rbson::to_bson(url).unwrap(),
@@ -252,7 +315,7 @@ impl File {
     if v.as_array().unwrap().len() == 1 {
       let v = executor
         .exec(
-          "INSERT INTO biominer_indexd_alias (file, name) VALUES ($1, $2) ON CONFLICT DO NOTHING;;",
+          "INSERT INTO biominer_indexd_alias (file, name) VALUES ($1, $2) ON CONFLICT DO NOTHING;",
           vec![
             rbson::to_bson(&uuid_str).unwrap(),
             rbson::to_bson(alias).unwrap(),
@@ -266,6 +329,52 @@ impl File {
         return Ok(());
       } else {
         info!("Alias {} already exists in file {}.", alias, uuid);
+        return Ok(());
+      }
+    } else {
+      warn!("Cannot find the file {}.", uuid);
+      return Err(Error::from(format!("Cannot find the file with {}", uuid)));
+    }
+  }
+
+  pub async fn add_tag(
+    rb: &Rbatis,
+    uuid: &uuid::Uuid,
+    field_name: &str,
+    field_value: &str,
+  ) -> rbatis::core::Result<()> {
+    let mut executor = rb.as_executor();
+    let uuid_str = uuid.to_string();
+
+    let v: serde_json::Value = executor
+      .fetch(
+        "SELECT * FROM biominer_indexd_alias WHERE file = $1",
+        vec![rbson::to_bson(&uuid_str).unwrap()],
+      )
+      .await
+      .unwrap();
+
+    if v.as_array().unwrap().len() == 1 {
+      let v = executor
+        .exec(
+          "INSERT INTO biominer_indexd_tag (file, field_name, field_value) VALUES ($1, $2, $3) ON CONFLICT (file, field_name, field_value) DO NOTHING;",
+          vec![
+            rbson::to_bson(&uuid_str).unwrap(),
+            rbson::to_bson(field_name).unwrap(),
+            rbson::to_bson(field_value).unwrap(),
+          ],
+        )
+        .await
+        .unwrap();
+
+      if v.rows_affected == 1 {
+        info!(
+          "Add tag \"{}:{}\" to file {}",
+          field_name, field_value, uuid
+        );
+        return Ok(());
+      } else {
+        info!("Tag {} already exists in file {}.", field_name, uuid);
         return Ok(());
       }
     } else {
@@ -297,7 +406,7 @@ impl File {
     if v.as_array().unwrap().len() == 1 {
       let v = executor
         .exec(
-          "INSERT INTO biominer_indexd_hash (file, hash_type, hash) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING;;",
+          "INSERT INTO biominer_indexd_hash (file, hash_type, hash) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING;",
           vec![
             rbson::to_bson(&uuid_str).unwrap(),
             rbson::to_bson(hash_type).unwrap(),
@@ -464,8 +573,11 @@ pub async fn query_files(
   hash: &str,
   alias: &str,
   url: &str,
+  field_name: &str,
+  field_value: &str,
   contain_alias: &usize,
   contain_url: &usize,
+  contain_tag: &usize,
 ) -> Page<File> {
   todo!()
 }
@@ -476,6 +588,7 @@ pub async fn query_file(
   hash: &str,
   contain_alias: &usize,
   contain_url: &usize,
+  contain_tag: &usize,
 ) -> Option<File> {
   let files = query_files(
     rb,
@@ -488,8 +601,11 @@ pub async fn query_file(
     hash,
     "",
     "",
+    "",
+    "",
     contain_alias,
     contain_url,
+    contain_tag,
   )
   .await
   .unwrap();
@@ -535,6 +651,9 @@ mod tests {
       "",
       "",
       "",
+      "",
+      "",
+      &1,
       &1,
       &1,
     )
@@ -547,7 +666,7 @@ mod tests {
   #[tokio::test]
   async fn test_query_file() {
     let rb = init().await;
-    let file = query_file(&mut rb.as_executor(), "abcd", "", &1, &1)
+    let file = query_file(&mut rb.as_executor(), "abcd", "", &1, &1, &1)
       .await
       .unwrap();
 
