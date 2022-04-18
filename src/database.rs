@@ -86,11 +86,17 @@ impl From<rbatis::Page<File>> for FilePage {
 #[crud_table(table_name:biominer_indexd_url)]
 #[derive(Serialize, Deserialize, Debug, Eq, PartialEq, Clone, Object)]
 pub struct URL {
+  #[oai(read_only)]
   pub id: u64,
+  #[oai(validator(max_length = 255))]
   pub url: String,
   pub created_at: i64,
+  #[oai(validator(max_length = 16))]
   pub status: String, // 'pending', 'processing', 'validated', 'failed'
+  #[oai(validator(max_length = 64))]
   pub uploader: String,
+  #[oai(validator(max_length = 64))]
+  pub file: Option<String>,
 }
 
 #[crud_table(table_name:biominer_indexd_hash)]
@@ -102,6 +108,8 @@ pub struct Hash {
   pub hash_type: String, // Max 16 characters, md5, sha1, sha256, sha512, crc32, crc64, etag, etc
   #[oai(validator(max_length = 128))]
   pub hash: String, // Max 128 characters
+  #[oai(validator(max_length = 64))]
+  pub file: Option<String>,
 }
 
 #[crud_table(table_name:biominer_indexd_tag)]
@@ -113,6 +121,8 @@ pub struct Tag {
   pub field_name: String, // Max 128 characters
   #[oai(validator(max_length = 128))]
   pub field_value: String, // Max 128 characters
+  #[oai(validator(max_length = 64))]
+  pub file: Option<String>,
 }
 
 #[crud_table(table_name:biominer_indexd_alias)]
@@ -122,6 +132,8 @@ pub struct Alias {
   pub id: u64,
   #[oai(validator(max_length = 255))]
   pub name: String,
+  #[oai(validator(max_length = 64))]
+  pub file: Option<String>,
 }
 
 #[crud_table(table_name:biominer_indexd_config)]
@@ -210,7 +222,16 @@ pub struct File {
 }
 
 impl File {
-  pub fn new(filename: &str, size: u64, uploader: &str, registry_id: &str) -> Self {
+  pub fn new(
+    filename: &str,
+    size: u64,
+    uploader: &str,
+    registry_id: &str,
+    urls: Option<Vec<URL>>,
+    hashes: Option<Vec<Hash>>,
+    aliases: Option<Vec<Alias>>,
+    tags: Option<Vec<Tag>>,
+  ) -> Self {
     let guid = uuid::Uuid::new_v4().to_string();
     let rev = guid[..8].to_string();
     let baseid = uuid::Uuid::new_v4().to_string();
@@ -228,10 +249,10 @@ impl File {
       uploader: uploader.to_string(),
       rev: rev,
       version: 1,
-      urls: None,
-      hashes: None,
-      aliases: None,
-      tags: None,
+      urls: urls,
+      hashes: hashes,
+      aliases: aliases,
+      tags: tags,
     }
   }
 

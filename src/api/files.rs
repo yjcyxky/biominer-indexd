@@ -24,6 +24,7 @@ enum FileApiTags {
   ListTags,
   DeleteFile,
   GetStat,
+  CreateFiles,
 }
 
 #[derive(ApiResponse)]
@@ -89,12 +90,15 @@ impl FilesApi {
     let rb_arc = rb.clone();
     info!("Creating file with params: {:?}", params);
 
-    let registry_id = config.registry_id.clone();
-    let filename = &params.filename.clone().unwrap_or_else(|| "".to_string());
-    let uploader = &params
-      .uploader
-      .clone()
-      .unwrap_or_else(|| "biominer-admin".to_string());
+    let registry_id = &config.registry_id;
+    let filename = match &params.filename {
+      Some(filename) => filename,
+      None => "",
+    };
+    let uploader = match &params.uploader {
+      Some(uploader) => uploader,
+      None => "biominer-admin",
+    };
     let size = params.size;
 
     let hash = &params.hash;
@@ -108,7 +112,16 @@ impl FilesApi {
       ));
     }
 
-    let mut file = File::new(&filename, size, &uploader, &registry_id);
+    let mut file = File::new(
+      filename,
+      size,
+      uploader,
+      registry_id,
+      None,
+      None,
+      None,
+      None,
+    );
     match file.add(&rb_arc, &hash).await {
       Ok(()) => PostResponse::Ok(Json(file)),
       Err(e) => PostResponse::BadRequest(PlainText(e.to_string())),
@@ -140,16 +153,46 @@ impl FilesApi {
     let page = page.unwrap_or_else(|| 1);
     let page_size = page_size.unwrap_or_else(|| 10);
 
-    let guid = guid.clone().unwrap_or_else(|| "".to_string());
-    let filename = filename.clone().unwrap_or_else(|| "".to_string());
-    let baseid = baseid.clone().unwrap_or_else(|| "".to_string());
-    let status = status.clone().unwrap_or_else(|| "".to_string());
-    let uploader = uploader.clone().unwrap_or_else(|| "".to_string());
-    let hash = hash.clone().unwrap_or_else(|| "".to_string());
-    let alias = alias.clone().unwrap_or_else(|| "".to_string());
-    let url = url.clone().unwrap_or_else(|| "".to_string());
-    let field_name = field_name.clone().unwrap_or_else(|| "".to_string());
-    let field_value = field_value.clone().unwrap_or_else(|| "".to_string());
+    let guid = match &guid.0 {
+      Some(guid) => guid,
+      None => "",
+    };
+    let filename = match &filename.0 {
+      Some(filename) => filename,
+      None => "",
+    };
+    let baseid = match &baseid.0 {
+      Some(baseid) => baseid,
+      None => "",
+    };
+    let status = match &status.0 {
+      Some(status) => status,
+      None => "",
+    };
+    let uploader = match &uploader.0 {
+      Some(uploader) => uploader,
+      None => "",
+    };
+    let hash = match &hash.0 {
+      Some(hash) => hash,
+      None => "",
+    };
+    let alias = match &alias.0 {
+      Some(alias) => alias,
+      None => "",
+    };
+    let url = match &url.0 {
+      Some(url) => url,
+      None => "",
+    };
+    let field_name = match &field_name.0 {
+      Some(field_name) => field_name,
+      None => "",
+    };
+    let field_value = match &field_value.0 {
+      Some(field_value) => field_value,
+      None => "",
+    };
     let contain_alias = contain_alias.clone().unwrap_or_else(|| false) as usize;
     let contain_url = contain_url.clone().unwrap_or_else(|| false) as usize;
     let contain_tag = contain_tag.clone().unwrap_or_else(|| false) as usize;
