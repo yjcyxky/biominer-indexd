@@ -18,7 +18,8 @@ const DataStatisticsCard: React.FC<DataStatisticsCardProps> = ({
   return (
     <StatisticCard
       statistic={{
-        value: totalSize / 1024,
+        // Bytes --> GB
+        value: (totalSize / 1024 / 1024 / 1024).toFixed(3),
         suffix: 'GB',
         description: (
           <Space>

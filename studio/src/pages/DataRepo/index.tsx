@@ -103,7 +103,7 @@ const FileList: React.FC = () => {
     },
     {
       title: <FormattedMessage id="pages.dataRepo.md5sum" defaultMessage="MD5SUM" />,
-      dataIndex: 'hashes',
+      dataIndex: 'hash',
       align: 'center',
       width: 200,
       tip: intl.formatMessage({
@@ -145,10 +145,10 @@ const FileList: React.FC = () => {
       }),
       sorter: true,
       hideInSearch: true,
-      renderText: (val: string) =>
-        `${val} ${intl.formatMessage({
-          id: 'pages.dataRepo.megaBytes',
-          defaultMessage: ' MB',
+      renderText: (val: number) =>
+        `${(val / (1024 * 1024 * 1024)).toFixed(3)} ${intl.formatMessage({
+          id: 'pages.dataRepo.gigaBytes',
+          defaultMessage: 'GB',
         })}`,
     },
     {
@@ -283,7 +283,7 @@ const FileList: React.FC = () => {
     },
     {
       title: <FormattedMessage id="pages.dataRepo.alias" defaultMessage="Alias" />,
-      dataIndex: 'aliases',
+      dataIndex: 'alias',
       tip: intl.formatMessage({
         id: 'pages.dataRepo.aliasTip',
         defaultMessage: 'The alias of the file',
@@ -303,7 +303,7 @@ const FileList: React.FC = () => {
       dataIndex: 'contain_tag',
       width: 100,
       align: 'center',
-      initialValue: true,
+      initialValue: 'false',
       hideInTable: true,
       hideInDescriptions: true,
       hideInSetting: true,
@@ -320,7 +320,7 @@ const FileList: React.FC = () => {
       title: <FormattedMessage id="pages.dataRepo.containAlias" defaultMessage="Contain Alias?" />,
       dataIndex: 'contain_alias',
       width: 100,
-      initialValue: true,
+      initialValue: 'false',
       align: 'center',
       hideInTable: true,
       hideInDescriptions: true,
@@ -338,7 +338,7 @@ const FileList: React.FC = () => {
       title: <FormattedMessage id="pages.dataRepo.containURL" defaultMessage="Contain URL?" />,
       dataIndex: 'contain_url',
       width: 100,
-      initialValue: true,
+      initialValue: 'false',
       align: 'center',
       hideInTable: true,
       hideInDescriptions: true,
@@ -492,10 +492,7 @@ const FileList: React.FC = () => {
     >
       <ProTable<API.File, API.getApiV1FilesParams>
         scroll={{ x: 1500 }}
-        headerTitle={intl.formatMessage({
-          id: 'pages.dataRepo.title',
-          defaultMessage: 'Data Repo',
-        })}
+        pagination={{ position: ['topLeft'] }}
         actionRef={actionRef}
         rowKey="guid"
         search={
@@ -528,8 +525,11 @@ const FileList: React.FC = () => {
               &nbsp;&nbsp;
               <span>
                 <FormattedMessage id="pages.dataRepo.totalSize" defaultMessage="Total Size" />{' '}
-                {selectedRowsState.reduce((pre, item) => pre + item.size!, 0)}{' '}
-                <FormattedMessage id="pages.dataRepo.megaBytes" defaultMessage="MB" />
+                {(
+                  selectedRowsState.reduce((pre, item) => pre + item.size!, 0) /
+                  (1024 * 1024 * 1024)
+                ).toFixed(3)}{' '}
+                <FormattedMessage id="pages.dataRepo.gigaBytes" defaultMessage="GB" />
               </span>
             </div>
           }

@@ -181,8 +181,7 @@ impl Config {
     let configs = configs.as_array().unwrap();
     if configs.len() > 0 {
       warn!(
-        "Config already exists, if you want to change the registry_id, 
-             please rebuild the database first."
+        "Config already exists, if you want to change the registry_id, please rebuild the database first."
       );
       let config: Config = serde_json::from_value(configs[0].clone()).unwrap();
       config

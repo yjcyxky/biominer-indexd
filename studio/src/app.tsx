@@ -53,9 +53,13 @@ export async function getInitialState(): Promise<{
   //     settings: defaultSettings,
   //   };
   // }
+  delete defaultSettings.logo;
   return {
     fetchUserInfo,
-    settings: defaultSettings,
+    settings: {
+      logo: require('@/assets/images/logo.png'),
+      ...defaultSettings,
+    },
   };
 }
 
@@ -64,9 +68,6 @@ export const layout: RunTimeLayoutConfig = ({ initialState, setInitialState }) =
   return {
     rightContentRender: () => <RightContent />,
     disableContentMargin: false,
-    waterMarkProps: {
-      content: initialState?.currentUser?.name,
-    },
     footerRender: () => <Footer />,
     onPageChange: () => {
       const { location } = history;

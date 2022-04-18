@@ -21,7 +21,7 @@ build-all: build-studio build-indexd
 	@printf "\nBuilding...\n"
 
 build-studio:
-	@cd studio && yarn && yarn build:embed && cd ..
+	@cd studio && yarn && yarn openapi && yarn build:embed && cd ..
 
 build-indexd:
 	@cargo build --release
