@@ -12,14 +12,14 @@ jobs:
     steps:
       - name: Fetch repository
         uses: actions/checkout@master
-      - name: Build site assets
-        working-directory: ./studio
+      - name: Build biominer-indexd studio
+        working-directory: ${{ github.workspace }}/studio
         run: pwd
       - uses: borales/actions-yarn@v2.3.0
         with:
           cmd: build:embed
-      - name: Build site assets
-        working-directory: ./studio
+      - name: Build biominer-indexd
+        working-directory: ${{ github.workspace }}
         run: pwd
       - uses: actions-rs/toolchain@v1
         with:
