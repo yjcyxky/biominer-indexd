@@ -14,6 +14,7 @@ jobs:
         uses: actions/checkout@master
       - uses: bahmutov/npm-install@v1
         with:
+          useLockFile: false
           working-directory: studio
       - name: Build studio
         run: cd studio && yarn openapi && yarn build:embed && cd ..
