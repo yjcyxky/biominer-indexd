@@ -12,15 +12,11 @@ jobs:
     steps:
       - name: Fetch repository
         uses: actions/checkout@master
-      - name: Build biominer-indexd studio
-        working-directory: ${{ github.workspace }}/studio
-        run: pwd
-      - uses: borales/actions-yarn@v2.3.0
+      - uses: bahmutov/npm-install@v1
         with:
-          cmd: build:embed
-      - name: Build biominer-indexd
-        working-directory: ${{ github.workspace }}
-        run: pwd
+          working-directory: studio
+      - name: Build studio
+        run: cd studio && yarn openapi && yarn build:embed && cd ..
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
