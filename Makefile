@@ -26,6 +26,12 @@ build-studio:
 build-indexd:
 	@cargo build --release
 
+build-indexd-linux:
+	@cargo build --release --target=x86_64-unknown-linux-gnu
+
+build-linux: build-studio build-indexd-linux
+	@printf "\nBuilding...\n"
+
 build-service:
 	@printf "Building service based on openapi...\n"
 	@curl -H "Accept: application/json" http://localhost:3000/spec -o studio/config/biominer-api.json

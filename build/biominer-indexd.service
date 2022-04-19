@@ -1,0 +1,15 @@
+[Unit]
+Description=BioMiner Indexd Daemon
+After=network.target
+
+[Service]
+EnvironmentFile=/etc/biominer-indexd.conf
+ExecStart=/opt/local/bin/biominer-indexd -H 0.0.0.0 -p 80
+ExecReload=/bin/kill -HUP $MAINPID
+Type=simple
+KillMode=process
+Restart=on-failure
+RestartSec=42s
+
+[Install]
+WantedBy=multi-user.target
