@@ -13,6 +13,7 @@ jobs:
       - name: Fetch repository
         uses: actions/checkout@master
       - uses: borales/actions-yarn@v2.3.0
+        working-directory: ./studio
         with:
           cmd: build:embed
       - uses: actions-rs/toolchain@v1
