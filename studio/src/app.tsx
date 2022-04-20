@@ -13,7 +13,7 @@ const isDev = process.env.NODE_ENV === 'development';
 const loginPath = '/user/login';
 
 export const request: RequestConfig = {
-  timeout: 1000,
+  timeout: 30000,
   // prefix: 'http://localhost:3000', // More details on ./config/proxy.ts
   errorConfig: {},
   middlewares: [],
