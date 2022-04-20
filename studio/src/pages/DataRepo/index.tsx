@@ -21,10 +21,10 @@ const FileList: React.FC = () => {
   const [enableSearch, setEnableSearch] = useState<boolean>(false);
 
   const [fileStat, setFileStat] = useState<API.FileStat>({
-    total_size: 0,
+    total_size: -1,
     version: '',
-    num_of_files: 0,
-    num_of_baseid: 0,
+    num_of_files: -1,
+    num_of_baseid: -1,
     registry_id: '',
   });
   const [params, setParams] = useState<API.getApiV1FilesParams>({});
@@ -42,7 +42,8 @@ const FileList: React.FC = () => {
   };
 
   useEffect(() => {
-    if (fileStat.total_size === 0 || fileStat.num_of_files === 0) {
+    // Avoid request frequently, only request when the data is empty
+    if (fileStat.total_size === -1 || fileStat.num_of_files === -1) {
       biominerAPI.GetStat.getStat()
         .then((res) => {
           setFileStat(res);
