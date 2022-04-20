@@ -643,6 +643,7 @@ pub async fn init_rbatis(database_url: &str) -> Rbatis {
   rb
 }
 
+// TODO: How to set test env?
 #[cfg(test)]
 mod tests {
   use super::{init_rbatis, query_file, query_files};

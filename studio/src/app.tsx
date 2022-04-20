@@ -14,7 +14,7 @@ const loginPath = '/user/login';
 
 export const request: RequestConfig = {
   timeout: 1000,
-  prefix: 'http://localhost:3000',
+  // prefix: 'http://localhost:3000', // More details on ./config/proxy.ts
   errorConfig: {},
   middlewares: [],
   requestInterceptors: [],

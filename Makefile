@@ -17,9 +17,6 @@ clean-test-db:
 	@printf "Clean "
 	@-docker rm biominer-indexd
 
-build-all: build-studio build-indexd
-	@printf "\nBuilding...\n"
-
 build-studio:
 	@cd studio && yarn && yarn openapi && yarn build:embed && cd ..
 
@@ -27,11 +24,15 @@ build-indexd:
 	@cargo build --release
 
 build-indexd-linux:
-	@cargo build --release --target=x86_64-unknown-linux-gnu
+	@cargo build --release --target=x86_64-unknown-linux-musl
+
+build-mac: build-studio build-indexd
+	@printf "\nBuilding...\n"
 
 build-linux: build-studio build-indexd-linux
 	@printf "\nBuilding...\n"
 
+# You must run `make build-service` to build new api spec for studio when you change the api spec
 build-service:
 	@printf "Building service based on openapi...\n"
 	@curl -H "Accept: application/json" http://localhost:3000/spec -o studio/config/biominer-api.json
