@@ -84,9 +84,10 @@ struct Opt {
   #[structopt(name = "database-url", short = "d", long = "database-url")]
   database_url: Option<String>,
 
+  /// The path of the repo config file.
   #[structopt(
     name = "config",
-    short = "r",
+    short = "c",
     long = "config",
     default_value = "/etc/indexd.json"
   )]
@@ -137,7 +138,7 @@ async fn main() -> Result<(), std::io::Error> {
   let indexd_repo_config = match RepoConfig::read_config(&config_path) {
     Ok(v) => v,
     Err(e) => {
-      error!("{}", e);
+      error!("{}: {}", e, config_path);
       std::process::exit(1);
     }
   };

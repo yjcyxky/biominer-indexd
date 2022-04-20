@@ -267,7 +267,7 @@ impl File {
   }
 
   pub async fn get_file(rb: &Rbatis, id: &uuid::Uuid) -> Result<Page<File>, Error> {
-    let guid = id.to_string();
+    let guid = format!("biominer.{}/{}", Config::get_registry_id(), id);
     query_files(
       &mut rb.as_executor(),
       &PageRequest::new(1, 1),
@@ -310,12 +310,12 @@ impl File {
     status: &str,
   ) -> rbatis::core::Result<()> {
     let mut executor = rb.as_executor();
-    let uuid_str = uuid.to_string();
+    let guid = format!("biominer.{}/{}", Config::get_registry_id(), uuid);
 
     let v: serde_json::Value = executor
       .fetch(
         "SELECT * FROM biominer_indexd_url WHERE file = $1",
-        vec![rbson::to_bson(&uuid_str).unwrap()],
+        vec![rbson::to_bson(&guid).unwrap()],
       )
       .await
       .unwrap();
@@ -331,7 +331,7 @@ impl File {
         .exec(
           "INSERT INTO biominer_indexd_url (file, url, status, uploader) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING;",
           vec![
-            rbson::to_bson(&uuid_str).unwrap(),
+            rbson::to_bson(&guid).unwrap(),
             rbson::to_bson(url).unwrap(),
             rbson::to_bson(&status).unwrap(),
             rbson::to_bson(uploader).unwrap(),
@@ -341,26 +341,26 @@ impl File {
         .unwrap();
 
       if v.rows_affected == 1 {
-        info!("Add url {} to file {}", url, uuid);
+        info!("Add url {} to file {}", url, guid);
         return Ok(());
       } else {
-        info!("Url {} already exists in file {}.", url, uuid);
+        info!("Url {} already exists in file {}.", url, guid);
         return Ok(());
       }
     } else {
-      warn!("Cannot find the file {}.", uuid);
-      return Err(Error::from(format!("Cannot find the file with {}", uuid)));
+      warn!("Cannot find the file {}.", guid);
+      return Err(Error::from(format!("Cannot find the file with {}", guid)));
     }
   }
 
   pub async fn add_alias(rb: &Rbatis, uuid: &uuid::Uuid, alias: &str) -> rbatis::core::Result<()> {
     let mut executor = rb.as_executor();
-    let uuid_str = uuid.to_string();
+    let guid = format!("biominer.{}/{}", Config::get_registry_id(), uuid);
 
     let v: serde_json::Value = executor
       .fetch(
         "SELECT * FROM biominer_indexd_alias WHERE file = $1",
-        vec![rbson::to_bson(&uuid_str).unwrap()],
+        vec![rbson::to_bson(&guid).unwrap()],
       )
       .await
       .unwrap();
@@ -370,7 +370,7 @@ impl File {
         .exec(
           "INSERT INTO biominer_indexd_alias (file, name) VALUES ($1, $2) ON CONFLICT DO NOTHING;",
           vec![
-            rbson::to_bson(&uuid_str).unwrap(),
+            rbson::to_bson(&guid).unwrap(),
             rbson::to_bson(alias).unwrap(),
           ],
         )
@@ -378,15 +378,15 @@ impl File {
         .unwrap();
 
       if v.rows_affected == 1 {
-        info!("Add alias {} to file {}", alias, uuid);
+        info!("Add alias {} to file {}", alias, guid);
         return Ok(());
       } else {
-        info!("Alias {} already exists in file {}.", alias, uuid);
+        info!("Alias {} already exists in file {}.", alias, guid);
         return Ok(());
       }
     } else {
-      warn!("Cannot find the file {}.", uuid);
-      return Err(Error::from(format!("Cannot find the file with {}", uuid)));
+      warn!("Cannot find the file {}.", guid);
+      return Err(Error::from(format!("Cannot find the file with {}", guid)));
     }
   }
 
@@ -397,12 +397,12 @@ impl File {
     field_value: &str,
   ) -> rbatis::core::Result<()> {
     let mut executor = rb.as_executor();
-    let uuid_str = uuid.to_string();
+    let guid = format!("biominer.{}/{}", Config::get_registry_id(), uuid);
 
     let v: serde_json::Value = executor
       .fetch(
         "SELECT * FROM biominer_indexd_alias WHERE file = $1",
-        vec![rbson::to_bson(&uuid_str).unwrap()],
+        vec![rbson::to_bson(&guid).unwrap()],
       )
       .await
       .unwrap();
@@ -412,7 +412,7 @@ impl File {
         .exec(
           "INSERT INTO biominer_indexd_tag (file, field_name, field_value) VALUES ($1, $2, $3) ON CONFLICT (file, field_name, field_value) DO NOTHING;",
           vec![
-            rbson::to_bson(&uuid_str).unwrap(),
+            rbson::to_bson(&guid).unwrap(),
             rbson::to_bson(field_name).unwrap(),
             rbson::to_bson(field_value).unwrap(),
           ],
@@ -423,27 +423,27 @@ impl File {
       if v.rows_affected == 1 {
         info!(
           "Add tag \"{}:{}\" to file {}",
-          field_name, field_value, uuid
+          field_name, field_value, guid
         );
         return Ok(());
       } else {
-        info!("Tag {} already exists in file {}.", field_name, uuid);
+        info!("Tag {} already exists in file {}.", field_name, guid);
         return Ok(());
       }
     } else {
-      warn!("Cannot find the file {}.", uuid);
-      return Err(Error::from(format!("Cannot find the file with {}", uuid)));
+      warn!("Cannot find the file {}.", guid);
+      return Err(Error::from(format!("Cannot find the file with {}", guid)));
     }
   }
 
   pub async fn add_hash(rb: &Rbatis, uuid: &uuid::Uuid, hash: &str) -> rbatis::core::Result<()> {
     let mut executor = rb.as_executor();
-    let uuid_str = uuid.to_string();
+    let guid = format!("biominer.{}/{}", Config::get_registry_id(), uuid);
 
     let v: serde_json::Value = executor
       .fetch(
         "SELECT * FROM biominer_indexd_alias WHERE file = $1",
-        vec![rbson::to_bson(&uuid_str).unwrap()],
+        vec![rbson::to_bson(&guid).unwrap()],
       )
       .await
       .unwrap();
@@ -461,7 +461,7 @@ impl File {
         .exec(
           "INSERT INTO biominer_indexd_hash (file, hash_type, hash) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING;",
           vec![
-            rbson::to_bson(&uuid_str).unwrap(),
+            rbson::to_bson(&guid).unwrap(),
             rbson::to_bson(hash_type).unwrap(),
             rbson::to_bson(hash).unwrap(),
           ],

@@ -263,7 +263,7 @@ impl FilesApi {
     let guid = id.0.to_string();
     info!("Get file ({:?}) with params", guid);
 
-    match File::get_file(&rb, &id).await {
+    match File::get_file(&rb_arc, &id).await {
       Ok(files) => {
         if files.total == 0 {
           return GetFileResponse::NotFound(PlainText("File not found.".to_string()));
@@ -298,7 +298,7 @@ impl FilesApi {
     };
     info!("Sign file {:?}", guid);
 
-    match File::get_file(&rb, &id).await {
+    match File::get_file(&rb_arc, &id).await {
       Ok(files) => {
         if files.total == 0 {
           return PostSignResponse::NotFound(PlainText("File not found.".to_string()));
