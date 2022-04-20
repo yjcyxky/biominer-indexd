@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Object)]
-pub struct FileStat {
+pub struct FileStatResponse {
   pub total_size: u64,
   pub num_of_files: u64,
   pub num_of_baseid: u64,
@@ -21,8 +21,8 @@ pub struct FileStat {
   pub registry_id: String,
 }
 
-impl FileStat {
-  pub async fn get_stat(rb: &Rbatis) -> Result<FileStat, Error> {
+impl FileStatResponse {
+  pub async fn get_stat(rb: &Rbatis) -> Result<FileStatResponse, Error> {
     let mut executor = rb.as_executor();
     // Database will return null when the table is empty, COALESCE will return 0/'' if the first argument is null
     let stat = executor
@@ -44,12 +44,12 @@ impl FileStat {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Object)]
-pub struct FileTags {
+pub struct FileTagsResponse {
   pub field_names: Vec<String>,
 }
 
-impl FileTags {
-  pub async fn get_fields(rb: &Rbatis) -> Result<FileTags, Error> {
+impl FileTagsResponse {
+  pub async fn get_fields(rb: &Rbatis) -> Result<FileTagsResponse, Error> {
     let mut executor = rb.as_executor();
     let field_names = executor
       .fetch(
@@ -62,7 +62,7 @@ impl FileTags {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, Object)]
-pub struct FilePage {
+pub struct FilePageResponse {
   /// data
   pub records: Vec<File>,
   /// total num
@@ -77,7 +77,7 @@ pub struct FilePage {
   pub search_count: bool,
 }
 
-impl From<rbatis::Page<File>> for FilePage {
+impl From<rbatis::Page<File>> for FilePageResponse {
   fn from(page: rbatis::Page<File>) -> Self {
     let serialised = serde_json::to_string(&page).unwrap();
     serde_json::from_str(&serialised).unwrap()

@@ -44,7 +44,7 @@ const FileList: React.FC = () => {
   useEffect(() => {
     // Avoid request frequently, only request when the data is empty
     if (fileStat.total_size === -1 || fileStat.num_of_files === -1) {
-      biominerAPI.GetStat.getStat()
+      biominerAPI.Files.getStat()
         .then((res) => {
           setFileStat(res);
         })
@@ -68,7 +68,7 @@ const FileList: React.FC = () => {
     let { current, pageSize, ...newParams } = params;
     newParams['page'] = current ? current : 1;
     newParams['page_size'] = pageSize ? pageSize : 10;
-    let response = await biominerAPI.ListFiles.getApiV1Files(newParams);
+    let response = await biominerAPI.Files.getApiV1Files(newParams);
     return {
       data: response.records,
       total: response.total,

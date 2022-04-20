@@ -1,4 +1,6 @@
-use crate::database::{query_files, Config, File, FilePage, FileStat, FileTags};
+use crate::database::{
+  query_files, Config, File, FilePageResponse, FileStatResponse, FileTagsResponse,
+};
 use crate::util;
 use log::{debug, info};
 use poem::web::Data;
@@ -14,23 +16,14 @@ use std::sync::Arc;
 
 #[derive(Tags)]
 enum FileApiTags {
-  GetFile,
-  ListFiles,
-  CreateFile,
-  AddUrl,
-  AddAlias,
-  AddHash,
-  AddTag,
-  ListTags,
-  DeleteFile,
-  GetStat,
-  CreateFiles,
+  Files,
+  File,
 }
 
 #[derive(ApiResponse)]
 enum GetResponse {
   #[oai(status = 200)]
-  Ok(Json<FilePage>),
+  Ok(Json<FilePageResponse>),
 
   #[oai(status = 404)]
   NotFound(PlainText<String>),
@@ -39,7 +32,7 @@ enum GetResponse {
 #[derive(ApiResponse)]
 enum GetTagsResponse {
   #[oai(status = 200)]
-  Ok(Json<FileTags>),
+  Ok(Json<FileTagsResponse>),
 
   #[oai(status = 500)]
   InternalError(PlainText<String>),
@@ -48,7 +41,7 @@ enum GetTagsResponse {
 #[derive(ApiResponse)]
 enum GetStatResponse {
   #[oai(status = 200)]
-  Ok(Json<FileStat>),
+  Ok(Json<FileStatResponse>),
 
   #[oai(status = 500)]
   InternalError(PlainText<String>),
@@ -57,7 +50,7 @@ enum GetStatResponse {
 #[derive(ApiResponse)]
 enum PutResponse {
   #[oai(status = 201)]
-  Ok(Json<StatusResponse>),
+  Ok(Json<MessageResponse>),
 
   #[oai(status = 400)]
   BadRequest(PlainText<String>),
@@ -76,11 +69,7 @@ pub struct FilesApi;
 
 #[OpenApi]
 impl FilesApi {
-  #[oai(
-    path = "/api/v1/files",
-    method = "post",
-    tag = "FileApiTags::CreateFile"
-  )]
+  #[oai(path = "/api/v1/files", method = "post", tag = "FileApiTags::Files", operation_id = "createFile")]
   async fn create_file(
     &self,
     rb: Data<&Arc<Rbatis>>,
@@ -128,7 +117,7 @@ impl FilesApi {
     }
   }
 
-  #[oai(path = "/api/v1/files", method = "get", tag = "FileApiTags::ListFiles")]
+  #[oai(path = "/api/v1/files", method = "get", tag = "FileApiTags::Files", operation_id = "fetchFiles")]
   async fn fetch_files(
     &self,
     rb: Data<&Arc<Rbatis>>,
@@ -224,13 +213,14 @@ impl FilesApi {
     .unwrap();
 
     debug!("Files: {:?}", files);
-    GetResponse::Ok(Json(FilePage::from(files)))
+    GetResponse::Ok(Json(FilePageResponse::from(files)))
   }
 
   #[oai(
     path = "/api/v1/files/:id/url",
     method = "put",
-    tag = "FileApiTags::AddUrl"
+    tag = "FileApiTags::File",
+    operation_id = "addUrlToFile"
   )]
   async fn add_url(
     &self,
@@ -254,7 +244,7 @@ impl FilesApi {
     };
 
     match File::add_url(&rb_arc, &id.0, &params.url, &uploader, &status).await {
-      Ok(()) => PutResponse::Ok(Json(StatusResponse {
+      Ok(()) => PutResponse::Ok(Json(MessageResponse {
         msg: "Success".to_string(),
       })),
       Err(e) => PutResponse::BadRequest(PlainText(e.to_string())),
@@ -264,7 +254,8 @@ impl FilesApi {
   #[oai(
     path = "/api/v1/files/:id/alias",
     method = "put",
-    tag = "FileApiTags::AddAlias"
+    tag = "FileApiTags::File",
+    operation_id = "addAliasToFile"
   )]
   async fn add_alias(
     &self,
@@ -276,7 +267,7 @@ impl FilesApi {
     info!("Updating file ({:?}) with params: {:?}", id.0, params);
 
     match File::add_alias(&rb_arc, &id.0, &params.alias).await {
-      Ok(()) => PutResponse::Ok(Json(StatusResponse {
+      Ok(()) => PutResponse::Ok(Json(MessageResponse {
         msg: "Success".to_string(),
       })),
       Err(e) => PutResponse::BadRequest(PlainText(e.to_string())),
@@ -286,7 +277,8 @@ impl FilesApi {
   #[oai(
     path = "/api/v1/files/:id/hash",
     method = "put",
-    tag = "FileApiTags::AddHash"
+    tag = "FileApiTags::File",
+    operation_id = "addHashToFile"
   )]
   async fn add_hash(
     &self,
@@ -298,7 +290,7 @@ impl FilesApi {
     info!("Updating file ({:?}) with params: {:?}", id.0, params);
 
     match File::add_hash(&rb_arc, &id.0, &params.hash).await {
-      Ok(()) => PutResponse::Ok(Json(StatusResponse {
+      Ok(()) => PutResponse::Ok(Json(MessageResponse {
         msg: "Success".to_string(),
       })),
       Err(e) => PutResponse::BadRequest(PlainText(e.to_string())),
@@ -308,7 +300,8 @@ impl FilesApi {
   #[oai(
     path = "/api/v1/files/:id/tag",
     method = "put",
-    tag = "FileApiTags::AddTag"
+    tag = "FileApiTags::File",
+    operation_id = "addTagToFile"
   )]
   async fn add_tag(
     &self,
@@ -320,7 +313,7 @@ impl FilesApi {
     info!("Updating file ({:?}) with params: {:?}", id.0, params);
 
     match File::add_tag(&rb_arc, &id.0, &params.field_name, &params.field_value).await {
-      Ok(()) => PutResponse::Ok(Json(StatusResponse {
+      Ok(()) => PutResponse::Ok(Json(MessageResponse {
         msg: "Success".to_string(),
       })),
       Err(e) => PutResponse::BadRequest(PlainText(e.to_string())),
@@ -330,12 +323,13 @@ impl FilesApi {
   #[oai(
     path = "/api/v1/files/tags",
     method = "get",
-    tag = "FileApiTags::ListTags"
+    tag = "FileApiTags::Files",
+    operation_id = "getTags"
   )]
   async fn list_tags(&self, rb: Data<&Arc<Rbatis>>) -> GetTagsResponse {
     let rb_arc = rb.clone();
 
-    match FileTags::get_fields(&rb_arc).await {
+    match FileTagsResponse::get_fields(&rb_arc).await {
       Ok(tags) => GetTagsResponse::Ok(Json(tags)),
       Err(e) => GetTagsResponse::InternalError(PlainText(e.to_string())),
     }
@@ -344,12 +338,13 @@ impl FilesApi {
   #[oai(
     path = "/api/v1/files/stat",
     method = "get",
-    tag = "FileApiTags::GetStat"
+    tag = "FileApiTags::Files",
+    operation_id = "getFileStat"
   )]
   async fn get_stat(&self, rb: Data<&Arc<Rbatis>>) -> GetStatResponse {
     let rb_arc = rb.clone();
 
-    match FileStat::get_stat(&rb_arc).await {
+    match FileStatResponse::get_stat(&rb_arc).await {
       Ok(stat) => GetStatResponse::Ok(Json(stat)),
       Err(e) => GetStatResponse::InternalError(PlainText(e.to_string())),
     }
@@ -388,6 +383,6 @@ pub struct AddFileTag {
 }
 
 #[derive(Debug, Default, Clone, Serialize, Eq, PartialEq, Deserialize, Object)]
-pub struct StatusResponse {
+pub struct MessageResponse {
   pub msg: String,
 }

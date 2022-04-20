@@ -21,6 +21,7 @@ declare namespace API {
   type Alias = {
     id: number;
     name: string;
+    file?: string;
   };
 
   type CreateFile = {
@@ -47,7 +48,7 @@ declare namespace API {
     tags?: Tag[];
   };
 
-  type FilePage = {
+  type FilePageResponse = {
     /** data */
     records: File[];
     /** total num */
@@ -62,7 +63,7 @@ declare namespace API {
     search_count: boolean;
   };
 
-  type FileStat = {
+  type FileStatResponse = {
     total_size: number;
     num_of_files: number;
     num_of_baseid: number;
@@ -70,7 +71,7 @@ declare namespace API {
     registry_id: string;
   };
 
-  type FileTags = {
+  type FileTagsResponse = {
     field_names: string[];
   };
 
@@ -78,9 +79,10 @@ declare namespace API {
     id: number;
     hash_type: string;
     hash: string;
+    file?: string;
   };
 
-  type StatusResponse = {
+  type MessageResponse = {
     msg: string;
   };
 
@@ -88,6 +90,7 @@ declare namespace API {
     id: number;
     field_name: string;
     field_value: string;
+    file?: string;
   };
 
   type URL = {
@@ -96,9 +99,10 @@ declare namespace API {
     created_at: number;
     status: string;
     uploader: string;
+    file?: string;
   };
 
-  type getApiV1FilesParams = {
+  type fetchFilesParams = {
     page?: number;
     page_size?: number;
     guid?: string;
@@ -116,19 +120,19 @@ declare namespace API {
     contain_tag?: boolean;
   };
 
-  type putByIdUrlParams = {
+  type addUrlToFileParams = {
     id: string;
   };
 
-  type putByIdAliasParams = {
+  type addAliasToFileParams = {
     id: string;
   };
 
-  type putByIdHashParams = {
+  type addHashToFileParams = {
     id: string;
   };
 
-  type putByIdTagParams = {
+  type addTagToFileParams = {
     id: string;
   };
 }

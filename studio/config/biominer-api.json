@@ -16,41 +16,17 @@
   ],
   "tags": [
     {
-      "name": "AddAlias"
+      "name": "File"
     },
     {
-      "name": "AddHash"
-    },
-    {
-      "name": "AddTag"
-    },
-    {
-      "name": "AddUrl"
-    },
-    {
-      "name": "CreateFile"
-    },
-    {
-      "name": "DeleteFile"
-    },
-    {
-      "name": "GetFile"
-    },
-    {
-      "name": "GetStat"
-    },
-    {
-      "name": "ListFiles"
-    },
-    {
-      "name": "ListTags"
+      "name": "Files"
     }
   ],
   "paths": {
     "/api/v1/files": {
       "post": {
         "tags": [
-          "CreateFile"
+          "Files"
         ],
         "requestBody": {
           "content": {
@@ -83,11 +59,12 @@
               }
             }
           }
-        }
+        },
+        "operationId": "createFile"
       },
       "get": {
         "tags": [
-          "ListFiles"
+          "Files"
         ],
         "parameters": [
           {
@@ -234,7 +211,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FilePage"
+                  "$ref": "#/components/schemas/FilePageResponse"
                 }
               }
             }
@@ -249,13 +226,14 @@
               }
             }
           }
-        }
+        },
+        "operationId": "fetchFiles"
       }
     },
     "/api/v1/files/{id}/url": {
       "put": {
         "tags": [
-          "AddUrl"
+          "File"
         ],
         "parameters": [
           {
@@ -285,7 +263,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/StatusResponse"
+                  "$ref": "#/components/schemas/MessageResponse"
                 }
               }
             }
@@ -300,13 +278,14 @@
               }
             }
           }
-        }
+        },
+        "operationId": "addUrlToFile"
       }
     },
     "/api/v1/files/{id}/alias": {
       "put": {
         "tags": [
-          "AddAlias"
+          "File"
         ],
         "parameters": [
           {
@@ -336,7 +315,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/StatusResponse"
+                  "$ref": "#/components/schemas/MessageResponse"
                 }
               }
             }
@@ -351,13 +330,14 @@
               }
             }
           }
-        }
+        },
+        "operationId": "addAliasToFile"
       }
     },
     "/api/v1/files/{id}/hash": {
       "put": {
         "tags": [
-          "AddHash"
+          "File"
         ],
         "parameters": [
           {
@@ -387,7 +367,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/StatusResponse"
+                  "$ref": "#/components/schemas/MessageResponse"
                 }
               }
             }
@@ -402,13 +382,14 @@
               }
             }
           }
-        }
+        },
+        "operationId": "addHashToFile"
       }
     },
     "/api/v1/files/{id}/tag": {
       "put": {
         "tags": [
-          "AddTag"
+          "File"
         ],
         "parameters": [
           {
@@ -438,7 +419,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/StatusResponse"
+                  "$ref": "#/components/schemas/MessageResponse"
                 }
               }
             }
@@ -453,13 +434,14 @@
               }
             }
           }
-        }
+        },
+        "operationId": "addTagToFile"
       }
     },
     "/api/v1/files/tags": {
       "get": {
         "tags": [
-          "ListTags"
+          "Files"
         ],
         "responses": {
           "200": {
@@ -467,7 +449,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FileTags"
+                  "$ref": "#/components/schemas/FileTagsResponse"
                 }
               }
             }
@@ -482,13 +464,14 @@
               }
             }
           }
-        }
+        },
+        "operationId": "getTags"
       }
     },
     "/api/v1/files/stat": {
       "get": {
         "tags": [
-          "GetStat"
+          "Files"
         ],
         "responses": {
           "200": {
@@ -496,7 +479,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FileStat"
+                  "$ref": "#/components/schemas/FileStatResponse"
                 }
               }
             }
@@ -511,7 +494,8 @@
               }
             }
           }
-        }
+        },
+        "operationId": "getFileStat"
       }
     }
   },
@@ -586,6 +570,10 @@
           "name": {
             "type": "string",
             "maxLength": 255
+          },
+          "file": {
+            "type": "string",
+            "maxLength": 64
           }
         }
       },
@@ -686,7 +674,7 @@
           }
         }
       },
-      "FilePage": {
+      "FilePageResponse": {
         "type": "object",
         "required": [
           "records",
@@ -730,7 +718,7 @@
           }
         }
       },
-      "FileStat": {
+      "FileStatResponse": {
         "type": "object",
         "required": [
           "total_size",
@@ -760,7 +748,7 @@
           }
         }
       },
-      "FileTags": {
+      "FileTagsResponse": {
         "type": "object",
         "required": [
           "field_names"
@@ -794,10 +782,14 @@
           "hash": {
             "type": "string",
             "maxLength": 128
+          },
+          "file": {
+            "type": "string",
+            "maxLength": 64
           }
         }
       },
-      "StatusResponse": {
+      "MessageResponse": {
         "type": "object",
         "required": [
           "msg"
@@ -828,6 +820,10 @@
           "field_value": {
             "type": "string",
             "maxLength": 128
+          },
+          "file": {
+            "type": "string",
+            "maxLength": 64
           }
         }
       },
@@ -843,20 +839,28 @@
         "properties": {
           "id": {
             "type": "integer",
-            "format": "uint64"
+            "format": "uint64",
+            "readOnly": true
           },
           "url": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 255
           },
           "created_at": {
             "type": "integer",
             "format": "int64"
           },
           "status": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 16
           },
           "uploader": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 64
+          },
+          "file": {
+            "type": "string",
+            "maxLength": 64
           }
         }
       }
