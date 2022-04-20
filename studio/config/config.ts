@@ -9,6 +9,7 @@ import routes from './routes';
 const { REACT_APP_ENV } = process.env;
 
 export default defineConfig({
+  history: { type: 'hash' },
   hash: true,
   antd: {},
   dva: {
@@ -73,5 +74,5 @@ export default defineConfig({
   nodeModulesTransform: { type: 'none' },
   mfsu: {},
   webpack5: {},
-  exportStatic: {},
+  exportStatic: {}
 });
