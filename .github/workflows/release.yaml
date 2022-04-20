@@ -24,7 +24,7 @@ jobs:
       - name: Configure environment
         id: config
         run: |
-          VERSION=$(echo $GITHUB_REF | sed -e "s/^refs\/tags\/v//")
+          VERSION=$(echo $GITHUB_REF | sed -e "s/^refs\/tags\///")
           sed -i "s/0.1.0/$VERSION/g" Cargo.toml
           echo ::set-output name=version::$VERSION
       - uses: actions-rs/cargo@v1
