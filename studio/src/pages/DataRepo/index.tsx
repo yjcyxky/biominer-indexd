@@ -20,14 +20,14 @@ const FileList: React.FC = () => {
   const [showDetail, setShowDetail] = useState<boolean>(false);
   const [enableSearch, setEnableSearch] = useState<boolean>(false);
 
-  const [fileStat, setFileStat] = useState<API.FileStat>({
+  const [fileStat, setFileStat] = useState<API.FileStatResponse>({
     total_size: -1,
     version: '',
     num_of_files: -1,
     num_of_baseid: -1,
     registry_id: '',
   });
-  const [params, setParams] = useState<API.getApiV1FilesParams>({});
+  const [params, setParams] = useState<API.fetchFilesParams>({});
 
   const actionRef = useRef<ActionType>();
   const [currentRow, setCurrentRow] = useState<API.File>();
@@ -44,7 +44,7 @@ const FileList: React.FC = () => {
   useEffect(() => {
     // Avoid request frequently, only request when the data is empty
     if (fileStat.total_size === -1 || fileStat.num_of_files === -1) {
-      biominerAPI.Files.getStat()
+      biominerAPI.Files.getFileStat()
         .then((res) => {
           setFileStat(res);
         })
@@ -61,14 +61,14 @@ const FileList: React.FC = () => {
   const intl = useIntl();
 
   const ListFiles = async (
-    params: API.getApiV1FilesParams & { current?: number; pageSize?: number },
+    params: API.fetchFilesParams & { current?: number; pageSize?: number },
     sort: Record<string, SortOrder>,
     filter: Record<string, React.ReactText[] | null>,
   ) => {
     let { current, pageSize, ...newParams } = params;
     newParams['page'] = current ? current : 1;
     newParams['page_size'] = pageSize ? pageSize : 10;
-    let response = await biominerAPI.Files.getApiV1Files(newParams);
+    let response = await biominerAPI.Files.fetchFiles(newParams);
     return {
       data: response.records,
       total: response.total,
@@ -491,7 +491,7 @@ const FileList: React.FC = () => {
         ></CustomPageHeader>
       }
     >
-      <ProTable<API.File, API.getApiV1FilesParams>
+      <ProTable<API.File, API.fetchFilesParams>
         scroll={{ x: 1500 }}
         pagination={{ position: ['topLeft'] }}
         actionRef={actionRef}
@@ -505,7 +505,7 @@ const FileList: React.FC = () => {
         }
         toolBarRender={() => []}
         params={params}
-        beforeSearchSubmit={(params: API.getApiV1FilesParams) => {
+        beforeSearchSubmit={(params: API.fetchFilesParams) => {
           setParams(params);
         }}
         request={ListFiles}

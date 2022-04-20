@@ -30,3 +30,4 @@ structopt = {version = "0.3", default-features = false}
 tokio = {version = "1.17.0", features = ["rt-multi-thread", "macros", "signal"]}
 uuid = {version = "^0", features = ["serde", "v4"]}
 rust-embed = "6.3.0"
+custom_error = "1.9.2"

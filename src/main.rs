@@ -5,7 +5,7 @@ extern crate log;
 #[macro_use]
 extern crate lazy_static;
 
-use biominer_indexd::{api, database, database::init_rbatis};
+use biominer_indexd::{api, database, database::init_rbatis, RepoConfig};
 use dotenv::dotenv;
 use log::{error, LevelFilter};
 use log4rs;
@@ -83,6 +83,14 @@ struct Opt {
   /// You can also set it with env var: DATABASE_URL.
   #[structopt(name = "database-url", short = "d", long = "database-url")]
   database_url: Option<String>,
+
+  #[structopt(
+    name = "config",
+    short = "r",
+    long = "config",
+    default_value = "/etc/indexd.json"
+  )]
+  config: String,
 }
 
 #[derive(RustEmbed)]
@@ -125,6 +133,17 @@ async fn main() -> Result<(), std::io::Error> {
     database_url.unwrap()
   };
 
+  let config_path = args.config;
+  let indexd_repo_config = match RepoConfig::read_config(&config_path) {
+    Ok(v) => v,
+    Err(e) => {
+      error!("{}", e);
+      std::process::exit(1);
+    }
+  };
+  let arc_config = Arc::new(indexd_repo_config);
+  let shared_repo_config = AddData::new(arc_config.clone());
+
   let rb = init_rbatis(&database_url).await;
   let arc_rb = Arc::new(rb);
   let shared_rb = AddData::new(arc_rb.clone());
@@ -162,7 +181,11 @@ async fn main() -> Result<(), std::io::Error> {
     route
   };
 
-  let route = route.with(Cors::new()).with(shared_rb).with(shared_config);
+  let route = route
+    .with(Cors::new())
+    .with(shared_rb)
+    .with(shared_config)
+    .with(shared_repo_config);
 
   Server::new(TcpListener::bind(format!("{}:{}", host, port)))
     .run(route)

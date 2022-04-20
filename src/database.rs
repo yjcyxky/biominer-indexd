@@ -100,6 +100,16 @@ pub struct URL {
   pub file: Option<String>,
 }
 
+impl URL {
+  pub fn get_identity(&self) -> String {
+    let url_parts = self.url.split("/").collect::<Vec<&str>>();
+    // NODE: node://<account_name>/<project_id>/<experiment_id>/<sample_id>/<run_id>/<data_id>; account_name = url_parts[2]
+    // S3/OSS/Minio: s3://<bucket_name>/<object_name>; bucket_name = url_parts[2]
+    // GSA: gsa://<account_name>/xxx; account_name = url_parts[2]
+    return url_parts[2].to_string();
+  }
+}
+
 #[crud_table(table_name:biominer_indexd_hash)]
 #[derive(Serialize, Deserialize, Debug, Eq, PartialEq, Clone, Object)]
 pub struct Hash {
@@ -254,6 +264,28 @@ impl File {
       aliases: aliases,
       tags: tags,
     }
+  }
+
+  pub async fn get_file(rb: &Rbatis, id: &uuid::Uuid) -> Result<Page<File>, Error> {
+    let guid = id.to_string();
+    query_files(
+      &mut rb.as_executor(),
+      &PageRequest::new(1, 1),
+      &guid,
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      &1,
+      &1,
+      &1,
+    )
+    .await
   }
 
   pub async fn check_hash_exists(rb: &Rbatis, hash: &str) -> bool {

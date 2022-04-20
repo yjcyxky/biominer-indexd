@@ -1,13 +1,15 @@
 import sys
-import json
+import json as json_lib
 import csv
 import click
 import requests
 
+api_endpoint = 'https://api.3steps.cn/biominer-indexd/api/v1/files'
+
 
 def read_json(file_path):
     with open(file_path, 'r') as f:
-        return json.load(f)
+        return json_lib.load(f)
 
 
 def check_row(row, columns):
@@ -38,8 +40,9 @@ def transform_row4file(row, idx):
     try:
         row['size'] = int(row.get('size'))
         return row
-    except Exception:
-        print("Invalid row: %s, size must be integer" % str(idx))
+    except Exception as e:
+        print("Error: %s" % e)
+        print("Invalid row: %s, size must be integer" % str(idx + 2))
         sys.exit(1)
 
 
@@ -47,7 +50,7 @@ def batch_import_files(data):
     success = []
     failed = []
     for item in data:
-        r = requests.post('http://localhost:3000/api/v1/files', json=item)
+        r = requests.post(api_endpoint, json=item)
         if r.status_code == 201:
             print('Successfully imported file: ' + item['filename'])
             success.append(r.json())
@@ -90,4 +93,8 @@ def batch_import_file(json, csv, output):
     output = 'output.json' if not output else output
 
     with open(output, 'w') as f:
-        json.dump(batch_import_files(json_data), f, indent=4)
+        json_lib.dump(batch_import_files(json_data), f, indent=4)
+
+
+if __name__ == '__main__':
+    batch_import_file()

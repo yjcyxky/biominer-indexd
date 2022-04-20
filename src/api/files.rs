@@ -2,7 +2,9 @@ use crate::database::{
   query_files, Config, File, FilePageResponse, FileStatResponse, FileTagsResponse,
 };
 use crate::util;
-use log::{debug, info};
+use crate::RepoConfig;
+use crate::SignResponse;
+use log::{debug, info, warn};
 use poem::web::Data;
 use poem_openapi::{
   param::Path,
@@ -27,6 +29,30 @@ enum GetResponse {
 
   #[oai(status = 404)]
   NotFound(PlainText<String>),
+}
+
+#[derive(ApiResponse)]
+enum GetFileResponse {
+  #[oai(status = 200)]
+  Ok(Json<File>),
+
+  #[oai(status = 404)]
+  NotFound(PlainText<String>),
+
+  #[oai(status = 500)]
+  InternalError(PlainText<String>),
+}
+
+#[derive(ApiResponse)]
+enum PostSignResponse {
+  #[oai(status = 201)]
+  Ok(Json<SignResponse>),
+
+  #[oai(status = 404)]
+  NotFound(PlainText<String>),
+
+  #[oai(status = 500)]
+  InternalError(PlainText<String>),
 }
 
 #[derive(ApiResponse)]
@@ -69,7 +95,12 @@ pub struct FilesApi;
 
 #[OpenApi]
 impl FilesApi {
-  #[oai(path = "/api/v1/files", method = "post", tag = "FileApiTags::Files", operation_id = "createFile")]
+  #[oai(
+    path = "/api/v1/files",
+    method = "post",
+    tag = "FileApiTags::Files",
+    operation_id = "createFile"
+  )]
   async fn create_file(
     &self,
     rb: Data<&Arc<Rbatis>>,
@@ -117,7 +148,12 @@ impl FilesApi {
     }
   }
 
-  #[oai(path = "/api/v1/files", method = "get", tag = "FileApiTags::Files", operation_id = "fetchFiles")]
+  #[oai(
+    path = "/api/v1/files",
+    method = "get",
+    tag = "FileApiTags::Files",
+    operation_id = "fetchFiles"
+  )]
   async fn fetch_files(
     &self,
     rb: Data<&Arc<Rbatis>>,
@@ -217,6 +253,79 @@ impl FilesApi {
   }
 
   #[oai(
+    path = "/api/v1/files/:id",
+    method = "get",
+    tag = "FileApiTags::File",
+    operation_id = "getFile"
+  )]
+  async fn get_file(&self, rb: Data<&Arc<Rbatis>>, id: Path<uuid::Uuid>) -> GetFileResponse {
+    let rb_arc = rb.clone();
+    let guid = id.0.to_string();
+    info!("Get file ({:?}) with params", guid);
+
+    match File::get_file(&rb, &id).await {
+      Ok(files) => {
+        if files.total == 0 {
+          return GetFileResponse::NotFound(PlainText("File not found.".to_string()));
+        } else {
+          GetFileResponse::Ok(Json(files.records[0].clone()))
+        }
+      }
+      Err(e) => GetFileResponse::InternalError(PlainText(e.to_string())),
+    }
+  }
+
+  #[oai(
+    path = "/api/v1/files/:id",
+    method = "post",
+    tag = "FileApiTags::File",
+    operation_id = "signFile"
+  )]
+  async fn sign_file(
+    &self,
+    rb: Data<&Arc<Rbatis>>,
+    config: Data<&Arc<RepoConfig>>,
+    id: Path<uuid::Uuid>,
+    which_repo: Query<Option<String>>,
+  ) -> PostSignResponse {
+    let rb_arc = rb.clone();
+    let config_arc = config.clone();
+    let guid = id.0.to_string();
+    let which_repo = match which_repo.0 {
+      Some(which_repo) => which_repo,
+      // TODO: Need to set a best repo, select gsa or select one based on the user's position.
+      None => "node".to_string(),
+    };
+    info!("Sign file {:?}", guid);
+
+    match File::get_file(&rb, &id).await {
+      Ok(files) => {
+        if files.total == 0 {
+          return PostSignResponse::NotFound(PlainText("File not found.".to_string()));
+        } else {
+          let urls = files.records[0].urls.clone().unwrap();
+          if let Some(idx) = urls.iter().position(|item| item.url.contains(&which_repo)) {
+            let url = &urls[idx];
+            let identity = url.get_identity();
+            match config_arc.fetch_config(&which_repo, &identity) {
+              Some(c) => {
+                let sign_response = c.sign(&url.url);
+                return PostSignResponse::Ok(Json(sign_response));
+              },
+              None => {
+                return PostSignResponse::InternalError(PlainText("Repo config not found.".to_string()));
+              }
+            }
+          }
+
+          return PostSignResponse::NotFound(PlainText(format!("Cannot found {} repo for the file.", which_repo)));
+        }
+      }
+      Err(e) => PostSignResponse::InternalError(PlainText(e.to_string())),
+    }
+  }
+
+  #[oai(
     path = "/api/v1/files/:id/url",
     method = "put",
     tag = "FileApiTags::File",
@@ -243,7 +352,18 @@ impl FilesApi {
       "biominer-admin".to_string()
     };
 
-    match File::add_url(&rb_arc, &id.0, &params.url, &uploader, &status).await {
+    let url = &params.url;
+
+    match util::which_protocol(url) {
+      Some(protocol) => protocol,
+      None => {
+        warn!("Cannot find the protocol {}", url);
+        // TODO: error message should be customized
+        return PutResponse::BadRequest(PlainText("Invalid url.".to_string()));
+      }
+    };
+
+    match File::add_url(&rb_arc, &id.0, url, &uploader, &status).await {
       Ok(()) => PutResponse::Ok(Json(MessageResponse {
         msg: "Success".to_string(),
       })),
