@@ -24,23 +24,25 @@ jobs:
       - name: Configure environment
         id: config
         run: |
-          VERSION=$(echo $GITHUB_REF | sed -e "s/^refs\/tags\///")
+          VERSION=$(echo $GITHUB_REF | sed -e "s/^refs\/tags\/v//")
           sed -i "s/0.1.0/$VERSION/g" Cargo.toml
           echo ::set-output name=version::$VERSION
       - uses: actions-rs/cargo@v1
         with:
           command: build
           args: --release --all-features
+      - name: Build studio
+        run: mv target/release/biominer-indexd target/release/biominer-indexd-v${{ steps.config.outputs.version }}-x86_64-linux
       - name: Create a pre-release
         id: pre_release
         uses: marvinpinto/action-automatic-releases@latest
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          automatic_release_tag: "${{ steps.config.outputs.version }}"
+          automatic_release_tag: "v${{ steps.config.outputs.version }}"
           prerelease: true
-          title: "Pre-release ${{ steps.config.outputs.version }}"
+          title: "Pre-release v${{ steps.config.outputs.version }}"
           files: |
             LICENSE
-            target/release/biominer-indexd
+            target/release/biominer-indexd-v*
       - name: Output
         run: echo "${{steps.pre_release.outputs.automatic_releases_tag}}"
