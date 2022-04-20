@@ -24,15 +24,16 @@ pub struct FileStat {
 impl FileStat {
   pub async fn get_stat(rb: &Rbatis) -> Result<FileStat, Error> {
     let mut executor = rb.as_executor();
+    // Database will return null when the table is empty, COALESCE will return 0/'' if the first argument is null
     let stat = executor
       .fetch(
         "
         SELECT 
-          SUM(size)::BIGINT AS total_size, 
+          COALESCE(SUM(size)::BIGINT, 0) AS total_size, 
           COUNT (guid)::BIGINT AS num_of_files, 
           COUNT(DISTINCT(baseid))::BIGINT AS num_of_baseid,
-          (SELECT REPLACE(CONCAT_WS('', 'v', DATE(TO_TIMESTAMP(updated_at / 1000))), '-', '') 
-            FROM biominer_indexd_file ORDER BY updated_at DESC LIMIT 1) AS version,
+          COALESCE((SELECT REPLACE(CONCAT_WS('', 'v', DATE(TO_TIMESTAMP(updated_at / 1000))), '-', '') 
+            FROM biominer_indexd_file ORDER BY updated_at DESC LIMIT 1), '') AS version,
           (SELECT registry_id FROM biominer_indexd_config LIMIT 1) AS registry_id
         FROM biominer_indexd_file",
         vec![],
