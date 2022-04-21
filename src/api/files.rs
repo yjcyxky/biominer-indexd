@@ -263,14 +263,8 @@ impl FilesApi {
     info!("Get file ({:?}) with params", guid);
 
     match File::get_file(&rb_arc, &id).await {
-      Ok(files) => {
-        if files.total == 0 {
-          return GetFileResponse::NotFound(PlainText("File not found.".to_string()));
-        } else {
-          GetFileResponse::Ok(Json(files.records[0].clone()))
-        }
-      }
-      Err(e) => GetFileResponse::InternalError(PlainText(e.to_string())),
+      Some(file) => GetFileResponse::Ok(Json(file)),
+      None => return GetFileResponse::NotFound(PlainText("File not found.".to_string())),
     }
   }
 
@@ -298,45 +292,41 @@ impl FilesApi {
     info!("Sign file {:?}", guid);
 
     match File::get_file(&rb_arc, &id).await {
-      Ok(files) => {
-        if files.total == 0 {
-          return PostSignResponse::NotFound(PlainText("File not found.".to_string()));
-        } else {
-          let file = &files.records[0];
-          match &file.urls {
-            Some(urls) => {
-              if let Some(idx) = urls.iter().position(|item| item.url.contains(&which_repo)) {
-                let url = &urls[idx];
-                let identity = url.get_identity();
-                match config_arc.fetch_config(&which_repo, &identity) {
-                  Some(c) => {
-                    let sign_data = c.sign(&url.url);
-                    let sign_response = SignResponse {
-                      sign: sign_data,
-                      size: file.size,
-                      hashes: file.hashes.clone().unwrap(),
-                      filename: file.filename.clone(),
-                    };
-                    return PostSignResponse::Ok(Json(sign_response));
-                  }
-                  None => {
-                    return PostSignResponse::InternalError(PlainText(
-                      "Repo config not found.".to_string(),
-                    ));
-                  }
+      Some(file) => {
+        match &file.urls {
+          Some(urls) => {
+            if let Some(idx) = urls.iter().position(|item| item.url.contains(&which_repo)) {
+              let url = &urls[idx];
+              let identity = url.get_identity();
+              match config_arc.fetch_config(&which_repo, &identity) {
+                Some(c) => {
+                  let sign_data = c.sign(&url.url);
+                  let sign_response = SignResponse {
+                    sign: sign_data,
+                    size: file.size,
+                    hashes: file.hashes.clone().unwrap(),
+                    filename: file.filename.clone(),
+                  };
+                  return PostSignResponse::Ok(Json(sign_response));
+                }
+                None => {
+                  return PostSignResponse::InternalError(PlainText(
+                    "Repo config not found.".to_string(),
+                  ));
                 }
               }
             }
-            _ => {}
           }
-
-          return PostSignResponse::NotFound(PlainText(format!(
-            "Cannot found {} repo for the file.",
-            which_repo
-          )));
+          _ => {}
         }
+
+        // Last arm of the match
+        return PostSignResponse::NotFound(PlainText(format!(
+          "Cannot found {} repo for the file.",
+          which_repo
+        )));
       }
-      Err(e) => PostSignResponse::InternalError(PlainText(e.to_string())),
+      None => return PostSignResponse::NotFound(PlainText("File not found.".to_string())),
     }
   }
 

@@ -49,6 +49,7 @@ CREATE TABLE IF NOT EXISTS biominer_indexd_tag (
   field_name VARCHAR(128) NOT NULL, -- The name of the field, max 128 characters, e.g. 'project_name', 'patient_id', 'sample_id', etc.
   field_value VARCHAR(128) NOT NULL, -- The value of the field, max 128 characters, e.g. 'Quartet', '12345', 'ABC123', etc.
 
+  UNIQUE (field_name, file),
   file VARCHAR(64) NOT NULL, -- The file's global unique identifier
   FOREIGN KEY (file) REFERENCES biominer_indexd_file(guid)
 );

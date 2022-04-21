@@ -164,6 +164,7 @@ impl Config {
     }
   }
 
+  // TODO: use a better way to get the registry_id?
   fn get_registry_id() -> String {
     let registry_id = match std::env::var("BIOMIER_REGISTRY_ID") {
       Ok(v) => v,
@@ -266,26 +267,33 @@ impl File {
     }
   }
 
-  pub async fn get_file(rb: &Rbatis, id: &uuid::Uuid) -> Result<Page<File>, Error> {
-    let guid = format!("biominer.{}/{}", Config::get_registry_id(), id);
-    query_files(
-      &mut rb.as_executor(),
-      &PageRequest::new(1, 1),
-      &guid,
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      &1,
-      &1,
-      &1,
-    )
-    .await
+  pub async fn get_file(rb: &Rbatis, id: &uuid::Uuid) -> Option<File> {
+    let guid = File::gen_guid(id);
+    query_file(&mut rb.as_executor(), &guid, "", &1, &1, &1).await
+  }
+
+  fn gen_guid(id: &uuid::Uuid) -> String {
+    return format!("biominer.{}/{}", Config::get_registry_id(), id);
+  }
+
+  pub async fn delete_file(rb: &Rbatis, id: &uuid::Uuid) -> rbatis::core::Result<()> {
+    let guid = File::gen_guid(id);
+    let mut executor = rb.as_executor();
+    // NOTICE: Be careful, this is a hard delete (delete cascade).
+    let v = executor
+      .exec(
+        "DELETE FROM biominer_indexd_file WHERE guid = $1;",
+        vec![rbson::to_bson(&guid).unwrap()],
+      )
+      .await?;
+    if v.rows_affected == 1 {
+      Ok(())
+    } else {
+      return Err(Error::from(format!(
+        "Cannot delete the file with {}, you need to delete all related records firstly.",
+        guid
+      )));
+    }
   }
 
   pub async fn check_hash_exists(rb: &Rbatis, hash: &str) -> bool {
@@ -310,7 +318,7 @@ impl File {
     status: &str,
   ) -> rbatis::core::Result<()> {
     let mut executor = rb.as_executor();
-    let guid = format!("biominer.{}/{}", Config::get_registry_id(), uuid);
+    let guid = File::gen_guid(uuid);
 
     let v: serde_json::Value = executor
       .fetch(
@@ -329,7 +337,8 @@ impl File {
     if v.as_array().unwrap().len() == 1 {
       let v = executor
         .exec(
-          "INSERT INTO biominer_indexd_url (file, url, status, uploader) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING;",
+          "INSERT INTO biominer_indexd_url (file, url, status, uploader) VALUES ($1, $2, $3, $4) 
+               ON CONFLICT (file, url) DO UPDATE SET status = EXCLUDED.status, uploader = EXCLUDED.uploader;",
           vec![
             rbson::to_bson(&guid).unwrap(),
             rbson::to_bson(url).unwrap(),
@@ -353,9 +362,45 @@ impl File {
     }
   }
 
+  pub async fn delete_url(
+    rb: &Rbatis,
+    id: &uuid::Uuid,
+    url: Option<&str>,
+  ) -> rbatis::core::Result<()> {
+    let guid = File::gen_guid(id);
+    let mut executor = rb.as_executor();
+    let v = match url {
+      Some(h) => {
+        executor
+          .exec(
+            "DELETE FROM biominer_indexd_url WHERE file = $1 AND url = $2;",
+            vec![rbson::to_bson(&guid).unwrap(), rbson::to_bson(h).unwrap()],
+          )
+          .await?
+      }
+      None => {
+        executor
+          .exec(
+            "DELETE FROM biominer_indexd_url WHERE file = $1;",
+            vec![rbson::to_bson(&guid).unwrap()],
+          )
+          .await?
+      }
+    };
+
+    if v.rows_affected >= 1 {
+      Ok(())
+    } else {
+      return Err(Error::from(format!(
+        "Cannot delete the url with {} and {:?}",
+        guid, url
+      )));
+    }
+  }
+
   pub async fn add_alias(rb: &Rbatis, uuid: &uuid::Uuid, alias: &str) -> rbatis::core::Result<()> {
     let mut executor = rb.as_executor();
-    let guid = format!("biominer.{}/{}", Config::get_registry_id(), uuid);
+    let guid = File::gen_guid(uuid);
 
     let v: serde_json::Value = executor
       .fetch(
@@ -390,6 +435,42 @@ impl File {
     }
   }
 
+  pub async fn delete_alias(
+    rb: &Rbatis,
+    id: &uuid::Uuid,
+    name: Option<&str>,
+  ) -> rbatis::core::Result<()> {
+    let guid = File::gen_guid(id);
+    let mut executor = rb.as_executor();
+    let v = match name {
+      Some(h) => {
+        executor
+          .exec(
+            "DELETE FROM biominer_indexd_alias WHERE file = $1 AND name = $2;",
+            vec![rbson::to_bson(&guid).unwrap(), rbson::to_bson(h).unwrap()],
+          )
+          .await?
+      }
+      None => {
+        executor
+          .exec(
+            "DELETE FROM biominer_indexd_alias WHERE file = $1;",
+            vec![rbson::to_bson(&guid).unwrap()],
+          )
+          .await?
+      }
+    };
+
+    if v.rows_affected >= 1 {
+      Ok(())
+    } else {
+      return Err(Error::from(format!(
+        "Cannot delete the alias with {} and {:?}",
+        guid, name
+      )));
+    }
+  }
+
   pub async fn add_tag(
     rb: &Rbatis,
     uuid: &uuid::Uuid,
@@ -397,7 +478,7 @@ impl File {
     field_value: &str,
   ) -> rbatis::core::Result<()> {
     let mut executor = rb.as_executor();
-    let guid = format!("biominer.{}/{}", Config::get_registry_id(), uuid);
+    let guid = File::gen_guid(uuid);
 
     let v: serde_json::Value = executor
       .fetch(
@@ -410,7 +491,8 @@ impl File {
     if v.as_array().unwrap().len() == 1 {
       let v = executor
         .exec(
-          "INSERT INTO biominer_indexd_tag (file, field_name, field_value) VALUES ($1, $2, $3) ON CONFLICT (file, field_name, field_value) DO NOTHING;",
+          "INSERT INTO biominer_indexd_tag (file, field_name, field_value) VALUES ($1, $2, $3) 
+               ON CONFLICT (file, field_name) DO UPDATE SET field_value = EXCLUDED.field_value;",
           vec![
             rbson::to_bson(&guid).unwrap(),
             rbson::to_bson(field_name).unwrap(),
@@ -436,9 +518,45 @@ impl File {
     }
   }
 
+  pub async fn delete_tag(
+    rb: &Rbatis,
+    id: &uuid::Uuid,
+    field_name: Option<&str>,
+  ) -> rbatis::core::Result<()> {
+    let guid = File::gen_guid(id);
+    let mut executor = rb.as_executor();
+    let v = match field_name {
+      Some(h) => {
+        executor
+          .exec(
+            "DELETE FROM biominer_indexd_tag WHERE file = $1 AND field_name = $2;",
+            vec![rbson::to_bson(&guid).unwrap(), rbson::to_bson(h).unwrap()],
+          )
+          .await?
+      }
+      None => {
+        executor
+          .exec(
+            "DELETE FROM biominer_indexd_tag WHERE file = $1;",
+            vec![rbson::to_bson(&guid).unwrap()],
+          )
+          .await?
+      }
+    };
+
+    if v.rows_affected >= 1 {
+      Ok(())
+    } else {
+      return Err(Error::from(format!(
+        "Cannot delete the tag with {} and {:?}",
+        guid, field_name
+      )));
+    }
+  }
+
   pub async fn add_hash(rb: &Rbatis, uuid: &uuid::Uuid, hash: &str) -> rbatis::core::Result<()> {
     let mut executor = rb.as_executor();
-    let guid = format!("biominer.{}/{}", Config::get_registry_id(), uuid);
+    let guid = File::gen_guid(uuid);
 
     let v: serde_json::Value = executor
       .fetch(
@@ -479,6 +597,42 @@ impl File {
     } else {
       warn!("Cannot find the file {}.", uuid);
       return Err(Error::from(format!("Cannot find the file with {}", uuid)));
+    }
+  }
+
+  pub async fn delete_hash(
+    rb: &Rbatis,
+    id: &uuid::Uuid,
+    hash: Option<&str>,
+  ) -> rbatis::core::Result<()> {
+    let guid = File::gen_guid(id);
+    let mut executor = rb.as_executor();
+    let v = match hash {
+      Some(h) => {
+        executor
+          .exec(
+            "DELETE FROM biominer_indexd_hash WHERE file = $1 AND hash = $2;",
+            vec![rbson::to_bson(&guid).unwrap(), rbson::to_bson(h).unwrap()],
+          )
+          .await?
+      }
+      None => {
+        executor
+          .exec(
+            "DELETE FROM biominer_indexd_hash WHERE file = $1;",
+            vec![rbson::to_bson(&guid).unwrap()],
+          )
+          .await?
+      }
+    };
+
+    if v.rows_affected >= 1 {
+      Ok(())
+    } else {
+      return Err(Error::from(format!(
+        "Cannot delete the hash with {} and {:?}",
+        guid, hash
+      )));
     }
   }
 
@@ -635,6 +789,7 @@ pub async fn query_files(
   todo!()
 }
 
+// TODO: unwrap the result maybe not good, instead of return error?
 pub async fn query_file(
   rb: &mut RbatisExecutor<'_, '_>,
   guid: &str,
@@ -700,7 +855,7 @@ mod tests {
       "",
       "",
       "",
-      "failed",
+      "",
       "",
       "",
       "",
@@ -720,10 +875,17 @@ mod tests {
   #[tokio::test]
   async fn test_query_file() {
     let rb = init().await;
-    let file = query_file(&mut rb.as_executor(), "abcd", "", &1, &1, &1)
-      .await
-      .unwrap();
+    let file = query_file(
+      &mut rb.as_executor(),
+      "biominer.fudan-pgx/3ec4d151-061b-4bcb-ad3a-425c712bfc88",
+      "",
+      &1,
+      &1,
+      &1,
+    )
+    .await
+    .unwrap();
 
-    assert!(file.guid == "abcd");
+    assert!(file.guid == "biominer.fudan-pgx/3ec4d151-061b-4bcb-ad3a-425c712bfc88");
   }
 }
