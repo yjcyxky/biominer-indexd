@@ -217,9 +217,9 @@ impl FilesApi {
       Some(field_value) => field_value,
       None => "",
     };
-    let contain_alias = contain_alias.clone().unwrap_or_else(|| false) as usize;
-    let contain_url = contain_url.clone().unwrap_or_else(|| false) as usize;
-    let contain_tag = contain_tag.clone().unwrap_or_else(|| false) as usize;
+    let contain_alias = contain_alias.clone().unwrap_or_else(|| true) as usize;
+    let contain_url = contain_url.clone().unwrap_or_else(|| true) as usize;
+    let contain_tag = contain_tag.clone().unwrap_or_else(|| true) as usize;
 
     info!(
       "Query with (guid: {:?}, filename: {:?}, baseid: {:?}, status: {:?}, 

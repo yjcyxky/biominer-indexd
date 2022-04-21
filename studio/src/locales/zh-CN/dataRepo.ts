@@ -50,6 +50,10 @@ export default {
   'pages.dataRepo.noAlias': '无别名',
   'pages.dataRepo.aliases': '别名',
   'pages.dataRepo.aliasesTip': 'The aliases of the item',
+  'pages.dataRepo.fieldName': '标签',
+  'pages.dataRepo.fieldValue': '标签值',
+  'pages.dataRepo.fieldNameTip': '标注到文件上的标签字段名',
+  'pages.dataRepo.fieldValueTip': '标注到文件上的标签字段值',
   'pages.dataRepo.hashes': '哈希值',
   'pages.dataRepo.hashesTip': 'The hashes of the item',
   'pages.dataRepo.urls': '仓库地址',
@@ -80,7 +84,8 @@ export default {
   'data-repo.data-statistics-card.files': '文件数',
 
   // Header Content
-  'data-repo.header-content.description': 'BioMiner旨在收集、管理、挖掘、分享和共享癌症相关的多组学数据，并为癌症相关研究人员提供统一的数据接口。',
+  'data-repo.header-content.description':
+    'BioMiner旨在收集、管理、挖掘、分享和共享癌症相关的多组学数据，并为癌症相关研究人员提供统一的数据接口。',
   'data-repo.header-content.productDoc': '文档',
   'data-repo.header-content.issues': '讨论区',
   'data-repo.header-content.githubRepo': 'GitHub仓库',
