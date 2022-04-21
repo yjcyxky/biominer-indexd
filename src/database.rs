@@ -314,7 +314,7 @@ impl File {
 
     let v: serde_json::Value = executor
       .fetch(
-        "SELECT * FROM biominer_indexd_url WHERE file = $1",
+        "SELECT * FROM biominer_indexd_file WHERE guid = $1",
         vec![rbson::to_bson(&guid).unwrap()],
       )
       .await
@@ -359,7 +359,7 @@ impl File {
 
     let v: serde_json::Value = executor
       .fetch(
-        "SELECT * FROM biominer_indexd_alias WHERE file = $1",
+        "SELECT * FROM biominer_indexd_file WHERE guid = $1",
         vec![rbson::to_bson(&guid).unwrap()],
       )
       .await
@@ -401,7 +401,7 @@ impl File {
 
     let v: serde_json::Value = executor
       .fetch(
-        "SELECT * FROM biominer_indexd_alias WHERE file = $1",
+        "SELECT * FROM biominer_indexd_file WHERE guid = $1",
         vec![rbson::to_bson(&guid).unwrap()],
       )
       .await
@@ -442,7 +442,7 @@ impl File {
 
     let v: serde_json::Value = executor
       .fetch(
-        "SELECT * FROM biominer_indexd_alias WHERE file = $1",
+        "SELECT * FROM biominer_indexd_file WHERE guid = $1",
         vec![rbson::to_bson(&guid).unwrap()],
       )
       .await
