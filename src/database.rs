@@ -111,7 +111,7 @@ impl URL {
 }
 
 #[crud_table(table_name:biominer_indexd_hash)]
-#[derive(Serialize, Deserialize, Debug, Eq, PartialEq, Clone, Object)]
+#[derive(Serialize, Deserialize, Debug, Eq, PartialEq, Clone, Object, Default)]
 pub struct Hash {
   #[oai(read_only)]
   pub id: u64,

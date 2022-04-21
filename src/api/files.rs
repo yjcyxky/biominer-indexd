@@ -1,9 +1,8 @@
 use crate::database::{
-  query_files, Config, File, FilePageResponse, FileStatResponse, FileTagsResponse,
+  query_files, Config, File, FilePageResponse, FileStatResponse, FileTagsResponse, Hash,
 };
+use crate::repo_config::{RepoConfig, SignData};
 use crate::util;
-use crate::RepoConfig;
-use crate::SignResponse;
 use log::{debug, info, warn};
 use poem::web::Data;
 use poem_openapi::{
@@ -303,22 +302,38 @@ impl FilesApi {
         if files.total == 0 {
           return PostSignResponse::NotFound(PlainText("File not found.".to_string()));
         } else {
-          let urls = files.records[0].urls.clone().unwrap();
-          if let Some(idx) = urls.iter().position(|item| item.url.contains(&which_repo)) {
-            let url = &urls[idx];
-            let identity = url.get_identity();
-            match config_arc.fetch_config(&which_repo, &identity) {
-              Some(c) => {
-                let sign_response = c.sign(&url.url);
-                return PostSignResponse::Ok(Json(sign_response));
-              },
-              None => {
-                return PostSignResponse::InternalError(PlainText("Repo config not found.".to_string()));
+          let file = &files.records[0];
+          match &file.urls {
+            Some(urls) => {
+              if let Some(idx) = urls.iter().position(|item| item.url.contains(&which_repo)) {
+                let url = &urls[idx];
+                let identity = url.get_identity();
+                match config_arc.fetch_config(&which_repo, &identity) {
+                  Some(c) => {
+                    let sign_data = c.sign(&url.url);
+                    let sign_response = SignResponse {
+                      sign: sign_data,
+                      size: file.size,
+                      hashes: file.hashes.clone().unwrap(),
+                      filename: file.filename.clone(),
+                    };
+                    return PostSignResponse::Ok(Json(sign_response));
+                  }
+                  None => {
+                    return PostSignResponse::InternalError(PlainText(
+                      "Repo config not found.".to_string(),
+                    ));
+                  }
+                }
               }
             }
+            _ => {}
           }
 
-          return PostSignResponse::NotFound(PlainText(format!("Cannot found {} repo for the file.", which_repo)));
+          return PostSignResponse::NotFound(PlainText(format!(
+            "Cannot found {} repo for the file.",
+            which_repo
+          )));
         }
       }
       Err(e) => PostSignResponse::InternalError(PlainText(e.to_string())),
@@ -505,4 +520,13 @@ pub struct AddFileTag {
 #[derive(Debug, Default, Clone, Serialize, Eq, PartialEq, Deserialize, Object)]
 pub struct MessageResponse {
   pub msg: String,
+}
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize, Object)]
+pub struct SignResponse {
+  pub sign: SignData,
+  pub size: u64,
+  // At least one of the hashes exists.
+  pub hashes: Vec<Hash>,
+  pub filename: String,
 }

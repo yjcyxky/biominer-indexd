@@ -5,7 +5,7 @@ extern crate log;
 #[macro_use]
 extern crate lazy_static;
 
-use biominer_indexd::{api, database, database::init_rbatis, RepoConfig};
+use biominer_indexd::{api, database, database::init_rbatis, repo_config::RepoConfig};
 use dotenv::dotenv;
 use log::{error, LevelFilter};
 use log4rs;
