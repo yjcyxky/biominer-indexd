@@ -32,7 +32,10 @@ impl Sign for NodeConfig {
     let url_parts = url.split("/").collect::<Vec<&str>>();
     let data_no = url_parts[url_parts.len() - 1];
     let header = vec!["Content-Type: application/x-www-form-urlencoded".to_string()];
-    let data = vec![format!("dataNo={}", data_no), format!("memberId={}", self.member_id)];
+    let data = vec![
+      format!("dataNo={}", data_no),
+      format!("memberId={}", self.member_id),
+    ];
     let params = vec![];
     let baseurl = self.download_url.clone();
     let method = "POST".to_string();
@@ -48,11 +51,42 @@ impl Sign for NodeConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GSAConfig {}
+pub struct GSAConfig {
+  pub download_url: String,
+  pub account_name: String,
+  pub shared_id: String,
+}
 
 impl Sign for GSAConfig {
   fn sign(&self, url: &str) -> SignData {
-    todo!();
+    // gsa://yjcyxky@163.com/HRA0001/HRS335657/HRX427830/HRR593463/HRR592563_f1.fastq.gz
+    // ["gsa:", "", "yjcyxky@163.com", "HRR0001", "HRS335657", "HRX427830", "HRR593463", "HRR592563_f1.fastq.gz"]
+    let url_parts = url.split("/").collect::<Vec<&str>>();
+    let project_id = url_parts[3];
+    // TODO: Check account_name?
+    // let account_name = url_parts[2];
+    let run_id = url_parts[6];
+    let filename = url_parts[7];
+    let header = vec![];
+    let data = vec![];
+    let params = vec![];
+    let baseurl = std::path::Path::new(&self.download_url)
+      .join(&self.shared_id)
+      .join(project_id)
+      .join(run_id)
+      .join(filename)
+      .to_str()
+      .unwrap()
+      .to_string();
+    let method = "GET".to_string();
+
+    SignData {
+      header: header,
+      data: data,
+      baseurl: baseurl,
+      method: method,
+      params: params,
+    }
   }
 }
 
@@ -165,8 +199,14 @@ impl RepoConfig {
         return None;
       }
       "gsa" => {
-        todo!();
-        // return None;
+        if let Some(configs) = &self.gsa {
+          for config in configs {
+            if config.account_name == identity {
+              return Some(Box::new(config.clone()));
+            }
+          }
+        }
+        return None;
       }
       _ => panic!("unsupported protocol"),
     };
@@ -199,6 +239,25 @@ mod tests {
       }
       None => {}
     }
+  }
+
+  #[test]
+  fn test_gsaconfig_sign() {
+    let url = "gsa://yjcyxky@163.com/HRA0001/HRS335657/HRX427830/HRR593463/HRR592563_f1.fastq.gz";
+    let config_str = r#"
+      {
+        "gsa": [{
+          "download_url": "https://share.cncb.ac.cn/",
+          "account_name": "yjcyxky@163.com",
+          "shared_id": "vsSyAX3A"
+        }]
+      }
+    "#;
+    let config = RepoConfig::read_config_data(config_str).unwrap();
+    let gsa = config.gsa.unwrap();
+    let config = gsa[0].clone();
+    let signed = config.sign(url);
+    assert!(signed.baseurl == "https://share.cncb.ac.cn/vsSyAX3A/HRA0001/HRR593463/HRR592563_f1.fastq.gz".to_string());
   }
 
   #[test]
