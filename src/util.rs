@@ -38,7 +38,7 @@ lazy_static! {
     m.insert("node", Regex::new(r"^node://([a-zA-Z0-9@\-_.]+)/(OEP[0-9]+)/(OEX[0-9]+)/(OES[0-9]+)/(OER[0-9]+)/(OED[0-9]+)$").unwrap());
     m.insert("oss", Regex::new(r"^oss://([a-zA-Z0-9@\-_.]+)/(.*)$").unwrap());
     m.insert("s3", Regex::new(r"^s3://([a-zA-Z0-9@\-_.]+)/(.*)$").unwrap());
-    m.insert("gsa", Regex::new(r"^gsa://([a-zA-Z0-9@\-_.]+)/(.*)$").unwrap());
+    m.insert("gsa", Regex::new(r"^gsa://([a-zA-Z0-9@\-_.]+)/(HRA[0-9]+)/(HRS[0-9]+)/(HRX[0-9]+)/(HRR[0-9]+)/(HRR[0-9]+.*)$").unwrap());
     m.insert("minio", Regex::new(r"^minio://([a-zA-Z0-9@\-_.]+)/(.*)$").unwrap());
     m
   };

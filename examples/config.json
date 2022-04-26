@@ -7,5 +7,9 @@
   "s3": [],
   "oss": [],
   "minio": [],
-  "gsa": []
+  "gsa": [{
+    "download_url": "https://share.cncb.ac.cn/",
+    "account_name": "yjcyxky@163.com",
+    "shared_id": "vsSyAX3A"
+  }]
 }
