@@ -233,16 +233,7 @@ pub struct File {
 }
 
 impl File {
-  pub fn new(
-    filename: &str,
-    size: u64,
-    uploader: &str,
-    registry_id: &str,
-    urls: Option<Vec<URL>>,
-    hashes: Option<Vec<Hash>>,
-    aliases: Option<Vec<Alias>>,
-    tags: Option<Vec<Tag>>,
-  ) -> Self {
+  pub fn new(filename: &str, size: u64, uploader: &str, registry_id: &str) -> Self {
     let guid = uuid::Uuid::new_v4().to_string();
     let rev = guid[..8].to_string();
     let baseid = uuid::Uuid::new_v4().to_string();
@@ -260,10 +251,10 @@ impl File {
       uploader: uploader.to_string(),
       rev: rev,
       version: 1,
-      urls: urls,
-      hashes: hashes,
-      aliases: aliases,
-      tags: tags,
+      urls: None,
+      hashes: None,
+      aliases: None,
+      tags: None,
     }
   }
 
@@ -636,7 +627,124 @@ impl File {
     }
   }
 
-  pub async fn add(&mut self, rb: &Rbatis, hash: &str) -> rbatis::core::Result<()> {
+  pub async fn batch_add(
+    rb: &Rbatis,
+    files: &Vec<&File>,
+    urls: &Vec<Option<&str>>,
+    aliases: &Vec<Option<&str>>,
+  ) -> rbatis::core::Result<()> {
+    // tx will be commit.when func end
+    let mut tx = rb.acquire_begin().await?.defer_async(|mut tx1| async move {
+      if !tx1.is_done() {
+        tx1.rollback().await;
+        warn!("Commit rollback success!");
+      } else {
+        info!("Don't need to rollback!")
+      }
+    });
+
+    for (idx, file) in files.iter().enumerate() {
+      let v = vec![
+        rbson::to_bson(&file.guid).unwrap(),
+        rbson::to_bson(&file.filename).unwrap(),
+        rbson::to_bson(&file.size).unwrap(),
+        rbson::to_bson(&file.created_at).unwrap(),
+        rbson::to_bson(&file.updated_at).unwrap(),
+        rbson::to_bson(&file.status).unwrap(),
+        rbson::to_bson(&file.baseid).unwrap(),
+        rbson::to_bson(&file.uploader).unwrap(),
+        rbson::to_bson(&file.rev).unwrap(),
+        rbson::to_bson(&file.version).unwrap(),
+      ];
+
+      let result = tx
+        .exec(
+          "INSERT INTO biominer_indexd_file 
+             (guid, filename, size, created_at, updated_at, status, baseid, uploader, rev, version)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+             ON CONFLICT DO NOTHING;",
+          v,
+        )
+        .await
+        .unwrap();
+
+      if result.rows_affected == 1 {
+        info!("Add file {:?}.", result.last_insert_id);
+        let url = urls[idx];
+        match url {
+          Some(url) => {
+            let uvalue = vec![
+              rbson::to_bson(&file.guid).unwrap(),
+              rbson::to_bson(&url).unwrap(),
+              rbson::to_bson(&file.uploader).unwrap(),
+            ];
+
+            let u = match tx
+              .exec(
+                "INSERT INTO biominer_indexd_url (file, url, uploader) VALUES ($1, $2, $3);",
+                uvalue,
+              )
+              .await
+            {
+              Ok(u) => u,
+              Err(e) => {
+                warn!("Insert URL Error: {:?}", e);
+                return Err(Error::from(e.to_string()));
+              }
+            };
+          }
+          None => {}
+        };
+
+        let alias = aliases[idx];
+        match alias {
+          Some(alias) => {
+            let avalue = vec![
+              rbson::to_bson(&file.guid).unwrap(),
+              rbson::to_bson(&alias).unwrap(),
+            ];
+
+            let a = match tx
+              .exec(
+                "INSERT INTO biominer_indexd_alias (file, name) VALUES ($1, $2);",
+                avalue,
+              )
+              .await
+            {
+              Ok(a) => a,
+              Err(e) => {
+                warn!("Insert Alias Error: {:?}", e);
+                return Err(Error::from(e.to_string()));
+              }
+            };
+          }
+          None => {}
+        }
+      } else {
+        info!("{:?} files already exist.", result.last_insert_id);
+      }
+    }
+
+    match tx.commit().await {
+      Ok(_) => {
+        info!("Commit success!");
+      }
+      Err(e) => {
+        warn!("Commit error: {:?}", e);
+        return Err(Error::from(e.to_string()));
+      }
+    };
+
+    Ok(())
+  }
+
+  pub async fn add(
+    &mut self,
+    rb: &Rbatis,
+    hash: &str,
+    url: Option<&str>,
+    alias: Option<&str>,
+  ) -> rbatis::core::Result<()> {
     // tx will be commit.when func end
     let mut tx = rb.acquire_begin().await?.defer_async(|mut tx1| async move {
       if !tx1.is_done() {
@@ -695,6 +803,55 @@ impl File {
         warn!("Insert Hash Error: {:?}", e);
         return Err(Error::from(e.to_string()));
       }
+    };
+
+    match url {
+      Some(url) => {
+        let uvalue = vec![
+          rbson::to_bson(&self.guid).unwrap(),
+          rbson::to_bson(&url).unwrap(),
+          rbson::to_bson(&self.uploader).unwrap(),
+        ];
+
+        let u = match tx
+          .exec(
+            "INSERT INTO biominer_indexd_url (file, url, uploader) VALUES ($1, $2, $3);",
+            uvalue,
+          )
+          .await
+        {
+          Ok(u) => u,
+          Err(e) => {
+            warn!("Insert URL Error: {:?}", e);
+            return Err(Error::from(e.to_string()));
+          }
+        };
+      }
+      None => {}
+    };
+
+    match alias {
+      Some(alias) => {
+        let avalue = vec![
+          rbson::to_bson(&self.guid).unwrap(),
+          rbson::to_bson(&alias).unwrap(),
+        ];
+
+        let a = match tx
+          .exec(
+            "INSERT INTO biominer_indexd_alias (file, name) VALUES ($1, $2);",
+            avalue,
+          )
+          .await
+        {
+          Ok(a) => a,
+          Err(e) => {
+            warn!("Insert Alias Error: {:?}", e);
+            return Err(Error::from(e.to_string()));
+          }
+        };
+      }
+      None => {}
     };
 
     match tx.commit().await {

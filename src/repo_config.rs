@@ -25,6 +25,7 @@ pub struct NodeConfig {
   pub download_url: String,
   pub account_name: String,
   pub member_id: String,
+  pub project_id: String
 }
 
 impl Sign for NodeConfig {
@@ -55,6 +56,7 @@ pub struct GSAConfig {
   pub download_url: String,
   pub account_name: String,
   pub shared_id: String,
+  pub project_id: String
 }
 
 impl Sign for GSAConfig {
@@ -158,7 +160,7 @@ impl RepoConfig {
       "node" => {
         if let Some(configs) = &self.node {
           for config in configs {
-            if config.account_name == identity {
+            if config.project_id == identity {
               return Some(Box::new(config.clone()));
             }
           }
@@ -201,7 +203,7 @@ impl RepoConfig {
       "gsa" => {
         if let Some(configs) = &self.gsa {
           for config in configs {
-            if config.account_name == identity {
+            if config.project_id == identity {
               return Some(Box::new(config.clone()));
             }
           }
@@ -224,7 +226,8 @@ mod tests {
         "node": [{
           "download_url": "https://www.biosino.org/download/downloadByMember",
           "account_name": "yjcyxky@163.com",
-          "member_id": "P34MVSHVGBDSLOQ6BGSAL4SFEN"
+          "member_id": "P34MVSHVGBDSLOQ6BGSAL4SFEN",
+          "project_id": "OEP003178"
         }]
       }
     "#;
@@ -247,6 +250,7 @@ mod tests {
     let config_str = r#"
       {
         "gsa": [{
+          "project_id": "HRA0001",
           "download_url": "https://share.cncb.ac.cn/",
           "account_name": "yjcyxky@163.com",
           "shared_id": "vsSyAX3A"
@@ -266,6 +270,7 @@ mod tests {
     let config_str = r#"
       {
         "node": [{
+          "project_id": "OEP003178",
           "download_url": "https://www.biosino.org/download/downloadByMember",
           "account_name": "yjcyxky@163.com",
           "member_id": "P34MVSHVGBDSLOQ6BGSAL4SFEN"
@@ -284,6 +289,7 @@ mod tests {
     let config_str = r#"
       {
         "node": [{
+          "project_id": "OEP003178",
           "download_url": "https://www.biosino.org/download/downloadByMember",
           "member_id": "P34MVSHVGBDSLOQ6BGSAL4SFEN",
           "account_name": "yjcyxky@163.com"
@@ -292,7 +298,7 @@ mod tests {
     "#;
     let url = "node://yjcyxky@163.com/OEP003178/OEX015832/OES135568/OER249692/OED718095";
     let config = RepoConfig::read_config_data(config_str).unwrap();
-    let c = config.fetch_config("node", "yjcyxky@163.com").unwrap();
+    let c = config.fetch_config("node", "OEP003178").unwrap();
     assert!(c.sign(url).header == ["Content-Type: application/x-www-form-urlencoded".to_string()]);
   }
 }

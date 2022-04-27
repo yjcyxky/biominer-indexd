@@ -120,7 +120,7 @@ impl FilesApi {
     };
     let size = params.size;
 
-    let hash = &params.hash;
+    let hash = &params.md5sum;
     if !util::validate_hash(hash, "md5") {
       return PostResponse::BadRequest(PlainText("Invalid hash value.".to_string()));
     };
@@ -131,17 +131,31 @@ impl FilesApi {
       ));
     }
 
+    let url = match &params.url {
+      Some(url) => {
+        if util::which_protocol(url).is_none() {
+          return PostResponse::BadRequest(PlainText("Invalid url protocol.".to_string()));
+        } else {
+          Some(url.as_str())
+        }
+      }
+      _ => {
+        None
+      }
+    };
+
+    let alias = match &params.alias {
+      Some(alias) => Some(alias.as_str()),
+      None => None,
+    };
+
     let mut file = File::new(
       filename,
       size,
       uploader,
-      registry_id,
-      None,
-      None,
-      None,
-      None,
+      registry_id
     );
-    match file.add(&rb_arc, &hash).await {
+    match file.add(&rb_arc, &hash, url, alias).await {
       Ok(()) => PostResponse::Ok(Json(file)),
       Err(e) => PostResponse::BadRequest(PlainText(e.to_string())),
     }
@@ -480,8 +494,10 @@ impl FilesApi {
 pub struct CreateFile {
   pub filename: Option<String>,
   pub uploader: Option<String>,
-  pub hash: String,
+  pub md5sum: String,
   pub size: u64,
+  pub alias: Option<String>,
+  pub url: Option<String>,
 }
 
 #[derive(Debug, Default, Clone, Serialize, Eq, PartialEq, Deserialize, Object)]

@@ -2,7 +2,8 @@
   "node": [{
     "download_url": "https://www.biosino.org/download/downloadByMember",
     "account_name": "yjcyxky@163.com",
-    "member_id": "P34MVSHVGBDSLOQ6BGSAL4SFEN"
+    "member_id": "P34MVSHVGBDSLOQ6BGSAL4SFEN",
+    "project_id": "OEP003178"
   }],
   "s3": [],
   "oss": [],
@@ -10,6 +11,7 @@
   "gsa": [{
     "download_url": "https://share.cncb.ac.cn/",
     "account_name": "yjcyxky@163.com",
-    "shared_id": "vsSyAX3A"
+    "shared_id": "vsSyAX3A",
+    "project_id": "HRA0001"
   }]
 }
