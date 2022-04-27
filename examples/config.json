@@ -3,6 +3,11 @@
     "download_url": "https://www.biosino.org/download/downloadByMember",
     "account_name": "yjcyxky@163.com",
     "member_id": "P34MVSHVGBDSLOQ6BGSAL4SFEN",
+    "project_id": "OEP003176"
+  }, {
+    "download_url": "https://www.biosino.org/download/downloadByMember",
+    "account_name": "shangjunv@163.com",
+    "member_id": "JGM6OT3HFZFXJDN7XJABFF2EFD",
     "project_id": "OEP003178"
   }],
   "s3": [],
@@ -11,7 +16,7 @@
   "gsa": [{
     "download_url": "https://share.cncb.ac.cn/",
     "account_name": "yjcyxky@163.com",
-    "shared_id": "vsSyAX3A",
+    "shared_id": "vsOyAX3A",
     "project_id": "HRA0001"
   }]
 }

@@ -5,6 +5,7 @@ import click
 import requests
 
 api_endpoint = 'https://api.3steps.cn/biominer-indexd/api/v1/files'
+# api_endpoint = 'http://localhost:3000/api/v1/files'
 
 
 def read_json(file_path):
@@ -65,7 +66,7 @@ def batch_import_files(data):
 
 
 columns = {
-    'file': ['size', 'filename', 'uploader', 'hash']
+    'file': ['size', 'filename', 'uploader', 'md5sum']
 }
 
 transform_fns = {

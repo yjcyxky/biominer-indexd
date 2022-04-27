@@ -316,7 +316,7 @@ impl FilesApi {
                 }
                 None => {
                   return PostSignResponse::InternalError(PlainText(
-                    "Repo config not found.".to_string(),
+                    "The data has not been released, please contact the administrator for more details.".to_string(),
                   ));
                 }
               }
@@ -327,7 +327,7 @@ impl FilesApi {
 
         // Last arm of the match
         return PostSignResponse::NotFound(PlainText(format!(
-          "Cannot found {} repo for the file.",
+          "The data has not been released on {} repo, please contact the administrator to add it.",
           which_repo
         )));
       }
