@@ -84,7 +84,7 @@ enum PutResponse {
 #[derive(ApiResponse)]
 enum PostResponse {
   #[oai(status = 201)]
-  Ok(Json<File>),
+  Ok(Json<GuidResponse>),
 
   #[oai(status = 400)]
   BadRequest(PlainText<String>),
@@ -94,6 +94,7 @@ pub struct FilesApi;
 
 #[OpenApi]
 impl FilesApi {
+  /// Call `/api/v1/files` to create a file instance.
   #[oai(
     path = "/api/v1/files",
     method = "post",
@@ -125,12 +126,6 @@ impl FilesApi {
       return PostResponse::BadRequest(PlainText("Invalid hash value.".to_string()));
     };
 
-    if File::check_hash_exists(&rb_arc, hash).await {
-      return PostResponse::BadRequest(PlainText(
-        "The hash value already exists or has been registered.".to_string(),
-      ));
-    }
-
     let url = match &params.url {
       Some(url) => {
         if util::which_protocol(url).is_none() {
@@ -139,9 +134,7 @@ impl FilesApi {
           Some(url.as_str())
         }
       }
-      _ => {
-        None
-      }
+      _ => None,
     };
 
     let alias = match &params.alias {
@@ -149,18 +142,14 @@ impl FilesApi {
       None => None,
     };
 
-    let mut file = File::new(
-      filename,
-      size,
-      uploader,
-      registry_id
-    );
+    let mut file = File::new(filename, size, uploader, registry_id);
     match file.add(&rb_arc, &hash, url, alias).await {
-      Ok(()) => PostResponse::Ok(Json(file)),
+      Ok(()) => PostResponse::Ok(Json(GuidResponse { guid: file.guid })),
       Err(e) => PostResponse::BadRequest(PlainText(e.to_string())),
     }
   }
 
+  /// Call `/api/v1/files` with query params to fetch files.
   #[oai(
     path = "/api/v1/files",
     method = "get",
@@ -265,6 +254,7 @@ impl FilesApi {
     GetResponse::Ok(Json(FilePageResponse::from(files)))
   }
 
+  /// Call `/api/v1/files/:id` to fetch the file.
   #[oai(
     path = "/api/v1/files/:id",
     method = "get",
@@ -282,6 +272,7 @@ impl FilesApi {
     }
   }
 
+  /// Call `/api/v1/files/:id` to sign the file and get the downloading link.
   #[oai(
     path = "/api/v1/files/:id",
     method = "post",
@@ -344,6 +335,7 @@ impl FilesApi {
     }
   }
 
+  /// Call `/api/v1/files/:id/url` to add url for the file.
   #[oai(
     path = "/api/v1/files/:id/url",
     method = "put",
@@ -390,6 +382,7 @@ impl FilesApi {
     }
   }
 
+  /// Call `/api/v1/files/:id/alias` to add alias for the file.
   #[oai(
     path = "/api/v1/files/:id/alias",
     method = "put",
@@ -413,6 +406,7 @@ impl FilesApi {
     }
   }
 
+  /// Call `/api/v1/files/:id/hash` to add hash for the file.
   #[oai(
     path = "/api/v1/files/:id/hash",
     method = "put",
@@ -436,6 +430,7 @@ impl FilesApi {
     }
   }
 
+  /// Call `/api/v1/files/:id/tag` to add tag for the file.
   #[oai(
     path = "/api/v1/files/:id/tag",
     method = "put",
@@ -459,6 +454,7 @@ impl FilesApi {
     }
   }
 
+  /// Call `/api/v1/files/tags` to fetch all tags.
   #[oai(
     path = "/api/v1/files/tags",
     method = "get",
@@ -474,6 +470,7 @@ impl FilesApi {
     }
   }
 
+  /// Call `/api/v1/files/stat` to get the statistics data.
   #[oai(
     path = "/api/v1/files/stat",
     method = "get",
@@ -521,6 +518,11 @@ pub struct AddFileHash {
 pub struct AddFileTag {
   pub field_name: String,
   pub field_value: String,
+}
+
+#[derive(Debug, Default, Clone, Serialize, Eq, PartialEq, Deserialize, Object)]
+pub struct GuidResponse {
+  pub guid: String,
 }
 
 #[derive(Debug, Default, Clone, Serialize, Eq, PartialEq, Deserialize, Object)]
