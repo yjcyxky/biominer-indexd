@@ -107,11 +107,11 @@ impl URL {
     // S3/OSS/Minio: s3://<bucket_name>/<object_name>;
     // GSA: gsa://<account_name>/<project_id>/<sample_id>/<experiment_id>/<run_id>/<filename>;
     match url_parts[0] {
-      "node:" => url_parts[3].to_string(), // project_id
-      "s3:" => url_parts[2].to_string(), // bucket_name
-      "oss:" => url_parts[2].to_string(), // bucket_name
+      "node:" => url_parts[3].to_string(),  // project_id
+      "s3:" => url_parts[2].to_string(),    // bucket_name
+      "oss:" => url_parts[2].to_string(),   // bucket_name
       "minio:" => url_parts[2].to_string(), // bucket_name
-      "gsa:" => url_parts[3].to_string(), // project_id
+      "gsa:" => url_parts[3].to_string(),   // project_id
       _ => "".to_string(),
     }
   }
@@ -268,6 +268,10 @@ impl File {
   pub async fn get_file(rb: &Rbatis, id: &uuid::Uuid) -> Option<File> {
     let guid = File::gen_guid(id);
     query_file(&mut rb.as_executor(), &guid, "", &1, &1, &1).await
+  }
+
+  pub async fn get_file_with_hash(rb: &Rbatis, hash: &str) -> Option<File> {
+    query_file(&mut rb.as_executor(), "", hash, &1, &1, &1).await
   }
 
   fn gen_guid(id: &uuid::Uuid) -> String {
