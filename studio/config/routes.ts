@@ -19,10 +19,10 @@
     ],
   },
   {
-    path: '/welcome',
-    name: 'welcome',
-    icon: 'smile',
-    component: './Welcome',
+    path: '/index',
+    name: 'home',
+    icon: 'home',
+    component: './Index',
   },
   {
     name: 'data-repo',
@@ -31,8 +31,18 @@
     component: './DataRepo',
   },
   {
+    path: '/about',
+    name: 'about',
+    icon: 'question-circle',
+    component: './About',
+  },
+  {
     path: '/',
-    redirect: '/welcome',
+    redirect: '/index',
+  },
+  {
+    path: '/:guid(biominer.fudan-pgx/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})',
+    component: './DataRepo',
   },
   {
     component: './404',

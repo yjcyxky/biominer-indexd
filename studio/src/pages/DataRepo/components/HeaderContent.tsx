@@ -15,7 +15,7 @@ const HeaderContent: React.FC = () => {
         {intl.formatMessage({
           id: 'data-repo.header-content.description',
           defaultMessage:
-            'BioMiner is dedicated to building a data mining platform that integrates high-quality multi-omics data management, distribution and exploratory analysis.',
+            'BioMiner Indexd is a hash-based data indexing and tracking service providing globally unique identifiers.',
         })}
       </Paragraph>
       {/* <Paragraph>Please add a description...</Paragraph> */}

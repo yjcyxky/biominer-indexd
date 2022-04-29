@@ -85,7 +85,7 @@ export default {
 
   // Header Content
   'data-repo.header-content.description':
-    'BioMiner is dedicated to building a data mining platform that integrates high-quality multi-omics data management, distribution and exploratory analysis.',
+    'BioMiner Indexd is a hash-based data indexing and tracking service providing globally unique identifiers.',
   'data-repo.header-content.productDoc': 'Docs',
   'data-repo.header-content.issues': 'Issues',
   'data-repo.header-content.githubRepo': 'GitHub Repo',
