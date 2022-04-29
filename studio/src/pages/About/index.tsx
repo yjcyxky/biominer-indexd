@@ -36,7 +36,7 @@ If you have any questions or suggestions, please submit a pull request or an iss
 
 ### How to download the omics data files?
 
-Download biominer-aget binary from [BioMiner Aget for Linux](https://biominer-indexd.oss-cn-shanghai.aliyuncs.com/biominer-aget/biominer-aget_x86-64_linux) or [BioMiner Aget for Mac](https://biominer-indexd.oss-cn-shanghai.aliyuncs.com/biominer-aget/biominer-aget_x86-64_macosx)
+Download biominer-aget binary from [BioMiner Aget for Linux](https://www.indexd.org/biominer-aget/biominer-aget_x86-64_linux) or [BioMiner Aget for Mac](https://www.indexd.org/biominer-aget/biominer-aget_x86-64_macosx)
 
 Copy the biominer-aget binary into /usr/bin/biominer-aget or any other directory which in PATH variable.
 
