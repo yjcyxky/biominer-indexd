@@ -13,6 +13,19 @@ import CustomPageHeader from './components/CustomPageHeader';
 import biominerAPI from '@/services/biominer';
 import './index.less';
 
+const isValidGuid = (guid: string | null) => {
+  if (guid) {
+    if (guid.length <= 36) {
+      return false;
+    }
+    const regex =
+      /^biominer.fudan-pgx\/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+    return regex.test(guid);
+  } else {
+    return false;
+  }
+};
+
 const FileList: React.FC = () => {
   /**
    * @en-US Pop-up window of new window
@@ -42,7 +55,7 @@ const FileList: React.FC = () => {
 
   // pathname: /biominer.fudan-pgx/1aea5c61-4a83-45a8-852e-dfd57a89b388
   let guid_path = window.location.pathname.replace(/^\//, '');
-  let guid = guid_path ? guid_path : guid_query;
+  let guid: string | null = guid_path ? guid_path : guid_query;
 
   const downloadSelectedFiles = (selectedRowsState: API.File[]) => {
     if (selectedRowsState.length === 0) {
@@ -55,8 +68,7 @@ const FileList: React.FC = () => {
   };
 
   const setQueryParams = (guid: string | null) => {
-    console.log('Something: ', guid);
-    if (guid) {
+    if (guid && isValidGuid(guid)) {
       setParams({
         guid: guid,
       });
