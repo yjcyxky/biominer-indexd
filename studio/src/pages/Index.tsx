@@ -91,10 +91,10 @@ const Index: React.FC = () => {
             continue to resolve to the correct resources or services at their new locations. (try
             this one:
             <a
-              href="https://indexd.org/biominer.fudan-pgx/00006134-c655-4bbe-9144-0ee86da83902"
+              href="https://www.indexd.org/biominer.fudan-pgx/00006134-c655-4bbe-9144-0ee86da83902"
               target="_blank"
             >
-              https://indexd.org/biominer.fudan-pgx/00006134-c655-4bbe-9144-0ee86da83902
+              https://www.indexd.org/biominer.fudan-pgx/00006134-c655-4bbe-9144-0ee86da83902
             </a>
             )
           </span>
