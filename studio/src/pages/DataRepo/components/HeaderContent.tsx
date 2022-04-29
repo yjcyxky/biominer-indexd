@@ -21,7 +21,7 @@ const HeaderContent: React.FC = () => {
       {/* <Paragraph>Please add a description...</Paragraph> */}
       <div>
         <IconLink
-          href="https://docs.3steps.cn"
+          href="/about"
           avatarSrc={<InfoCircleOutlined />}
           text={intl.formatMessage({
             id: 'data-repo.header-content.productDoc',
@@ -29,7 +29,7 @@ const HeaderContent: React.FC = () => {
           })}
         />
         <IconLink
-          href="https://github.com/biominer-lab/docs.3steps.cn/issues"
+          href="https://github.com/yjcyxky/biominer-indexd/issues"
           avatarSrc={<QuestionCircleOutlined />}
           text={intl.formatMessage({
             id: 'data-repo.header-content.issues',
@@ -37,7 +37,7 @@ const HeaderContent: React.FC = () => {
           })}
         />
         <IconLink
-          href="https://github.com/biominer-lab"
+          href="https://github.com/yjcyxky/biominer-indexd"
           avatarSrc={<GithubOutlined />}
           text={intl.formatMessage({
             id: 'data-repo.header-content.githubRepo',

@@ -40,10 +40,14 @@ Download biominer-aget binary from [BioMiner Aget for Linux](https://biominer-in
 
 Copy the biominer-aget binary into /usr/bin/biominer-aget or any other directory which in PATH variable.
 
-e.g. you want to download the file with UUID 00006134-c655-4bbe-9144-0ee86da83902 from the repository biominer.fudan-pgx, you can run the following command:
+e.g. you want to download the file with UUID \`00006134-c655-4bbe-9144-0ee86da83902\` or Hash (such as md5sum, sha128...) \`b02ced3319ba35746e2436d67b04a42c\` from the repository biominer.fudan-pgx, you can run the following command:
 
 \`\`\`bash
 biominer-aget --guid biominer.fudan-pgx/00006134-c655-4bbe-9144-0ee86da83902 --output-dir ~/Downloads/ --repo gsa --chunk_size 1m --concurrency 1000
+
+## or
+
+biominer-aget --hash b02ced3319ba35746e2436d67b04a42c --output-dir ~/Downloads/ --repo gsa --chunk_size 1m --concurrency 1000
 \`\`\`
 
 > Please note that:
@@ -57,22 +61,25 @@ Jingcheng Yang <yjcyxky@163.com>
 An Index Engine for Omics Data Files
 
 USAGE:
-    biominer-aget_x86-64_macosx [FLAGS] [OPTIONS] --guid <guid>
+    biominer-aget [FLAGS] [OPTIONS]
 
 FLAGS:
-    -D, --debug      Activate debug mode short and long flags (-D, --debug) will be deduced from the field's name
+    -D, --debug      Activate debug mode
     -h, --help       Prints help information
     -V, --version    Prints version information
 
 OPTIONS:
-    -a, --api-server <api-server>      Where to find the biominer api server
+    -a, --api-server <api-server>      The api server address
     -k, --chunk_size <chunk_size>      The number ofinterval length of each concurrent request [default: '50m']
-        --concurrency <concurrency>    The number of concurrency request [default: 10]
+    -c, --concurrency <concurrency>    The number of concurrency request [default: 10]
         --dns-timeout <dns-timeout>    DNS Timeout(seconds) of request [default: 10]
-    -g, --guid <guid>                  Which file you want to download
-    -o, --output-dir <output-dir>       [default: ./]
+    -g, --guid <guid>                  The guid of the file you want to download, e.g. biominer.fudan-pgx/00006134-c655-
+                                       4bbe-9144-0ee86da83902
+    -H, --hash <hash>                  The hash of the file you want to download, e.g. b47ee06cdf62847f6d4c11bb12ac1ae0
+    -o, --output-dir <output-dir>      Output directory [default: ./]
     -p, --password <password>          Password for the biominer api server [default: anonymous]
-    -r, --repo <repo>                   [default: node]  [possible values: node, gsa, s3, oss, minio]
+    -r, --repo <repo>                  Which data repository you want to download from [default: node]  [possible
+                                       values: node, gsa, s3, oss, minio]
         --retries <retries>            The maximum times of retring [default: 0]
         --retry-wait <retry-wait>      The seconds between retries [default: 0]
     -t, --timeout <timeout>            Timeout(seconds) of request [default: 60]
