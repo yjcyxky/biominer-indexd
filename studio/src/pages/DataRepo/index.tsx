@@ -55,7 +55,8 @@ const FileList: React.FC = () => {
 
   // pathname: /biominer.fudan-pgx/1aea5c61-4a83-45a8-852e-dfd57a89b388
   let guid_path = window.location.pathname.replace(/^\//, '');
-  let guid: string | null = guid_path ? guid_path : guid_query;
+  // guid_path always exists, so we need to use guid_query firstly.
+  let guid: string | null = guid_query ? guid_query : guid_path;
 
   const downloadSelectedFiles = (selectedRowsState: API.File[]) => {
     if (selectedRowsState.length === 0) {
