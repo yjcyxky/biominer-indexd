@@ -4,7 +4,7 @@
   "private": true,
   "description": "BioMiner Indexd is a hash-based data indexing and tracking service providing globally unique identifiers.",
   "scripts": {
-    "publish-code": "cross-env UMI_APP_API_PREFIX=https://api.3steps.cn/biominer-indexd umi build && ossutilmac64 cp -r -u ./dist/ oss://biominer-indexd/ -c ~/.ossutilconfig-tgmc -e oss-cn-shanghai.aliyuncs.com",
+    "publish-code": "cross-env UMI_APP_API_PREFIX=https://api.3steps.cn/biominer-indexd umi build && ossutilmac64 cp -r -u ./dist/ oss://indexd-org/ -c ~/.ossutilconfig-tgmc -e oss-ap-southeast-1.aliyuncs.com",
     "analyze": "cross-env ANALYZE=1 umi build",
     "build": "umi build",
     "start:cloud": "cross-env UMI_APP_API_PREFIX=https://api.3steps.cn/biominer-indexd umi dev",
@@ -68,6 +68,9 @@
     "react-dev-inspector": "^1.7.0",
     "react-dom": "^17.0.0",
     "react-helmet-async": "^1.2.0",
+    "react-markdown": "^8.0.3",
+    "rehype-raw": "^6.1.1",
+    "remark-gfm": "^3.0.1",
     "umi": "^3.5.0"
   },
   "devDependencies": {

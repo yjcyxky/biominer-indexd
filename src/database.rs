@@ -103,10 +103,17 @@ pub struct URL {
 impl URL {
   pub fn get_identity(&self) -> String {
     let url_parts = self.url.split("/").collect::<Vec<&str>>();
-    // NODE: node://<account_name>/<project_id>/<experiment_id>/<sample_id>/<run_id>/<data_id>; account_name = url_parts[2]
-    // S3/OSS/Minio: s3://<bucket_name>/<object_name>; bucket_name = url_parts[2]
-    // GSA: gsa://<account_name>/xxx; account_name = url_parts[2]
-    return url_parts[2].to_string();
+    // NODE: node://<account_name>/<project_id>/<experiment_id>/<sample_id>/<run_id>/<data_id>;
+    // S3/OSS/Minio: s3://<bucket_name>/<object_name>;
+    // GSA: gsa://<account_name>/<project_id>/<sample_id>/<experiment_id>/<run_id>/<filename>;
+    match url_parts[0] {
+      "node:" => url_parts[3].to_string(),  // project_id
+      "s3:" => url_parts[2].to_string(),    // bucket_name
+      "oss:" => url_parts[2].to_string(),   // bucket_name
+      "minio:" => url_parts[2].to_string(), // bucket_name
+      "gsa:" => url_parts[3].to_string(),   // project_id
+      _ => "".to_string(),
+    }
   }
 }
 
@@ -233,16 +240,7 @@ pub struct File {
 }
 
 impl File {
-  pub fn new(
-    filename: &str,
-    size: u64,
-    uploader: &str,
-    registry_id: &str,
-    urls: Option<Vec<URL>>,
-    hashes: Option<Vec<Hash>>,
-    aliases: Option<Vec<Alias>>,
-    tags: Option<Vec<Tag>>,
-  ) -> Self {
+  pub fn new(filename: &str, size: u64, uploader: &str, registry_id: &str) -> Self {
     let guid = uuid::Uuid::new_v4().to_string();
     let rev = guid[..8].to_string();
     let baseid = uuid::Uuid::new_v4().to_string();
@@ -260,16 +258,20 @@ impl File {
       uploader: uploader.to_string(),
       rev: rev,
       version: 1,
-      urls: urls,
-      hashes: hashes,
-      aliases: aliases,
-      tags: tags,
+      urls: None,
+      hashes: None,
+      aliases: None,
+      tags: None,
     }
   }
 
   pub async fn get_file(rb: &Rbatis, id: &uuid::Uuid) -> Option<File> {
     let guid = File::gen_guid(id);
     query_file(&mut rb.as_executor(), &guid, "", &1, &1, &1).await
+  }
+
+  pub async fn get_file_with_hash(rb: &Rbatis, hash: &str) -> Option<File> {
+    query_file(&mut rb.as_executor(), "", hash, &1, &1, &1).await
   }
 
   fn gen_guid(id: &uuid::Uuid) -> String {
@@ -636,16 +638,21 @@ impl File {
     }
   }
 
-  pub async fn add(&mut self, rb: &Rbatis, hash: &str) -> rbatis::core::Result<()> {
+  pub async fn add(
+    &mut self,
+    rb: &Rbatis,
+    hash: &str,
+    url: Option<&str>,
+    alias: Option<&str>,
+  ) -> rbatis::core::Result<()> {
     // tx will be commit.when func end
-    let mut tx = rb.acquire_begin().await?.defer_async(|mut tx1| async move {
-      if !tx1.is_done() {
-        tx1.rollback().await;
-        warn!("Commit rollback success!");
-      } else {
-        info!("Don't need to rollback!")
+    let mut tx = match rb.acquire_begin().await {
+      Ok(tx) => tx,
+      Err(e) => {
+        warn!("Cannot acquire begin: {:?}", e);
+        return Err(Error::from(e.to_string()));
       }
-    });
+    };
 
     let fvalue = vec![
       rbson::to_bson(&self.guid).unwrap(),
@@ -660,7 +667,7 @@ impl File {
       rbson::to_bson(&self.version).unwrap(),
     ];
 
-    let f = match tx
+    match tx
       .exec(
         "INSERT INTO biominer_indexd_file 
              (guid, filename, size, created_at, updated_at, status, baseid, uploader, rev, version)
@@ -670,43 +677,94 @@ impl File {
       )
       .await
     {
-      Ok(f) => f,
+      Ok(_) => {
+        let hvalue = vec![
+          rbson::to_bson(hash).unwrap(),
+          rbson::to_bson("md5").unwrap(),
+          rbson::to_bson(&self.guid).unwrap(),
+        ];
+
+        match tx
+          .exec(
+            "INSERT INTO biominer_indexd_hash (hash, hash_type, file) VALUES ($1, $2, $3);",
+            hvalue,
+          )
+          .await
+        {
+          Ok(_) => {}
+          Err(e) => {
+            warn!("Insert Hash Error: {:?}", e);
+            tx.rollback().await;
+            return Err(Error::from(format!(
+              "The Hash ({:?}) already exists or has been registered.",
+              hash
+            )));
+          }
+        };
+
+        match url {
+          Some(url) => {
+            let uvalue = vec![
+              rbson::to_bson(&self.guid).unwrap(),
+              rbson::to_bson(&url).unwrap(),
+              rbson::to_bson(&self.uploader).unwrap(),
+            ];
+
+            match tx
+              .exec(
+                "INSERT INTO biominer_indexd_url (file, url, uploader) VALUES ($1, $2, $3);",
+                uvalue,
+              )
+              .await
+            {
+              Ok(_) => {}
+              Err(e) => {
+                warn!("Insert URL Error: {:?}", e);
+                tx.rollback().await;
+                return Err(Error::from(format!(
+                  "The URL ({:?}) already exists or has been registered.",
+                  url
+                )));
+              }
+            };
+          }
+          None => {}
+        };
+
+        match alias {
+          Some(alias) => {
+            let avalue = vec![
+              rbson::to_bson(&self.guid).unwrap(),
+              rbson::to_bson(&alias).unwrap(),
+            ];
+
+            match tx
+              .exec(
+                "INSERT INTO biominer_indexd_alias (file, name) VALUES ($1, $2);",
+                avalue,
+              )
+              .await
+            {
+              Ok(_) => {}
+              Err(e) => {
+                warn!("Insert Alias Error: {:?}", e);
+                tx.rollback().await;
+                return Err(Error::from(e.to_string()));
+              }
+            };
+          }
+          None => {}
+        };
+
+        tx.commit().await;
+        return Ok(());
+      }
       Err(e) => {
         warn!("Insert File Error: {:?}", e);
+        tx.rollback().await;
         return Err(Error::from(e.to_string()));
       }
     };
-
-    let hvalue = vec![
-      rbson::to_bson(hash).unwrap(),
-      rbson::to_bson("md5").unwrap(),
-      rbson::to_bson(&self.guid).unwrap(),
-    ];
-
-    let h = match tx
-      .exec(
-        "INSERT INTO biominer_indexd_hash (hash, hash_type, file) VALUES ($1, $2, $3);",
-        hvalue,
-      )
-      .await
-    {
-      Ok(h) => h,
-      Err(e) => {
-        warn!("Insert Hash Error: {:?}", e);
-        return Err(Error::from(e.to_string()));
-      }
-    };
-
-    match tx.commit().await {
-      Ok(_) => {
-        info!("Commit success!");
-      }
-      Err(e) => {
-        warn!("Commit error: {:?}", e);
-        return Err(Error::from(e.to_string()));
-      }
-    };
-    return Ok(());
   }
 }
 

@@ -13,6 +13,7 @@ export const IconLink = ({
   <a
     className="quick-link"
     href={href}
+    target="_blank"
     style={{ marginRight: '5px', display: 'inline-flex', alignItems: 'center' }}
   >
     <Avatar

@@ -52,13 +52,13 @@ const CustomPageHeader: React.FC<PageHeaderProps> = (props: PageHeaderProps) => 
                 defaultMessage: 'Show Query',
               })}
         </Button>,
-        <Button icon={<ImportOutlined />} key="2" type="primary">
+        <Button icon={<ImportOutlined />} disabled key="2" type="primary">
           {intl.formatMessage({
             id: 'data-repo.custom-page-header.batchImport',
             defaultMessage: 'Batch Import',
           })}
         </Button>,
-        <Button icon={<ShareAltOutlined />} key="1" type="primary">
+        <Button icon={<ShareAltOutlined />} disabled key="1" type="primary">
           {intl.formatMessage({
             id: 'data-repo.custom-page-header.share',
             defaultMessage: 'Share',

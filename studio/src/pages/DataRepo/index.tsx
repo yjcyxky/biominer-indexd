@@ -7,16 +7,31 @@ import type { ProColumns, ActionType } from '@ant-design/pro-table';
 import type { SortOrder } from 'antd/lib/table/interface';
 import ProTable from '@ant-design/pro-table';
 import type { ProDescriptionsItemProps } from '@ant-design/pro-descriptions';
+import type { ProFormInstance } from '@ant-design/pro-form';
 import ProDescriptions from '@ant-design/pro-descriptions';
 import CustomPageHeader from './components/CustomPageHeader';
 import biominerAPI from '@/services/biominer';
 import './index.less';
+
+const isValidGuid = (guid: string | null) => {
+  if (guid) {
+    if (guid.length <= 36) {
+      return false;
+    }
+    const regex =
+      /^biominer.fudan-pgx\/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+    return regex.test(guid);
+  } else {
+    return false;
+  }
+};
 
 const FileList: React.FC = () => {
   /**
    * @en-US Pop-up window of new window
    * @zh-CN 新建窗口的弹窗
    *  */
+  const formRef = useRef<ProFormInstance>();
   const [showDetail, setShowDetail] = useState<boolean>(false);
   const [enableSearch, setEnableSearch] = useState<boolean>(false);
 
@@ -33,13 +48,40 @@ const FileList: React.FC = () => {
   const [currentRow, setCurrentRow] = useState<API.File>();
   const [selectedRowsState, setSelectedRows] = useState<API.File[]>([]);
 
+  // ?guid=biominer.fudan-pgx/1aea5c61-4a83-45a8-852e-dfd57a89b388
+  const search = window.location.search;
+  let queryParams = new URLSearchParams(search);
+  let guid_query: string | null = queryParams.get('guid');
+
+  // pathname: /biominer.fudan-pgx/1aea5c61-4a83-45a8-852e-dfd57a89b388
+  let guid_path = window.location.pathname.replace(/^\//, '');
+  // guid_path always exists, so we need to use guid_query firstly.
+  let guid: string | null = guid_query ? guid_query : guid_path;
+
   const downloadSelectedFiles = (selectedRowsState: API.File[]) => {
     if (selectedRowsState.length === 0) {
       message.info('Please select the file you want to download');
       return;
     } else {
+      // TODO: download selected files
+      message.info('Comming soon...');
     }
   };
+
+  const setQueryParams = (guid: string | null) => {
+    if (guid && isValidGuid(guid)) {
+      setParams({
+        guid: guid,
+      });
+      formRef.current?.setFieldsValue({
+        guid: guid,
+      });
+    }
+  };
+
+  useEffect(() => {
+    setQueryParams(guid);
+  }, [guid]);
 
   useEffect(() => {
     // Avoid request frequently, only request when the data is empty
@@ -519,6 +561,7 @@ const FileList: React.FC = () => {
           fileStat={fileStat}
           setEnableSearch={() => {
             setEnableSearch(!enableSearch);
+            setQueryParams(guid);
           }}
           enableSearch={enableSearch}
         ></CustomPageHeader>
@@ -536,6 +579,7 @@ const FileList: React.FC = () => {
               }
             : false
         }
+        formRef={formRef}
         toolBarRender={() => []}
         params={params}
         beforeSearchSubmit={(params: API.fetchFilesParams) => {

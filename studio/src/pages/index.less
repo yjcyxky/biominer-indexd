@@ -1,0 +1,57 @@
+.home-page {
+  height: calc(100vh - 64px);
+
+  .search-container {
+    height: 100%;
+    padding: 20px 50px;
+    overflow: scroll;
+
+    .search-input {
+      display: flex;
+      flex-direction: column;
+      // width: 60vw;
+      font-size: 1rem;
+      color: #657188;
+    }
+
+    .notation {
+      background-color: #def2f8;
+      border-color: #d1edf6;
+      color: #2f6473;
+      display: block;
+      padding: 20px;
+      border-radius: 5px;
+    }
+
+    .statistics {
+      display: flex;
+      flex-direction: row;
+      margin: 20px 0px;
+
+      .ant-col {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+        border-radius: 5px;
+
+        span {
+          font-size: 1.5rem;
+          font-weight: bold;
+        }
+
+        .ant-pro-card-body {
+          padding: 10px 24px 24px 24px;
+        }
+
+        .ant-statistic-content {
+          span {
+            font-size: 1.2rem;
+            font-weight: 300;
+          }
+        }
+      }
+    }
+  }
+}

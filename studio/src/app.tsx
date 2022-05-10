@@ -102,7 +102,9 @@ export const layout: RunTimeLayoutConfig = ({ initialState, setInitialState }) =
         <>
           {children}
           {!props.location?.pathname?.includes('/login') && (
+            // How to hide the settingdrawer? https://github.com/ant-design/ant-design-pro/issues/9608#issue-1141660626
             <SettingDrawer
+              prefixCls="hide"
               disableUrlParams
               enableDarkTheme
               settings={initialState?.settings}

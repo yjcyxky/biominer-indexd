@@ -9,7 +9,7 @@ import routes from './routes';
 const { REACT_APP_ENV } = process.env;
 
 export default defineConfig({
-  history: { type: 'hash' },
+  history: { type: 'browser' },
   hash: true,
   antd: {},
   dva: {
@@ -61,7 +61,7 @@ export default defineConfig({
   openAPI: [
     {
       requestLibPath: "import { request } from 'umi'",
-      schemaPath: "https://gw.alipayobjects.com/os/antfincdn/M%24jrzTTYJN/oneapi.json",
+      schemaPath: 'https://gw.alipayobjects.com/os/antfincdn/M%24jrzTTYJN/oneapi.json',
       mock: false,
     },
     {
@@ -74,5 +74,5 @@ export default defineConfig({
   nodeModulesTransform: { type: 'none' },
   mfsu: {},
   webpack5: {},
-  exportStatic: {}
+  exportStatic: {},
 });

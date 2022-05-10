@@ -6,6 +6,10 @@ body,
   height: 100%;
 }
 
+*::-webkit-scrollbar {
+  display: none;
+}
+
 .colorWeak {
   filter: invert(80%);
 }
@@ -59,4 +63,8 @@ ol {
   body .ant-design-pro > .ant-layout {
     min-height: 100vh;
   }
+}
+
+.ant-layout .ant-layout-content {
+  margin: 10px;
 }

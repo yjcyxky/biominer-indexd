@@ -44,4 +44,5 @@ export default {
 
   // Customized
   'menu.data-repo': 'Data Repo',
+  'menu.about': 'About',
 };

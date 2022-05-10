@@ -85,7 +85,7 @@ export default {
 
   // Header Content
   'data-repo.header-content.description':
-    'BioMiner旨在收集、管理、挖掘、分享和共享癌症相关的多组学数据，并为癌症相关研究人员提供统一的数据接口。',
+    'BioMiner Indexd旨在收集、管理、分享癌症相关的多组学数据，并为癌症相关研究人员提供统一的数据接口。',
   'data-repo.header-content.productDoc': '文档',
   'data-repo.header-content.issues': '讨论区',
   'data-repo.header-content.githubRepo': 'GitHub仓库',
