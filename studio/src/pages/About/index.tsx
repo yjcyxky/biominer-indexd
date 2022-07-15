@@ -15,7 +15,9 @@ const CodePreview: React.FC = ({ children }) => (
 
 const markdown = `
 ### Intro
-BioMiner Indexd is a hash-based data indexing and tracking service providing globally unique identifiers.
+BioMiner Indexd is a hash-based data indexing and tracking service providing globally unique identifiers. 
+
+We will release our data to multiple repo (such as [NODE](https://www.biosino.org/node/), [GSA](https://ngdc.cncb.ac.cn/gsa/), [SRA](https://www.ncbi.nlm.nih.gov/sra), [ENA](https://www.ebi.ac.uk/ena/browser/) etc.), for your convenience, we provide the BioMiner Indexd service for aggregating all these repos.
 
 ### Features 
 
@@ -48,11 +50,16 @@ biominer-aget --guid biominer.fudan-pgx/00006134-c655-4bbe-9144-0ee86da83902 --o
 ## or
 
 biominer-aget --hash b02ced3319ba35746e2436d67b04a42c --output-dir ~/Downloads/ --repo gsa --chunk_size 1m --concurrency 1000
+
+## NODE doesn't support http range, so the --chunk_size and --concurrency arguments don't work for it.
+
+biominer-aget --hash b02ced3319ba35746e2436d67b04a42c --output-dir ~/Downloads/ --repo node
 \`\`\`
 
 > Please note that:
 > 1. The \`chunk_size\` and \`concurrency\` parameters are related with the download speed. **There may be tens or hundreds of times the difference, so it's worth taking some time to find the best one.**
 > 2. The biominer-aget binary is not available for Windows.
+> 3. Not each file can be found in all these repos, so you need to specify a repo name when you downloading expected file.
 
 \`\`\`bash
 $ biominer-aget --help
