@@ -13,7 +13,7 @@ const Content = ({ children, extraContent }: { children: ReactNode; extraContent
 );
 
 export type PageHeaderProps = {
-  fileStat: API.FileStat;
+  fileStat: API.FileStatResponse;
   enableSearch: boolean;
   setEnableSearch: (enableSearch: boolean) => void;
 };
