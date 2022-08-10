@@ -1,5 +1,11 @@
+// import {
+//   default as axios,
+//   AxiosRequestConfig,
+//   AxiosRequestHeaders,
+// } from 'axios';
+import { map } from 'lodash';
 import { DownloadOutlined } from '@ant-design/icons';
-import { Button, message, Drawer, Typography, Divider, Tag, Row, Col } from 'antd';
+import { Button, message, Drawer, Typography, Divider, Tag, Row, Col, notification, Spin } from 'antd';
 import React, { useState, useRef, useEffect } from 'react';
 import { useIntl, FormattedMessage } from 'umi';
 import { PageContainer, FooterToolbar } from '@ant-design/pro-layout';
@@ -26,6 +32,30 @@ const isValidGuid = (guid: string | null) => {
   }
 };
 
+const determinRepo = (url?: API.URL) => {
+  if (typeof url !== 'undefined') {
+    return url.url.split(':')[0]
+  } else {
+    return 'node'
+  }
+}
+
+const assign: any = (arr: Object[]) => {
+  let m: any = {};
+  arr.forEach(item => {
+    m = Object.assign(m, item)
+  });
+  return m;
+}
+
+type SignData = {
+  headers: Object;
+  data: Object;
+  baseurl: string;
+  method: string;
+  params: Object;
+};
+
 const FileList: React.FC = () => {
   /**
    * @en-US Pop-up window of new window
@@ -47,6 +77,13 @@ const FileList: React.FC = () => {
   const actionRef = useRef<ActionType>();
   const [currentRow, setCurrentRow] = useState<API.File>();
   const [selectedRowsState, setSelectedRows] = useState<API.File[]>([]);
+  const [signData, setSignData] = useState<SignData>({
+    method: 'POST',
+    baseurl: '',
+    data: {},
+    params: {},
+    headers: {}
+  });
 
   // ?guid=biominer.fudan-pgx/1aea5c61-4a83-45a8-852e-dfd57a89b388
   const search = window.location.search;
@@ -67,6 +104,82 @@ const FileList: React.FC = () => {
       message.info('Comming soon...');
     }
   };
+
+  const downloadFile = (apiSignData: API.SignData, filename: string, repo: string) => {
+    // console.log("Download selected file: ", apiSignData);
+
+    const customHeaders: Object[] = map(apiSignData.header, (item: string) => {
+      const m: Object = {}
+      const itemLst = item.split(":")
+      m[itemLst[0]] = itemLst[1].trim()
+      return m
+    });
+
+    const data: Object[] = map(apiSignData.data, (item: string) => {
+      const m: Object = {}
+      const itemLst = item.split("=")
+      m[itemLst[0]] = itemLst[1].trim()
+      return m
+    });
+
+    const params: Object[] = map(apiSignData.params, (item: string) => {
+      const m: Object = {}
+      const itemLst = item.split("=")
+      m[itemLst[0]] = itemLst[1].trim()
+      return m
+    });
+
+    setSignData({
+      headers: assign(customHeaders),
+      data: assign(data),
+      params: assign(params),
+      baseurl: apiSignData.baseurl,
+      method: apiSignData.method
+    })
+
+    if (apiSignData.method === 'GET' && repo === 'gsa') {
+      message.info(`Downloading ${filename}, please wait a minute.`);
+      const paramsStr = new URLSearchParams(assign(params)).toString();
+      const link = `${apiSignData.baseurl}?${paramsStr}`;
+      const downloadAnchorNode = document.createElement('a');
+      downloadAnchorNode.download = filename;
+      downloadAnchorNode.style.display = 'none';
+      downloadAnchorNode.setAttribute('href', link);
+      downloadAnchorNode.setAttribute('target', '_blank');
+      document.body.appendChild(downloadAnchorNode);
+      downloadAnchorNode.click();
+      downloadAnchorNode.remove();
+      return;
+    } else if (apiSignData.method === 'POST' && repo === 'node') {
+      const downloadAnchorNode = document.querySelector('#nodeDownloadForm') as HTMLFormElement;
+      if (downloadAnchorNode) {
+        downloadAnchorNode.submit();
+        return;
+      }
+    }
+
+    notification.warn({
+      message: 'Warning',
+      description: <p>Cannot be downloaded via browser, you can use <a href='http://indexd.org/about' target='_blank'>biominer-aget</a>.</p>
+    })
+  }
+
+  const downloadSelectedFile = (entity: API.File) => {
+    console.log('Download file ', entity);
+    // TODO: How to select prefered repo?
+    const url = entity.urls ? entity.urls[0] : undefined
+    const which_repo = determinRepo(url);
+    const id = entity.guid.split('/')[1];
+    biominerAPI.File.signFile({
+      id: id,
+      which_repo: which_repo
+    }).then((response: API.SignResponse) => {
+      downloadFile(response.sign, response.filename, which_repo);
+    }).catch(error => {
+      console.log("Download selected file(error): ", error);
+      message.error(`Cannot download ${entity.filename}, please retry later.`)
+    })
+  }
 
   const setQueryParams = (guid: string | null) => {
     if (guid && isValidGuid(guid)) {
@@ -520,7 +633,7 @@ const FileList: React.FC = () => {
       dataIndex: 'actions',
       align: 'center',
       fixed: 'right',
-      width: 80,
+      width: 160,
       valueType: 'option',
       render: (_, entity) => {
         return (
@@ -533,17 +646,14 @@ const FileList: React.FC = () => {
             >
               <FormattedMessage id="pages.dataRepo.view" defaultMessage="View" />
             </a>
-            {/* 
             <Divider type="vertical" />
             <a
               onClick={() => {
-                setCurrentRow(entity);
-                setEnableSearch(true);
+                downloadSelectedFile(entity);
               }}
             >
-              <FormattedMessage id="pages.dataRepo.search" defaultMessage="Search" />
+              <FormattedMessage id="pages.dataRepo.download" defaultMessage="Download" />
             </a>
-             */}
           </>
         );
       },
@@ -575,8 +685,8 @@ const FileList: React.FC = () => {
         search={
           enableSearch
             ? {
-                labelWidth: 120,
-              }
+              labelWidth: 120,
+            }
             : false
         }
         formRef={formRef}
@@ -648,6 +758,15 @@ const FileList: React.FC = () => {
           />
         )}
       </Drawer>
+      <form action={signData.baseurl} method={signData.method} id="nodeDownloadForm">
+        {
+          Object
+            .entries(signData.data)
+            .map(([key, value]) => (
+              <input hidden name={key} value={value} id={key} key={key} onChange={() => {}} />
+            ))
+        }
+      </form>
     </PageContainer>
   );
 };

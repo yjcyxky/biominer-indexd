@@ -28,6 +28,7 @@
         "tags": [
           "Files"
         ],
+        "summary": "Call `/api/v1/files` to create a file instance.",
         "requestBody": {
           "content": {
             "application/json": {
@@ -44,7 +45,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/File"
+                  "$ref": "#/components/schemas/GuidResponse"
                 }
               }
             }
@@ -66,6 +67,7 @@
         "tags": [
           "Files"
         ],
+        "summary": "Call `/api/v1/files` with query params to fetch files.",
         "parameters": [
           {
             "name": "page",
@@ -230,11 +232,206 @@
         "operationId": "fetchFiles"
       }
     },
+    "/api/v1/files/{id}": {
+      "get": {
+        "tags": [
+          "File"
+        ],
+        "summary": "Call `/api/v1/files/:id` to fetch the file.",
+        "parameters": [
+          {
+            "name": "id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "in": "path",
+            "required": true,
+            "deprecated": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/File"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getFile"
+      },
+      "post": {
+        "tags": [
+          "File"
+        ],
+        "summary": "Call `/api/v1/files/:id` to sign the file and get the downloading link.",
+        "parameters": [
+          {
+            "name": "id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "in": "path",
+            "required": true,
+            "deprecated": false
+          },
+          {
+            "name": "which_repo",
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "required": false,
+            "deprecated": false
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "signFile"
+      }
+    },
+    "/api/v1/files/hash/{hash}": {
+      "post": {
+        "tags": [
+          "File"
+        ],
+        "summary": "Call `/api/v1/files/:id` to sign the file and get the downloading link.",
+        "parameters": [
+          {
+            "name": "hash",
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "required": true,
+            "deprecated": false
+          },
+          {
+            "name": "which_repo",
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "required": false,
+            "deprecated": false
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "signFileWithHash"
+      }
+    },
     "/api/v1/files/{id}/url": {
       "put": {
         "tags": [
           "File"
         ],
+        "summary": "Call `/api/v1/files/:id/url` to add url for the file.",
         "parameters": [
           {
             "name": "id",
@@ -287,6 +484,7 @@
         "tags": [
           "File"
         ],
+        "summary": "Call `/api/v1/files/:id/alias` to add alias for the file.",
         "parameters": [
           {
             "name": "id",
@@ -339,6 +537,7 @@
         "tags": [
           "File"
         ],
+        "summary": "Call `/api/v1/files/:id/hash` to add hash for the file.",
         "parameters": [
           {
             "name": "id",
@@ -391,6 +590,7 @@
         "tags": [
           "File"
         ],
+        "summary": "Call `/api/v1/files/:id/tag` to add tag for the file.",
         "parameters": [
           {
             "name": "id",
@@ -443,6 +643,7 @@
         "tags": [
           "Files"
         ],
+        "summary": "Call `/api/v1/files/tags` to fetch all tags.",
         "responses": {
           "200": {
             "description": "",
@@ -473,6 +674,7 @@
         "tags": [
           "Files"
         ],
+        "summary": "Call `/api/v1/files/stat` to get the statistics data.",
         "responses": {
           "200": {
             "description": "",
@@ -580,7 +782,7 @@
       "CreateFile": {
         "type": "object",
         "required": [
-          "hash",
+          "md5sum",
           "size"
         ],
         "properties": {
@@ -590,12 +792,18 @@
           "uploader": {
             "type": "string"
           },
-          "hash": {
+          "md5sum": {
             "type": "string"
           },
           "size": {
             "type": "integer",
             "format": "uint64"
+          },
+          "alias": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
           }
         }
       },
@@ -762,6 +970,17 @@
           }
         }
       },
+      "GuidResponse": {
+        "type": "object",
+        "required": [
+          "guid"
+        ],
+        "properties": {
+          "guid": {
+            "type": "string"
+          }
+        }
+      },
       "Hash": {
         "type": "object",
         "required": [
@@ -796,6 +1015,69 @@
         ],
         "properties": {
           "msg": {
+            "type": "string"
+          }
+        }
+      },
+      "SignData": {
+        "type": "object",
+        "required": [
+          "header",
+          "data",
+          "baseurl",
+          "method",
+          "params"
+        ],
+        "properties": {
+          "header": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "baseurl": {
+            "type": "string"
+          },
+          "method": {
+            "type": "string"
+          },
+          "params": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "SignResponse": {
+        "type": "object",
+        "required": [
+          "sign",
+          "size",
+          "hashes",
+          "filename"
+        ],
+        "properties": {
+          "sign": {
+            "$ref": "#/components/schemas/SignData"
+          },
+          "size": {
+            "type": "integer",
+            "format": "uint64"
+          },
+          "hashes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Hash"
+            }
+          },
+          "filename": {
             "type": "string"
           }
         }

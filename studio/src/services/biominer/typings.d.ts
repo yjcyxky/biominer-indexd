@@ -27,8 +27,10 @@ declare namespace API {
   type CreateFile = {
     filename?: string;
     uploader?: string;
-    hash: string;
+    md5sum: string;
     size: number;
+    alias?: string;
+    url?: string;
   };
 
   type File = {
@@ -75,6 +77,10 @@ declare namespace API {
     field_names: string[];
   };
 
+  type GuidResponse = {
+    guid: string;
+  };
+
   type Hash = {
     id: number;
     hash_type: string;
@@ -84,6 +90,21 @@ declare namespace API {
 
   type MessageResponse = {
     msg: string;
+  };
+
+  type SignData = {
+    header: string[];
+    data: string[];
+    baseurl: string;
+    method: string;
+    params: string[];
+  };
+
+  type SignResponse = {
+    sign: SignData;
+    size: number;
+    hashes: Hash[];
+    filename: string;
   };
 
   type Tag = {
@@ -118,6 +139,20 @@ declare namespace API {
     contain_alias?: boolean;
     contain_url?: boolean;
     contain_tag?: boolean;
+  };
+
+  type getFileParams = {
+    id: string;
+  };
+
+  type signFileParams = {
+    id: string;
+    which_repo?: string;
+  };
+
+  type signFileWithHashParams = {
+    hash: string;
+    which_repo?: string;
   };
 
   type addUrlToFileParams = {

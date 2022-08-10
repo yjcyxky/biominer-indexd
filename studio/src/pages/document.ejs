@@ -196,7 +196,6 @@
           transform: rotate(405deg);
         }
       }
-
     </style>
     <div style="
           display: flex;
@@ -223,6 +222,19 @@
       </div>
     </div>
   </div>
+  <script>
+    window.addEventListener('message', (event) => {
+      const data = event.data;
+
+      if (data.hideHeader) {
+        let style = '.ant-layout-content { background-color: #ffffff; } .ant-layout-content .ant-card-bordered { border: unset !important; } #root { padding: 10px !important; } .ant-layout-header, .biominer-footer { display: none !important; } .ant-layout .ant-layout-content { margin: 0px !important; } .home-page { height: 100% !important; }';
+        var css = document.createElement('style');
+        css.type = 'text/css';
+        css.appendChild(document.createTextNode(style));
+        document.head.appendChild(css);
+      }
+    });
+  </script>
 </body>
 
 </html>

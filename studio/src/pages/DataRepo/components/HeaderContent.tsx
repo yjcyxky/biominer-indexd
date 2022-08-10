@@ -29,7 +29,8 @@ const HeaderContent: React.FC = () => {
           })}
         />
         <IconLink
-          href="https://github.com/yjcyxky/biominer-indexd/issues"
+          // href="https://github.com/yjcyxky/biominer-indexd/issues"
+          href="https://github.com/chinese-quartet/docs.chinese-quartet.org/issues"
           avatarSrc={<QuestionCircleOutlined />}
           text={intl.formatMessage({
             id: 'data-repo.header-content.issues',
@@ -37,7 +38,8 @@ const HeaderContent: React.FC = () => {
           })}
         />
         <IconLink
-          href="https://github.com/yjcyxky/biominer-indexd"
+          // href="https://github.com/yjcyxky/biominer-indexd"
+          href="https://github.com/chinese-quartet/"
           avatarSrc={<GithubOutlined />}
           text={intl.formatMessage({
             id: 'data-repo.header-content.githubRepo',

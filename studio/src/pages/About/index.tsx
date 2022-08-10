@@ -34,7 +34,7 @@ We will release our data to multiple repo (such as [NODE](https://www.biosino.or
 - [ ] More features... 
 
 
-If you have any questions or suggestions, please submit a pull request or an issue on [BioMiner Indexd](https://github.com/yjcyxky/biominer-indexd).
+If you have any questions or suggestions, please submit a pull request or an issue on [Quartet Data Portal](https://github.com/chinese-quartet/docs.chinese-quartet.org/issues).
 
 ### How to download the omics data files?
 

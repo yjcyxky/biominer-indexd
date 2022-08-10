@@ -19,10 +19,11 @@ const isValidGuid = (guid: string) => {
   return regex.test(guid);
 };
 
+// [BioMiner Indexd](https://github.com/yjcyxky/biominer-indexd)
 const markdown = `
 BioMiner Indexd is a hash-based data indexing and tracking service providing globally unique identifiers.
 
-If you have any questions or suggestions, please submit a pull request or an issue on [BioMiner Indexd](https://github.com/yjcyxky/biominer-indexd).
+If you have any questions or suggestions, please submit a pull request or an issue on [Quartet Data Portal](https://github.com/chinese-quartet/docs.chinese-quartet.org/issues).
 
 Examples: [Quartet Data Portal](https://chinese-quartet.org)
 `;
