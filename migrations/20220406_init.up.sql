@@ -5,10 +5,10 @@ CREATE TABLE IF NOT EXISTS biominer_indexd_file (
   created_at BIGINT NOT NULL DEFAULT EXTRACT(EPOCH from now()) * 1000, -- When the file was created, milliseconds since epoch
   updated_at BIGINT NOT NULL DEFAULT EXTRACT(EPOCH from now()) * 1000, -- When the file was last updated, milliseconds since epoch
   status VARCHAR(16) NOT NULL DEFAULT 'pending', -- 'pending', 'processing', 'validated', 'failed'
-  rev VARCHAR(8) NOT NULL DEFAULT 'no_rev', -- The current revision (for avoiding conflicts)
+  rev VARCHAR(8) NOT NULL DEFAULT 'no_rev', -- The current revision (for avoiding conflicts).
   baseid VARCHAR(64) NOT NULL, -- The base identifier linking logically similar GUIDs
-  uploader VARCHAR(64) DEFAULT 'biominer-admin', -- The user who uploaded the file
-  version INTEGER NOT NULL DEFAULT 1 -- The version of the file schema
+  version INTEGER NOT NULL DEFAULT 1, -- The version of the file schema
+  uploader VARCHAR(64) DEFAULT 'biominer-admin' -- The user who uploaded the file. The field can be used as identity between different uploading. such as <uploader>-<date>
 );
 
 CREATE TABLE IF NOT EXISTS biominer_indexd_url (

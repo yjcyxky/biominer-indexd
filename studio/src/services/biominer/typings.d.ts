@@ -44,6 +44,8 @@ declare namespace API {
     rev: string;
     version: number;
     uploader: string;
+    access: string;
+    acl?: string;
     urls?: URL[];
     hashes?: Hash[];
     aliases?: Alias[];
@@ -148,11 +150,13 @@ declare namespace API {
   type signFileParams = {
     id: string;
     which_repo?: string;
+    'X-Auth-Groups'?: string;
   };
 
   type signFileWithHashParams = {
     hash: string;
     which_repo?: string;
+    'X-Auth-Groups'?: string;
   };
 
   type addUrlToFileParams = {

@@ -2,7 +2,12 @@
 <mapper>
   <select id="query_files">
     SELECT
-      guid, filename, size, updated_at, baseid, rev, version,
+      guid, filename, size, updated_at, baseid, rev, version, acl,
+      CASE
+        WHEN acl IS NULL THEN 'public'
+        ELSE 'private'
+      END 
+      AS access,
       biominer_indexd_file.created_at          as created_at,
       biominer_indexd_file.status              as status,
       biominer_indexd_file.uploader            as uploader,

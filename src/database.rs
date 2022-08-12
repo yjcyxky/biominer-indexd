@@ -233,6 +233,8 @@ pub struct File {
   pub rev: String,
   pub version: usize,
   pub uploader: String,
+  pub access: String,  // public or private
+  pub acl: Option<String>,
   pub urls: Option<Vec<URL>>,
   pub hashes: Option<Vec<Hash>>,
   pub aliases: Option<Vec<Alias>>,
@@ -258,6 +260,8 @@ impl File {
       uploader: uploader.to_string(),
       rev: rev,
       version: 1,
+      access: "public".to_string(),
+      acl: None,
       urls: None,
       hashes: None,
       aliases: None,

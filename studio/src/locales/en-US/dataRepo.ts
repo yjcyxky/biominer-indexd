@@ -4,6 +4,7 @@ export default {
   'pages.dataRepo.filename': 'File Name',
   'pages.dataRepo.filenameTip': 'The name of the file',
   'pages.dataRepo.filesize': 'File Size',
+  'pages.dataRepo.access': 'Access',
   'pages.dataRepo.filesizeTip': 'The size of the file',
   'pages.dataRepo.totalSize': 'Total Size',
   'pages.dataRepo.totalSizeTip': 'The total size of the file',

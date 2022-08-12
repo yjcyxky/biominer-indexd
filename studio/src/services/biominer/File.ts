@@ -19,12 +19,16 @@ export async function getFile(
 /** Call `/api/v1/files/:id` to sign the file and get the downloading link. POST /api/v1/files/${param0} */
 export async function signFile(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
-  params: API.signFileParams,
+  params: API.signFileParams & {
+    // header
+    'X-Auth-Groups'?: string;
+  },
   options?: { [key: string]: any },
 ) {
   const { id: param0, ...queryParams } = params;
   return request<any>(`/api/v1/files/${param0}`, {
     method: 'POST',
+    headers: {},
     params: {
       ...queryParams,
     },
@@ -35,12 +39,16 @@ export async function signFile(
 /** Call `/api/v1/files/:id` to sign the file and get the downloading link. POST /api/v1/files/hash/${param0} */
 export async function signFileWithHash(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
-  params: API.signFileWithHashParams,
+  params: API.signFileWithHashParams & {
+    // header
+    'X-Auth-Groups'?: string;
+  },
   options?: { [key: string]: any },
 ) {
   const { hash: param0, ...queryParams } = params;
   return request<any>(`/api/v1/files/hash/${param0}`, {
     method: 'POST',
+    headers: {},
     params: {
       ...queryParams,
     },

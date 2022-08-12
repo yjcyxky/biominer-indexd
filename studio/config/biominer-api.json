@@ -308,6 +308,15 @@
             "in": "query",
             "required": false,
             "deprecated": false
+          },
+          {
+            "name": "X-Auth-Groups",
+            "schema": {
+              "type": "string"
+            },
+            "in": "header",
+            "required": false,
+            "deprecated": true
           }
         ],
         "responses": {
@@ -332,6 +341,16 @@
             }
           },
           "400": {
+            "description": "",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
             "description": "",
             "content": {
               "text/plain": {
@@ -379,6 +398,15 @@
             "in": "query",
             "required": false,
             "deprecated": false
+          },
+          {
+            "name": "X-Auth-Groups",
+            "schema": {
+              "type": "string"
+            },
+            "in": "header",
+            "required": false,
+            "deprecated": true
           }
         ],
         "responses": {
@@ -403,6 +431,16 @@
             }
           },
           "400": {
+            "description": "",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
             "description": "",
             "content": {
               "text/plain": {
@@ -819,7 +857,8 @@
           "baseid",
           "rev",
           "version",
-          "uploader"
+          "uploader",
+          "access"
         ],
         "properties": {
           "guid": {
@@ -854,6 +893,12 @@
             "format": "uint64"
           },
           "uploader": {
+            "type": "string"
+          },
+          "access": {
+            "type": "string"
+          },
+          "acl": {
             "type": "string"
           },
           "urls": {

@@ -59,3 +59,13 @@ pub fn which_protocol(url: &str) -> Option<&'static str> {
   }
   None
 }
+
+pub fn has_permission(auth_groups: &str, acl: &str) -> bool {
+  let mut auth_group_vec: Vec<&str> = auth_groups.split(',').collect::<Vec<_>>().iter().map(|x| x.trim()).collect::<Vec<_>>();
+  let mut acl_vec: Vec<&str> = acl.split(',').collect::<Vec<_>>().iter().map(|x| x.trim()).collect::<Vec<_>>();
+  auth_group_vec.append(&mut acl_vec);
+  let length = auth_group_vec.len();
+  auth_group_vec.sort_unstable();
+  auth_group_vec.dedup();
+  return auth_group_vec.len() != length;
+}

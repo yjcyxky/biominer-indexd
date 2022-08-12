@@ -2,6 +2,7 @@ export default {
   'pages.dataRepo.guid': 'GUID',
   'pages.dataRepo.guidTip': '全球唯一码',
   'pages.dataRepo.filename': '文件名',
+  'pages.dataRepo.access': '访问权限',
   'pages.dataRepo.filenameTip': '文件名',
   'pages.dataRepo.filesize': '文件大小',
   'pages.dataRepo.filesizeTip': 'The size of the file',

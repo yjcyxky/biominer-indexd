@@ -6,6 +6,7 @@
 import { map } from 'lodash';
 import { DownloadOutlined } from '@ant-design/icons';
 import { Button, message, Drawer, Typography, Divider, Tag, Row, Col, notification, Spin } from 'antd';
+import { LockOutlined, UnlockOutlined } from '@ant-design/icons';
 import React, { useState, useRef, useEffect } from 'react';
 import { useIntl, FormattedMessage } from 'umi';
 import { PageContainer, FooterToolbar } from '@ant-design/pro-layout';
@@ -174,10 +175,11 @@ const FileList: React.FC = () => {
       id: id,
       which_repo: which_repo
     }).then((response: API.SignResponse) => {
+      message.info(`Downloading the file ${entity.filename}, please wait a moment...`)
       downloadFile(response.sign, response.filename, which_repo);
     }).catch(error => {
       console.log("Download selected file(error): ", error);
-      message.error(`Cannot download ${entity.filename}, please retry later.`)
+      message.error(`Cannot download ${entity.filename}, ${error}`)
     })
   }
 
@@ -234,6 +236,22 @@ const FileList: React.FC = () => {
   };
 
   const columns: ProColumns<API.File>[] = [
+    {
+      title: <FormattedMessage id="pages.dataRepo.access" defaultMessage="Access" />,
+      sorter: false,
+      align: 'center',
+      width: 120,
+      hideInSearch: true,
+      dataIndex: 'access',
+      valueType: 'textarea',
+      render: (dom, entity) => {
+        if (entity.access === 'public') {
+          return <span><UnlockOutlined /> Public</span>
+        } else {
+          return <span><LockOutlined /> Controlled</span>
+        }
+      },
+    },
     {
       title: <FormattedMessage id="pages.dataRepo.guid" defaultMessage="GUID" />,
       dataIndex: 'guid',
@@ -329,7 +347,7 @@ const FileList: React.FC = () => {
         id: 'pages.dataRepo.filesizeTip',
         defaultMessage: 'The size of the file',
       }),
-      sorter: true,
+      sorter: false,
       hideInSearch: true,
       renderText: (val: number) =>
         `${(val / (1024 * 1024 * 1024)).toFixed(3)} ${intl.formatMessage({
@@ -400,7 +418,7 @@ const FileList: React.FC = () => {
     },
     {
       title: <FormattedMessage id="pages.dataRepo.createdAt" defaultMessage="Created At" />,
-      sorter: true,
+      sorter: false,
       align: 'center',
       width: 200,
       tip: intl.formatMessage({
@@ -763,7 +781,7 @@ const FileList: React.FC = () => {
           Object
             .entries(signData.data)
             .map(([key, value]) => (
-              <input hidden name={key} value={value} id={key} key={key} onChange={() => {}} />
+              <input hidden name={key} value={value} id={key} key={key} onChange={() => { }} />
             ))
         }
       </form>

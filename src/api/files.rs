@@ -8,6 +8,7 @@ use poem::web::Data;
 use poem_openapi::{
   param::Path,
   param::Query,
+  param::Header,
   payload::{Json, PlainText},
   ApiResponse, Object, OpenApi, Tags,
 };
@@ -52,6 +53,9 @@ enum PostSignResponse {
 
   #[oai(status = 400)]
   BadRequest(PlainText<String>),
+
+  #[oai(status = 401)]
+  Unauthorized(PlainText<String>),
 
   #[oai(status = 500)]
   InternalError(PlainText<String>),
@@ -288,6 +292,8 @@ impl FilesApi {
     config: Data<&Arc<RepoConfig>>,
     hash: Path<String>,
     which_repo: Query<Option<String>>,
+    #[oai(name = "X-Auth-Groups", deprecated)]
+    auth_groups: Header<Option<String>>,
   ) -> PostSignResponse {
     let rb_arc = rb.clone();
     let config_arc = config.clone();
@@ -297,6 +303,7 @@ impl FilesApi {
       // TODO: Need to set a best repo, select gsa or select one based on the user's position.
       None => "node".to_string(),
     };
+    let auth_groups = auth_groups.0;
 
     match util::which_hash_type(&hash) {
       Some(_) => {}
@@ -309,6 +316,14 @@ impl FilesApi {
 
     match File::get_file_with_hash(&rb_arc, &hash).await {
       Some(file) => {
+        if file.access == "private".to_string() {
+          if auth_groups.is_none() || !util::has_permission(&auth_groups.unwrap()[..], &file.acl.unwrap()[..]) {
+            return PostSignResponse::Unauthorized(PlainText(format!(
+              "The data is private and you do not have permission to access."
+            )));
+          }
+        }
+
         match &file.urls {
           Some(urls) => {
             if let Some(idx) = urls.iter().position(|item| item.url.contains(&which_repo)) {
@@ -359,6 +374,8 @@ impl FilesApi {
     config: Data<&Arc<RepoConfig>>,
     id: Path<uuid::Uuid>,
     which_repo: Query<Option<String>>,
+    #[oai(name = "X-Auth-Groups", deprecated)]
+    auth_groups: Header<Option<String>>,
   ) -> PostSignResponse {
     let rb_arc = rb.clone();
     let config_arc = config.clone();
@@ -368,10 +385,20 @@ impl FilesApi {
       // TODO: Need to set a best repo, select gsa or select one based on the user's position.
       None => "node".to_string(),
     };
+    let auth_groups = auth_groups.0;
+
     info!("Sign file {:?}", guid);
 
     match File::get_file(&rb_arc, &id).await {
       Some(file) => {
+        if file.access == "private" {
+          if auth_groups.is_none() || !util::has_permission(&auth_groups.unwrap()[..], &file.acl.unwrap()[..]) {
+            return PostSignResponse::Unauthorized(PlainText(format!(
+              "The data is private and you do not have permission to access."
+            )));
+          }
+        }
+
         match &file.urls {
           Some(urls) => {
             if let Some(idx) = urls.iter().position(|item| item.url.contains(&which_repo)) {
