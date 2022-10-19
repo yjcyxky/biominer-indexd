@@ -10,10 +10,16 @@ import { BookOutlined, LinkOutlined } from '@ant-design/icons';
 import defaultSettings from '../config/defaultSettings';
 
 const isDev = process.env.NODE_ENV === 'development';
-const apiPrefix = process.env.UMI_APP_API_PREFIX ? process.env.UMI_APP_API_PREFIX : '';
+let prefix = ''
+if (window.location.pathname == '/index.html') {
+  prefix = ''
+} else {
+  prefix = window.location.pathname.replace('/index.html', '')
+}
+const apiPrefix = process.env.UMI_APP_API_PREFIX ? process.env.UMI_APP_API_PREFIX : prefix;
 const loginPath = '/user/login';
 
-console.log("apiPrefix", process.env);
+console.log("apiPrefix", process.env, apiPrefix);
 
 export const request: RequestConfig = {
   timeout: 30000,

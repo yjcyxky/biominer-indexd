@@ -99,6 +99,31 @@
   cargo run -- --help
   ```
 
+## Build
+
+1. Build Frontend
+
+  ```bash
+  # All frontend files will output to assets directory.
+  cd studio && yarn build:embed && cd ..
+  ```
+
+2. Build Indexd
+   
+  ```bash
+  # For MacOSX
+  cargo build --release
+
+  # For Linux
+  cargo build --release --target=x86_64-unknown-linux-musl
+  ```
+
+3. [Optional] For BioMiner Service
+   
+   ```bash
+   cp target/x86_64-unknown-linux-musl/release/biominer-indexd ../biominer/docker/packages/
+   ```
+
 ## Contributing
 Comming soon...
 

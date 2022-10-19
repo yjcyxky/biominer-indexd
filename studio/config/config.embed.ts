@@ -3,6 +3,6 @@ import { defineConfig } from 'umi';
 
 export default defineConfig({
   outputPath: '../assets/',
-  publicPath: '/assets/',
+  runtimePublicPath: true,
   history: { type: 'hash' },
 });
