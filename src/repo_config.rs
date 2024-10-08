@@ -93,6 +93,33 @@ impl Sign for GSAConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HttpConfig {
+  pub base_url: String,
+  pub account_name: String,
+  pub password: String,
+  pub project_id: String,
+}
+
+impl Sign for HttpConfig {
+  fn sign(&self, url: &str) -> SignData {
+    // TODO: Do we need to support the private resources using the http protocol?
+    let header = vec![];
+    let data = vec![];
+    let params = vec![];
+    let baseurl = url.to_string();
+    let method = "GET".to_string();
+
+    SignData {
+      header: header,
+      data: data,
+      baseurl: baseurl,
+      method: method,
+      params: params,
+    }
+  }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OSSConfig {
   pub access_key: String,
   pub access_secret: String,
@@ -141,6 +168,7 @@ pub struct RepoConfig {
   pub s3: Option<Vec<S3Config>>,
   pub minio: Option<Vec<MinioConfig>>,
   pub gsa: Option<Vec<GSAConfig>>,
+  pub http: Option<Vec<HttpConfig>>,
 }
 
 impl RepoConfig {
@@ -210,6 +238,14 @@ impl RepoConfig {
         }
         return None;
       }
+      "http" => {
+        if let Some(configs) = &self.http {
+          for config in configs {
+            return Some(Box::new(config.clone()));
+          }
+        }
+        return None;
+      }
       _ => panic!("unsupported protocol"),
     };
   }
@@ -262,6 +298,26 @@ mod tests {
     let config = gsa[0].clone();
     let signed = config.sign(url);
     assert!(signed.baseurl == "https://share.cncb.ac.cn/vsSyAX3A/HRA0001/HRR593463/HRR592563_f1.fastq.gz".to_string());
+  }
+
+  #[test]
+  fn test_httpconfig_sign() {
+    let url = "http://www.baidu.com";
+    let config_str = r#"
+      {
+        "http": [{
+          "base_url": "http://www.baidu.com",
+          "account_name": "yjcyxky@163.com",
+          "password": "admin",
+          "project_id": "OEP003178"
+        }]
+      }
+    "#;
+    let config = RepoConfig::read_config_data(config_str).unwrap();
+    let http = config.http.unwrap();
+    let config = http[0].clone();
+    let signed = config.sign(url);
+    assert!(signed.baseurl == "http://www.baidu.com".to_string());
   }
 
   #[test]
