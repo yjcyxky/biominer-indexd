@@ -27,6 +27,11 @@ jobs:
           working-directory: studio
       - name: Build studio
         run: cd studio && yarn openapi && yarn build:embed && cd ..
+      # Install musl-tools and build-essential
+      - name: Install musl-gcc and build-essential
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y musl-tools build-essential
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
