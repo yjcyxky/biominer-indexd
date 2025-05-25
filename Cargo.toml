@@ -10,7 +10,13 @@ readme = "README.md"
 repository = "https://github.com/yjcyxky/biominer-indexd"
 version = "0.1.0"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[[bin]]
+name = "biominer-indexd"
+path = "src/bin/biominer-indexd.rs"
+
+[[bin]]
+name = "biominer-indexd-cli"
+path = "src/bin/biominer-indexd-cli.rs"
 
 [dependencies]
 anyhow = "1.0"
@@ -31,3 +37,19 @@ tokio = {version = "1.17.0", features = ["rt-multi-thread", "macros", "signal"]}
 uuid = {version = "^0", features = ["serde", "v4"]}
 rust-embed = "6.3.0"
 custom_error = "1.9.2"
+sqlx = { version = "0.6.3", features = [
+    "postgres",
+    "macros",
+    "runtime-tokio-rustls",
+    "migrate",
+    "chrono",
+    "json"
+] }
+reqwest = { version = "0.12.3", features = ["json", "stream"] }
+base64 = "0.22.0"
+jsonwebtoken = { version = "9.2.0" }
+csv = "1.1.6"
+validator = { version = "0.16.1", features = ["derive"] }
+url = "2.4.0"
+include_dir = "0.7.3"
+tempfile = "3.2.0"

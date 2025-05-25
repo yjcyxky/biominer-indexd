@@ -5,13 +5,9 @@ extern crate log;
 #[macro_use]
 extern crate lazy_static;
 
-use biominer_indexd::{api, database, database::init_rbatis, repo_config::RepoConfig};
+use biominer_indexd::{api, connect_db, init_logger, model, repo_config::RepoConfig};
 use dotenv::dotenv;
 use log::{error, LevelFilter};
-use log4rs;
-use log4rs::append::console::ConsoleAppender;
-use log4rs::config::{Appender, Config, Logger, Root};
-use log4rs::encode::pattern::PatternEncoder;
 use poem::middleware::AddData;
 use poem::EndpointExt;
 use poem::{
@@ -25,42 +21,15 @@ use poem::{
 use poem_openapi::OpenApiService;
 use rust_embed::RustEmbed;
 use std::env;
-use std::error::Error;
 use std::path::Path as OsPath;
 use std::sync::Arc;
 // use tokio::{self, time::Duration};
 
 use structopt::StructOpt;
 
-fn init_logger(tag_name: &str, level: LevelFilter) -> Result<log4rs::Handle, String> {
-    let stdout = ConsoleAppender::builder()
-        .encoder(Box::new(PatternEncoder::new(
-            &(format!("[{}]", tag_name) + " {d} - {h({l} - {t} - {m}{n})}"),
-        )))
-        .build();
-
-    let config = Config::builder()
-        .appender(Appender::builder().build("stdout", Box::new(stdout)))
-        .logger(
-            Logger::builder()
-                .appender("stdout")
-                .additive(false)
-                .build("stdout", level),
-        )
-        .build(Root::builder().appender("stdout").build(level))
-        .unwrap();
-
-    log4rs::init_config(config).map_err(|e| {
-        format!(
-            "couldn't initialize log configuration. Reason: {}",
-            e.description()
-        )
-    })
-}
-
 /// An Index Engine for Omics Data Files.
 #[derive(Debug, PartialEq, StructOpt)]
-#[structopt(setting=structopt::clap::AppSettings::ColoredHelp, name="Biominer Indexd", author="Jingcheng Yang <yjcyxky@163.com>")]
+#[structopt(setting=structopt::clap::AppSettings::ColoredHelp, name="BioMiner Indexd", author="Jingcheng Yang <yjcyxky@163.com>")]
 struct Opt {
     /// Activate debug mode
     /// short and long flags (-D, --debug) will be deduced from the field's name
@@ -105,6 +74,10 @@ struct Opt {
         default_value = "/etc/indexd.json"
     )]
     config: String,
+
+    /// Pool size for database connection.
+    #[structopt(name = "pool-size", short = "s", long = "pool-size")]
+    pool_size: Option<u32>,
 }
 
 #[derive(RustEmbed)]
@@ -146,7 +119,8 @@ impl Endpoint for IndexHtmlEmbed {
                                 )
                                 .replace(
                                     "window.resourceBaseUrl || \"/\"",
-                                    &format!("\"{}\"", base_path.join("assets/").to_str().unwrap())[..],
+                                    &format!("\"{}\"", base_path.join("assets/").to_str().unwrap())
+                                        [..],
                                 );
                             Ok(Response::builder()
                                 .header(header::CONTENT_TYPE, "text/html")
@@ -208,6 +182,7 @@ async fn main() -> Result<(), std::io::Error> {
         base_path.to_str().unwrap()
     );
 
+    // Connect to the database
     let database_url = args.database_url;
 
     let database_url = if database_url.is_none() {
@@ -221,7 +196,12 @@ async fn main() -> Result<(), std::io::Error> {
     } else {
         database_url.unwrap()
     };
+    let pool_size = args.pool_size.unwrap_or(10);
+    let pool = connect_db(&database_url, pool_size).await;
+    let arc_pool = Arc::new(pool);
+    let shared_rb = AddData::new(arc_pool.clone());
 
+    // Read the repo config file
     let config_path = args.config;
     let indexd_repo_config = match RepoConfig::read_config(&config_path) {
         Ok(v) => v,
@@ -233,15 +213,11 @@ async fn main() -> Result<(), std::io::Error> {
     let arc_config = Arc::new(indexd_repo_config);
     let shared_repo_config = AddData::new(arc_config.clone());
 
-    let rb = init_rbatis(&database_url).await;
-    let arc_rb = Arc::new(rb);
-    let shared_rb = AddData::new(arc_rb.clone());
-
-    let config = database::Config::init_config(&arc_rb.clone()).await;
+    let config = model::Config::init_config(&arc_pool.clone()).await;
     info!("Initialize Config with `{:?}`", config);
     let shared_config = AddData::new(Arc::new(config));
 
-    let api_service = OpenApiService::new(api::files::FilesApi, "BioMiner Indexd", "v0.1.0")
+    let api_service = OpenApiService::new(api::files::BioMinerIndexdApi, "BioMiner Indexd", "v0.1.0")
                                                                   .summary("A RESTful API for BioMiner Indexd")
                                                                   .description("BioMiner Indexd is a hash-based data indexing and tracking service providing globally unique identifiers.")
                                                                   .license("GNU AFFERO GENERAL PUBLIC LICENSE v3")
