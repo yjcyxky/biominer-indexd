@@ -27,13 +27,13 @@ const Footer: React.FC = () => {
         {
           key: 'github',
           title: <GithubOutlined />,
-          href: 'https://github.com/biominer-lab',
+          href: 'https://github.com/open-prophetdb',
           blankTarget: true,
         },
         {
-          key: 'biominer',
-          title: 'BioMiner',
-          href: 'https://biominer.3steps.cn',
+          key: 'OpenProphetDB',
+          title: 'prophetdb',
+          href: 'https://www.prophetdb.org',
           blankTarget: true,
         },
       ]}

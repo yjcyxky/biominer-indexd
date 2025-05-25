@@ -21,11 +21,9 @@ const isValidGuid = (guid: string) => {
 
 // [BioMiner Indexd](https://github.com/yjcyxky/biominer-indexd)
 const markdown = `
-BioMiner Indexd is a hash-based data indexing and tracking service providing globally unique identifiers.
+BioMiner Indexd is a hash-based data indexing and tracking service providing globally unique identifiers. It is a part of [OpenProphetDB](https://www.prophetdb.org) project. The service provides a unified interface for managing and mining disease associated omics data.
 
-If you have any questions or suggestions, please submit a pull request or an issue on [Quartet Data Portal](https://github.com/chinese-quartet/docs.chinese-quartet.org/issues).
-
-Examples: [Quartet Data Portal](https://chinese-quartet.org)
+If you have any questions or suggestions, please access [our website](https://www.prophetdb.org) for support.
 `;
 
 const Index: React.FC = () => {

@@ -15,7 +15,7 @@ const CodePreview: React.FC = ({ children }) => (
 
 const markdown = `
 ### Intro
-BioMiner Indexd is a hash-based data indexing and tracking service providing globally unique identifiers. 
+BioMiner Indexd is a hash-based data indexing and tracking service providing globally unique identifiers. It is a part of [OpenProphetDB](https://www.prophetdb.org) project. The service provides a unified interface for managing and mining disease associated omics data.
 
 We will release our data to multiple repo (such as [NODE](https://www.biosino.org/node/), [GSA](https://ngdc.cncb.ac.cn/gsa/), [SRA](https://www.ncbi.nlm.nih.gov/sra), [ENA](https://www.ebi.ac.uk/ena/browser/) etc.), for your convenience, we provide the BioMiner Indexd service for aggregating all these repos.
 
@@ -34,7 +34,7 @@ We will release our data to multiple repo (such as [NODE](https://www.biosino.or
 - [ ] More features... 
 
 
-If you have any questions or suggestions, please submit a pull request or an issue on [Quartet Data Portal](https://github.com/chinese-quartet/docs.chinese-quartet.org/issues).
+If you have any questions or suggestions, please access [our website](https://www.prophetdb.org) for support.
 
 ### How to download the omics data files?
 
