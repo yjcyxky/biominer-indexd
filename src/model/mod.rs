@@ -810,14 +810,16 @@ impl File {
         }
 
         let id = if field_name == "guid" {
-            let uid = match uuid::Uuid::parse_str(field_value) {
-                Ok(id) => id,
-                Err(_) => {
+            let uid = match field_value.contains(format!("{}.{}", "biominer", Config::get_registry_id()).as_str()) {
+                true => {
+                    field_value.to_string()
+                }
+                false => {
                     return Err(anyhow::anyhow!("Invalid guid: {}", field_value));
                 }
             };
 
-            File::gen_guid(&uid)
+            uid
         } else if field_name == "hash" {
             field_value.to_string()
         } else {
@@ -828,6 +830,7 @@ impl File {
             "
                 SELECT 
                 f.*,
+                CASE WHEN f.acl IS NULL THEN 'public' ELSE 'private' END AS access,
 
                 (
                     SELECT json_agg(

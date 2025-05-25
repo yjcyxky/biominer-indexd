@@ -25,6 +25,11 @@ export const request: RequestConfig = {
   timeout: 30000,
   // More details on ./config/proxy.ts or ./config/config.cloud.ts
   prefix: apiPrefix,
+  errorHandler: (error: any) => {
+    // console.log("error", error);
+    // We don't want to handle the error globally, just throw it.
+    throw error;
+  },
   errorConfig: {},
   middlewares: [],
   requestInterceptors: [],

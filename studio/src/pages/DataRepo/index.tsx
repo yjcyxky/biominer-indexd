@@ -18,6 +18,8 @@ import type { ProFormInstance } from '@ant-design/pro-form';
 import ProDescriptions from '@ant-design/pro-descriptions';
 import CustomPageHeader from './components/CustomPageHeader';
 import biominerAPI from '@/services/biominer';
+import { ResponseError } from 'umi-request';
+
 import './index.less';
 
 const isValidGuid = (guid: string | null) => {
@@ -106,6 +108,17 @@ const FileList: React.FC = () => {
     }
   };
 
+  const downloadFileFromURL = (link: string, filename: string) => {
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.download = filename;
+    downloadAnchorNode.style.display = 'none';
+    downloadAnchorNode.setAttribute('href', link);
+    downloadAnchorNode.setAttribute('target', '_blank');
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+  }
+
   const downloadFile = (apiSignData: API.SignData, filename: string, repo: string) => {
     // console.log("Download selected file: ", apiSignData);
 
@@ -142,14 +155,7 @@ const FileList: React.FC = () => {
       message.info(`Downloading ${filename}, please wait a minute.`);
       const paramsStr = new URLSearchParams(assign(params)).toString();
       const link = `${apiSignData.baseurl}?${paramsStr}`;
-      const downloadAnchorNode = document.createElement('a');
-      downloadAnchorNode.download = filename;
-      downloadAnchorNode.style.display = 'none';
-      downloadAnchorNode.setAttribute('href', link);
-      downloadAnchorNode.setAttribute('target', '_blank');
-      document.body.appendChild(downloadAnchorNode);
-      downloadAnchorNode.click();
-      downloadAnchorNode.remove();
+      downloadFileFromURL(link, filename);
       return;
     } else if (apiSignData.method === 'POST' && repo === 'node') {
       const downloadAnchorNode = document.querySelector('#nodeDownloadForm') as HTMLFormElement;
@@ -168,19 +174,31 @@ const FileList: React.FC = () => {
   const downloadSelectedFile = (entity: API.File) => {
     console.log('Download file ', entity);
     // TODO: How to select prefered repo?
-    const url = entity.urls ? entity.urls[0] : undefined
+    const filtered_urls = entity.urls?.filter(url => !url.url.startsWith("node"))
+    const url = filtered_urls ? filtered_urls[0] : undefined
     const which_repo = determinRepo(url);
-    const id = entity.guid.split('/')[1];
-    biominerAPI.File.signFile({
-      id: id,
-      which_repo: which_repo
-    }).then((response: API.SignResponse) => {
+
+    if (which_repo.startsWith("http")) {
       message.info(`Downloading the file ${entity.filename}, please wait a moment...`)
-      downloadFile(response.sign, response.filename, which_repo);
-    }).catch(error => {
-      console.log("Download selected file(error): ", error);
-      message.error(`Cannot download ${entity.filename}, ${error}`)
-    })
+      downloadFileFromURL(url?.url || '', entity.filename);
+    } else {
+      const id = entity.guid.split('/')[1];
+      biominerAPI.File.signFile({
+        id: id,
+        which_repo: which_repo
+      }).then((response: API.SignResponse) => {
+        message.info(`Downloading the file ${entity.filename}, please wait a moment...`)
+        downloadFile(response.sign, response.filename, which_repo);
+      }).catch(async (error: ResponseError) => {
+        let detail = '';
+        try {
+          detail = await error.response?.text?.() || error.message;
+        } catch (_) {
+          detail = error.message;
+        }
+        message.error(`Cannot download ${entity.filename}, ${detail}`, 5);
+      });
+    }
   }
 
   const setQueryParams = (guid: string | null) => {
