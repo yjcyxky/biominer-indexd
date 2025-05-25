@@ -275,48 +275,67 @@ impl<'a> QueryFilter<'a> {
 
     /// 拼接 SQL WHERE 条件，并返回参数列表
     pub fn to_sql_and_params(&self) -> (String, Vec<String>) {
-        let mut clauses = vec!["1=1".to_string()];
+        let mut clauses = vec![];
         let mut params = vec![];
+        let mut param_index = 1;
 
-        if let Some(v) = self.guid {
-            clauses.push("f.guid = $GUID".to_string());
-            params.push(v.to_string());
-        }
-        if let Some(v) = self.filename {
-            clauses.push("f.filename ILIKE $FILENAME".to_string());
-            params.push(format!("%{}%", v));
-        }
-        if let Some(v) = self.baseid {
-            clauses.push("f.baseid = $BASEID".to_string());
-            params.push(v.to_string());
-        }
-        if let Some(v) = self.status {
-            clauses.push("f.status = $STATUS".to_string());
-            params.push(v.to_string());
-        }
-        if let Some(v) = self.uploader {
-            clauses.push("f.uploader = $UPLOADER".to_string());
-            params.push(v.to_string());
-        }
-        if let Some(v) = self.hash {
-            clauses.push("EXISTS (SELECT 1 FROM biominer_indexd_hash h WHERE h.file = f.guid AND h.hash = $HASH)".to_string());
-            params.push(v.to_string());
-        }
-        if let Some(v) = self.alias {
-            clauses.push("EXISTS (SELECT 1 FROM biominer_indexd_alias a WHERE a.file = f.guid AND a.name = $ALIAS)".to_string());
-            params.push(v.to_string());
-        }
-        if let Some(v) = self.url {
-            clauses.push("EXISTS (SELECT 1 FROM biominer_indexd_url u WHERE u.file = f.guid AND u.url = $URL)".to_string());
-            params.push(v.to_string());
-        }
-        if self.field_name.is_some() && self.field_value.is_some() {
-            clauses.push("EXISTS (SELECT 1 FROM biominer_indexd_tag t WHERE t.file = f.guid AND t.field_name = $TAG_FN AND t.field_value = $TAG_FV)".to_string());
-            params.push(self.field_name.unwrap().to_string());
-            params.push(self.field_value.unwrap().to_string());
+        macro_rules! push_clause {
+            ($cond:expr, $sql_fmt:expr, $val:expr) => {
+                if $cond.is_some() {
+                    clauses.push(format!($sql_fmt, param_index));
+                    if let Some(vv) = $val {
+                        params.push(vv.to_string());
+                    } else {
+                        params.push("".to_string());
+                    };
+                    param_index += 1;
+                }
+            };
         }
 
-        (clauses.join(" AND "), params)
+        push_clause!(self.guid, "f.guid = ${}", self.guid);
+        push_clause!(
+            self.filename,
+            "f.filename ILIKE ${}",
+            Some(&format!("%{}%", self.filename.unwrap()))
+        );
+        push_clause!(self.baseid, "f.baseid = ${}", self.baseid);
+        push_clause!(self.status, "f.status = ${}", self.status);
+        push_clause!(self.uploader, "f.uploader = ${}", self.uploader);
+        push_clause!(
+            self.hash,
+            "EXISTS (SELECT 1 FROM biominer_indexd_hash h WHERE h.file = f.guid AND h.hash = ${})",
+            self.hash
+        );
+        push_clause!(
+            self.alias,
+            "EXISTS (SELECT 1 FROM biominer_indexd_alias a WHERE a.file = f.guid AND a.name = ${})",
+            self.alias
+        );
+        push_clause!(
+            self.url,
+            "EXISTS (SELECT 1 FROM biominer_indexd_url u WHERE u.file = f.guid AND u.url = ${})",
+            self.url
+        );
+
+        if let (Some(fn_), Some(fv)) = (self.field_name, self.field_value) {
+            clauses.push(format!(
+                "EXISTS (SELECT 1 FROM biominer_indexd_tag t WHERE t.file = f.guid AND t.field_name = ${} AND t.field_value = ${})",
+                param_index,
+                param_index + 1
+            ));
+            params.push(fn_.to_string());
+            params.push(fv.to_string());
+            param_index += 2;
+        }
+
+        let where_clause = if clauses.is_empty() {
+            "1=1".to_string()
+        } else {
+            clauses.join(" AND ")
+        };
+
+        (where_clause, params)
     }
 }
 
@@ -328,14 +347,17 @@ pub async fn fetch_guid_page(
 ) -> Result<(Vec<String>, i64), anyhow::Error> {
     let offset = (page_no - 1) * page_size;
     let (where_clause, params) = filter.to_sql_and_params();
+    let num_params = params.len();
 
-    let base_sql = format!(
-        "FROM biominer_indexd_file f WHERE {} ORDER BY f.updated_at DESC",
-        where_clause
-    );
+    let base_sql = format!("FROM biominer_indexd_file f WHERE {}", where_clause);
 
     let count_sql = format!("SELECT COUNT(*) {}", base_sql);
-    let guid_sql = format!("SELECT f.guid {} OFFSET $OFFSET LIMIT $LIMIT", base_sql);
+    let guid_sql = format!(
+        "SELECT f.guid {} OFFSET ${} LIMIT ${}",
+        base_sql,
+        num_params + 1,
+        num_params + 2
+    );
 
     // 绑定参数（位置绑定：$1, $2...）
     let mut query = sqlx::query_scalar::<_, i64>(&count_sql);
@@ -353,6 +375,12 @@ pub async fn fetch_guid_page(
         .fetch_all(pool)
         .await?;
 
+    debug!("Query Count SQL:    {:?}", count_sql);
+    debug!("Query Count Params: {:?}", params);
+
+    debug!("Query SQL:    {:?}", guid_sql);
+    debug!("Query Params: {:?}", params);
+
     Ok((guids, total))
 }
 
@@ -369,31 +397,34 @@ pub async fn load_files_by_guids(
 
     let in_clause = format!(
         "({})",
-        guids.iter().map(|_| "?").collect::<Vec<_>>().join(",")
+        (1..=guids.len())
+            .map(|i| format!("${}", i))
+            .collect::<Vec<_>>()
+            .join(", ")
     );
+
     let sql = format!(
         "
-        SELECT
-            f.guid, f.filename, f.size, f.updated_at, f.baseid, f.rev, f.version, f.acl,
-            CASE WHEN f.acl IS NULL THEN 'public' ELSE 'private' END AS access,
-            f.created_at, f.status, f.uploader,
-            {},
-            (SELECT json_agg(h) FROM biominer_indexd_hash h WHERE h.file = f.guid) AS hashes,
-            {},
-            {}
-        FROM biominer_indexd_file f
-        WHERE f.guid IN {}
-        ORDER BY f.updated_at DESC
+            SELECT
+                f.guid, f.filename, f.size, f.updated_at, f.baseid, f.rev, f.version, f.acl,
+                CASE WHEN f.acl IS NULL THEN 'public' ELSE 'private' END AS access,
+                f.created_at, f.status, f.uploader,
+                {},
+                (SELECT json_agg(h) FROM biominer_indexd_hash h WHERE h.file = f.guid) AS hashes,
+                {},
+                {}
+            FROM biominer_indexd_file f
+            WHERE f.guid IN {}
         ",
         if include_urls {
-            "(SELECT json_agg(u) FROM biominer_indexd_url u WHERE u.file = f.guid) AS urls,"
+            "(SELECT json_agg(u) FROM biominer_indexd_url u WHERE u.file = f.guid) AS urls"
         } else {
-            "NULL AS urls,"
+            "NULL AS urls"
         },
         if include_aliases {
-            "(SELECT json_agg(a) FROM biominer_indexd_alias a WHERE a.file = f.guid) AS aliases,"
+            "(SELECT json_agg(a) FROM biominer_indexd_alias a WHERE a.file = f.guid) AS aliases"
         } else {
-            "NULL AS aliases,"
+            "NULL AS aliases"
         },
         if include_tags {
             "(SELECT json_agg(t) FROM biominer_indexd_tag t WHERE t.file = f.guid) AS tags"
@@ -729,7 +760,7 @@ pub struct File {
     pub status: String,
     pub baseid: String,
     pub rev: String,
-    pub version: i64,
+    pub version: i32,
     pub uploader: String,
     pub access: String, // public or private
     pub acl: Option<String>,
@@ -757,7 +788,7 @@ impl File {
             baseid: baseid,
             uploader: uploader.to_string(),
             rev: rev,
-            version: 1i64,
+            version: 1i32,
             access: "public".to_string(),
             acl: None,
             urls: None,

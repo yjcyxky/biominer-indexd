@@ -74,7 +74,7 @@ export default {
 
   // Custom Page Header
   'data-repo.custom-page-header.title': 'BioMiner DataRepo',
-  'data-repo.custom-page-header.subtitle': 'For Managing and Mining Cancer Associated Omics Data.',
+  'data-repo.custom-page-header.subtitle': 'For Managing and Mining Disease Associated Omics Data.',
   'data-repo.custom-page-header.showQuery': 'Show Query',
   'data-repo.custom-page-header.hideQuery': 'Hide Query',
   'data-repo.custom-page-header.batchImport': 'Batch Import',
@@ -87,6 +87,7 @@ export default {
   // Header Content
   'data-repo.header-content.description':
     'BioMiner Indexd is a hash-based data indexing and tracking service providing globally unique identifiers.',
+  'data-repo.header-content.officialWebsite': 'Official Website',
   'data-repo.header-content.productDoc': 'Docs',
   'data-repo.header-content.issues': 'Issues',
   'data-repo.header-content.githubRepo': 'GitHub Repo',

@@ -2,7 +2,7 @@ import { IconLink } from './IconLink';
 import { Typography } from 'antd';
 import { useIntl } from 'umi';
 
-import { GithubOutlined, InfoCircleOutlined, QuestionCircleOutlined } from '@ant-design/icons';
+import { GithubOutlined, HomeFilled, HomeOutlined, InfoCircleOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 
 const { Paragraph } = Typography;
 
@@ -21,6 +21,14 @@ const HeaderContent: React.FC = () => {
       {/* <Paragraph>Please add a description...</Paragraph> */}
       <div>
         <IconLink
+          href="https://www.prophetdb.org"
+          avatarSrc={<HomeOutlined />}
+          text={intl.formatMessage({
+            id: 'data-repo.header-content.officialWebsite',
+            defaultMessage: 'Official Website',
+          })}
+        />
+        <IconLink
           href="/about"
           avatarSrc={<InfoCircleOutlined />}
           text={intl.formatMessage({
@@ -29,8 +37,7 @@ const HeaderContent: React.FC = () => {
           })}
         />
         <IconLink
-          // href="https://github.com/yjcyxky/biominer-indexd/issues"
-          href="https://github.com/chinese-quartet/docs.chinese-quartet.org/issues"
+          href="https://github.com/yjcyxky/biominer-indexd/issues"
           avatarSrc={<QuestionCircleOutlined />}
           text={intl.formatMessage({
             id: 'data-repo.header-content.issues',
@@ -38,8 +45,7 @@ const HeaderContent: React.FC = () => {
           })}
         />
         <IconLink
-          // href="https://github.com/yjcyxky/biominer-indexd"
-          href="https://github.com/chinese-quartet/"
+          href="https://github.com/yjcyxky/biominer-indexd"
           avatarSrc={<GithubOutlined />}
           text={intl.formatMessage({
             id: 'data-repo.header-content.githubRepo',

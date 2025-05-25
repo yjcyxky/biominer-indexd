@@ -212,7 +212,7 @@ impl BioMinerIndexdApi {
     )]
     async fn create_file(
         &self,
-        pool: Data<&sqlx::PgPool>,
+        pool: Data<&Arc<sqlx::PgPool>>,
         config: Data<&Arc<Config>>,
         params: Json<CreateFile>,
     ) -> PostResponse {
@@ -262,14 +262,14 @@ impl BioMinerIndexdApi {
 
     /// Call `/api/v1/files` with query params to fetch files.
     #[oai(
-        path = "/api/v1/files",
+        path = "/files",
         method = "get",
         tag = "FileApiTags::Files",
         operation_id = "fetchFiles"
     )]
     async fn fetch_files(
         &self,
-        pool: Data<&sqlx::PgPool>,
+        pool: Data<&Arc<sqlx::PgPool>>,
         page: Query<Option<u64>>,
         page_size: Query<Option<u64>>,
         guid: Query<Option<String>>,
@@ -369,7 +369,7 @@ impl BioMinerIndexdApi {
 
     /// Call `/api/v1/files/:id` to fetch the file.
     #[oai(
-        path = "/api/v1/files/:id",
+        path = "/files/:id",
         method = "get",
         tag = "FileApiTags::File",
         operation_id = "getFile"
@@ -387,14 +387,14 @@ impl BioMinerIndexdApi {
 
     /// Call `/api/v1/files/:id` to sign the file and get the downloading link.
     #[oai(
-        path = "/api/v1/files/hash/:hash",
+        path = "/files/hash/:hash",
         method = "post",
         tag = "FileApiTags::File",
         operation_id = "signFileWithHash"
     )]
     async fn sign_file_with_hash(
         &self,
-        pool: Data<&sqlx::PgPool>,
+        pool: Data<&Arc<sqlx::PgPool>>,
         config: Data<&Arc<RepoConfig>>,
         hash: Path<String>,
         which_repo: Query<Option<String>>,
@@ -483,14 +483,14 @@ impl BioMinerIndexdApi {
 
     /// Call `/api/v1/files/:id` to sign the file and get the downloading link.
     #[oai(
-        path = "/api/v1/files/:id",
+        path = "/files/:id",
         method = "post",
         tag = "FileApiTags::File",
         operation_id = "signFile"
     )]
     async fn sign_file(
         &self,
-        pool: Data<&sqlx::PgPool>,
+        pool: Data<&Arc<sqlx::PgPool>>,
         config: Data<&Arc<RepoConfig>>,
         id: Path<uuid::Uuid>,
         which_repo: Query<Option<String>>,
@@ -573,14 +573,14 @@ impl BioMinerIndexdApi {
 
     /// Call `/api/v1/files/:id/url` to add url for the file.
     #[oai(
-        path = "/api/v1/files/:id/url",
+        path = "/files/:id/url",
         method = "put",
         tag = "FileApiTags::File",
         operation_id = "addUrlToFile"
     )]
     async fn add_url(
         &self,
-        pool: Data<&sqlx::PgPool>,
+        pool: Data<&Arc<sqlx::PgPool>>,
         id: Path<uuid::Uuid>,
         params: Json<AddFileUrl>,
     ) -> PutResponse {
@@ -620,14 +620,14 @@ impl BioMinerIndexdApi {
 
     /// Call `/api/v1/files/:id/alias` to add alias for the file.
     #[oai(
-        path = "/api/v1/files/:id/alias",
+        path = "/files/:id/alias",
         method = "put",
         tag = "FileApiTags::File",
         operation_id = "addAliasToFile"
     )]
     async fn add_alias(
         &self,
-        pool: Data<&sqlx::PgPool>,
+        pool: Data<&Arc<sqlx::PgPool>>,
         id: Path<uuid::Uuid>,
         params: Json<AddFileAlias>,
     ) -> PutResponse {
@@ -644,14 +644,14 @@ impl BioMinerIndexdApi {
 
     /// Call `/api/v1/files/:id/hash` to add hash for the file.
     #[oai(
-        path = "/api/v1/files/:id/hash",
+        path = "/files/:id/hash",
         method = "put",
         tag = "FileApiTags::File",
         operation_id = "addHashToFile"
     )]
     async fn add_hash(
         &self,
-        pool: Data<&sqlx::PgPool>,
+        pool: Data<&Arc<sqlx::PgPool>>,
         id: Path<uuid::Uuid>,
         params: Json<AddFileHash>,
     ) -> PutResponse {
@@ -668,14 +668,14 @@ impl BioMinerIndexdApi {
 
     /// Call `/api/v1/files/:id/tag` to add tag for the file.
     #[oai(
-        path = "/api/v1/files/:id/tag",
+        path = "/files/:id/tag",
         method = "put",
         tag = "FileApiTags::File",
         operation_id = "addTagToFile"
     )]
     async fn add_tag(
         &self,
-        pool: Data<&sqlx::PgPool>,
+        pool: Data<&Arc<sqlx::PgPool>>,
         id: Path<uuid::Uuid>,
         params: Json<AddFileTag>,
     ) -> PutResponse {
@@ -692,12 +692,12 @@ impl BioMinerIndexdApi {
 
     /// Call `/api/v1/files/tags` to fetch all tags.
     #[oai(
-        path = "/api/v1/files/tags",
+        path = "/files/tags",
         method = "get",
         tag = "FileApiTags::Files",
         operation_id = "getTags"
     )]
-    async fn list_tags(&self, pool: Data<&sqlx::PgPool>) -> GetTagsResponse {
+    async fn list_tags(&self, pool: Data<&Arc<sqlx::PgPool>>) -> GetTagsResponse {
         let pool = pool.clone();
 
         match FileTagsResponse::get_fields(&pool).await {
@@ -708,12 +708,12 @@ impl BioMinerIndexdApi {
 
     /// Call `/api/v1/files/stat` to get the statistics data.
     #[oai(
-        path = "/api/v1/files/stat",
+        path = "/files/stat",
         method = "get",
         tag = "FileApiTags::Files",
         operation_id = "getFileStat"
     )]
-    async fn get_stat(&self, pool: Data<&sqlx::PgPool>) -> GetStatResponse {
+    async fn get_stat(&self, pool: Data<&Arc<sqlx::PgPool>>) -> GetStatResponse {
         let pool = pool.clone();
 
         match FileStatResponse::get_stat(&pool).await {

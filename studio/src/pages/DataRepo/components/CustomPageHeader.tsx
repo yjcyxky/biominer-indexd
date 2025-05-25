@@ -30,7 +30,7 @@ const CustomPageHeader: React.FC<PageHeaderProps> = (props: PageHeaderProps) => 
       className="datarepo-page-header"
       subTitle={intl.formatMessage({
         id: 'data-repo.custom-page-header.subtitle',
-        defaultMessage: 'For Managing and Mining Cancer Associated Omics Data.',
+        defaultMessage: 'For Managing and Mining Disease Associated Omics Data.',
       })}
       tags={<Tag color="blue">{props.fileStat.registry_id}</Tag>}
       extra={[

@@ -375,7 +375,6 @@ const FileList: React.FC = () => {
               return (
                 <Col
                   key={tag.field_name}
-                  span={8}
                   style={{ marginBottom: '5px', marginRight: '10px' }}
                 >
                   <Tag>{tag.field_name}</Tag>
