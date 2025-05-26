@@ -1,6 +1,4 @@
 #[macro_use]
-extern crate rbatis;
-#[macro_use]
 extern crate log;
 #[macro_use]
 extern crate lazy_static;
@@ -78,6 +76,10 @@ struct Opt {
     /// Pool size for database connection.
     #[structopt(name = "pool-size", short = "s", long = "pool-size")]
     pool_size: Option<u32>,
+
+    /// The path of the data directory.
+    #[structopt(name = "data-dir", short = "D", long = "data-dir")]
+    data_dir: Option<String>,
 }
 
 #[derive(RustEmbed)]
@@ -213,7 +215,7 @@ async fn main() -> Result<(), std::io::Error> {
     let arc_config = Arc::new(indexd_repo_config);
     let shared_repo_config = AddData::new(arc_config.clone());
 
-    let config = model::Config::init_config(&arc_pool.clone()).await;
+    let config = model::datafile::Config::init_config(&arc_pool.clone()).await;
     info!("Initialize Config with `{:?}`", config);
     let shared_config = AddData::new(Arc::new(config));
 

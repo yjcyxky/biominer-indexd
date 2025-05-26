@@ -1,0 +1,506 @@
+[
+  {
+    "key": "patient_id",
+    "name": "Patient Identifier",
+    "description": "Identifier to uniquely specify a patient.",
+    "data_type": "STRING",
+    "notes": "Patient Identifier",
+    "allowed_values": [
+      "AdCC5T",
+      "AdCC4T",
+      "AdCC2T",
+      "AdCC9T",
+      "AdCC8T",
+      "AdCC6T",
+      "AdCC32T",
+      "AdCC1T",
+      "AdCC12T",
+      "AdCC3T",
+      "AdCC11T",
+      "AdCC10T"
+    ],
+    "order": 1
+  },
+  {
+    "key": "sample_id",
+    "name": "Sample Identifier",
+    "description": "A unique sample identifier.",
+    "data_type": "STRING",
+    "notes": "Sample Identifier",
+    "allowed_values": [
+      "AdCC5T",
+      "AdCC4T",
+      "AdCC2T",
+      "AdCC9T",
+      "AdCC8T",
+      "AdCC6T",
+      "AdCC32T",
+      "AdCC1T",
+      "AdCC12T",
+      "AdCC3T",
+      "AdCC11T",
+      "AdCC10T"
+    ],
+    "order": 1
+  },
+  {
+    "key": "cancer_type",
+    "name": "Cancer Type",
+    "description": "Cancer Type",
+    "data_type": "STRING",
+    "notes": "Cancer Type",
+    "allowed_values": [
+      "Breast Cancer",
+      "Invasive Breast Carcinoma"
+    ],
+    "order": 1
+  },
+  {
+    "key": "cancer_type_detailed",
+    "name": "Cancer Type Detailed",
+    "description": "Cancer Type Detailed",
+    "data_type": "STRING",
+    "notes": "Cancer Type Detailed",
+    "allowed_values": [
+      "Adenoid Cystic Breast Cancer"
+    ],
+    "order": 1
+  },
+  {
+    "key": "tumor_size",
+    "name": "Tumor Size",
+    "description": "Tumor size.",
+    "data_type": "STRING",
+    "notes": "Tumor Size",
+    "allowed_values": [
+      "40",
+      "35",
+      "25",
+      "45",
+      "17",
+      "22",
+      "15",
+      "20",
+      "23",
+      "24"
+    ],
+    "order": 1
+  },
+  {
+    "key": "primary_site",
+    "name": "Primary Tumor Site",
+    "description": "Text term to describe the organ sub-division in an individual with cancer.",
+    "data_type": "STRING",
+    "notes": "Primary Tumor Site",
+    "allowed_values": [
+      "Breast"
+    ],
+    "order": 1
+  },
+  {
+    "key": "sample_type",
+    "name": "Sample Type",
+    "description": "The type of sample (i.e., normal, primary, met, recurrence).",
+    "data_type": "STRING",
+    "notes": "Sample Type",
+    "allowed_values": [
+      "Primary"
+    ],
+    "order": 9
+  },
+  {
+    "key": "metastatic_site",
+    "name": "Metastatic Site",
+    "description": "The anatomic location to which the cancer has spread.",
+    "data_type": "STRING",
+    "notes": "Metastatic Site",
+    "allowed_values": [
+      "Lung"
+    ],
+    "order": 1
+  },
+  {
+    "key": "tumor_stage",
+    "name": "Tumor Stage",
+    "description": "Tumor stage.",
+    "data_type": "STRING",
+    "notes": "Tumor Stage",
+    "allowed_values": [
+      "II",
+      "I"
+    ],
+    "order": 1
+  },
+  {
+    "key": "myb_nfib_fish",
+    "name": "MYB-NFIB FISH",
+    "description": "MYB-NFIB FISH.",
+    "data_type": "STRING",
+    "notes": "MYB-NFIB FISH",
+    "allowed_values": [
+      "Negative",
+      "Positive"
+    ],
+    "order": 1
+  },
+  {
+    "key": "myb_nfib_nonsynonymous_count",
+    "name": "MYB-NFIB Fusion Gene Non-synonymous Mutations",
+    "description": "Count of non-synonymous mutations in MYB-NFIB Fusion Gene",
+    "data_type": "STRING",
+    "notes": "MYB-NFIB Fusion Gene Non-synonymous Mutations",
+    "allowed_values": [
+      "11",
+      "22",
+      "23",
+      "10",
+      "9",
+      "18",
+      "14",
+      "19",
+      "6",
+      "7"
+    ],
+    "order": 1
+  },
+  {
+    "key": "myb_nfib_cna",
+    "name": "MYB-NFIB Fusion Gene Copy Number Alterations",
+    "description": "MYB-NFIB Fusion Gene Copy Number Alterations",
+    "data_type": "STRING",
+    "notes": "MYB-NFIB Fusion Gene Copy Number Alterations",
+    "allowed_values": [
+      "9q13-q34.2 loss",
+      "17q21-q25.1 gain; 17p13.3-p11.2 loss",
+      "12q12-q14.1 loss",
+      "17q21-q25.1 gain"
+    ],
+    "order": 1
+  },
+  {
+    "key": "er_status_by_ihc",
+    "name": "ER Status By IHC",
+    "description": "breast carcinoma progesterone receptor status",
+    "data_type": "STRING",
+    "notes": "ER Status By IHC",
+    "allowed_values": [
+      "Negative"
+    ],
+    "order": 1
+  },
+  {
+    "key": "ihc_her2",
+    "name": "IHC-HER2",
+    "description": "IHC-HER2",
+    "data_type": "STRING",
+    "notes": "IHC-HER2",
+    "allowed_values": [
+      "Negative"
+    ],
+    "order": 1
+  },
+  {
+    "key": "pr_status_by_ihc",
+    "name": "PR status by ihc",
+    "description": "Breast carcinoma progesterone receptor status",
+    "data_type": "STRING",
+    "notes": "PR status by ihc",
+    "allowed_values": [
+      "Negative"
+    ],
+    "order": 1
+  },
+  {
+    "key": "type_of_surgery",
+    "name": "Type of Surgery",
+    "description": "Type of Surgery.",
+    "data_type": "STRING",
+    "notes": "Type of Surgery",
+    "allowed_values": [
+      "Breast Conservation/Mastectomy",
+      "Mastectomy",
+      "Breast Conservation"
+    ],
+    "order": 1
+  },
+  {
+    "key": "metastatic_tumor_indicator",
+    "name": "Metastatic tumor indicator",
+    "description": "Distant metastasis present ind2",
+    "data_type": "STRING",
+    "notes": "Metastatic tumor indicator",
+    "allowed_values": [
+      "No",
+      "Yes"
+    ],
+    "order": 1
+  },
+  {
+    "key": "platform",
+    "name": "Platform",
+    "description": "Platform.",
+    "data_type": "STRING",
+    "notes": "Platform",
+    "allowed_values": [
+      "WES"
+    ],
+    "order": 1
+  },
+  {
+    "key": "genomic_alterations",
+    "name": "Genomic Alterations",
+    "description": "Number of genomic alterations",
+    "data_type": "NUMBER",
+    "notes": "Genomic Alterations",
+    "allowed_values": [
+      15.0,
+      31.0,
+      33.0,
+      19.0,
+      18.0,
+      25.0,
+      20.0,
+      29.0,
+      9.0,
+      14.0,
+      16.0
+    ],
+    "order": 1
+  },
+  {
+    "key": "oncotree_code",
+    "name": "Oncotree Code",
+    "description": "Oncotree Code",
+    "data_type": "STRING",
+    "notes": "Oncotree Code",
+    "allowed_values": [
+      "ACBC"
+    ],
+    "order": 1
+  },
+  {
+    "key": "fusion_status",
+    "name": "Fusion Status",
+    "description": "Yes/No indicator of fusion status",
+    "data_type": "STRING",
+    "notes": "Fusion Status",
+    "allowed_values": [
+      "YES"
+    ],
+    "order": 1
+  },
+  {
+    "key": "myb_mybl1_fusion",
+    "name": "MYB or MYBL1 Fusion",
+    "description": "Description of MYB or MYBL1 fusions identified.",
+    "data_type": "STRING",
+    "notes": "MYB or MYBL1 Fusion",
+    "allowed_values": [
+      "MYB-NFIB Fusion",
+      "Negative"
+    ],
+    "order": 1
+  },
+  {
+    "key": "somatic_status",
+    "name": "Somatic Status",
+    "description": "Somatic Status",
+    "data_type": "STRING",
+    "notes": "Somatic Status",
+    "allowed_values": [
+      "Matched"
+    ],
+    "order": 1
+  },
+  {
+    "key": "tmb_nonsynonymous",
+    "name": "TMB (nonsynonymous)",
+    "description": "TMB (nonsynonymous)",
+    "data_type": "NUMBER",
+    "notes": "TMB (nonsynonymous)",
+    "allowed_values": [
+      0.366666667,
+      0.766666667,
+      0.733333333,
+      0.4,
+      0.566666667,
+      0.466666667,
+      0.7,
+      0.6,
+      0.233333333,
+      0.2
+    ],
+    "order": 1
+  },
+  {
+    "key": "age",
+    "name": "Patient Identifier",
+    "description": "Identifier to uniquely specify a patient.",
+    "data_type": "STRING",
+    "notes": "Patient Identifier",
+    "allowed_values": [
+      66.0,
+      67.0,
+      52.0,
+      69.0,
+      53.0,
+      77.0,
+      78.0,
+      57.0,
+      63.0,
+      62.0
+    ],
+    "order": 1
+  },
+  {
+    "key": "sex",
+    "name": "Diagnosis Age",
+    "description": "Age at which a condition or disease was first diagnosed.",
+    "data_type": "NUMBER",
+    "notes": "Diagnosis Age",
+    "allowed_values": [
+      "Female"
+    ],
+    "order": 1
+  },
+  {
+    "key": "myb_nfib_rearrangement",
+    "name": "Sex",
+    "description": "Sex",
+    "data_type": "STRING",
+    "notes": "Sex",
+    "allowed_values": [
+      "MYB Exon 14-NFIB Exon 9",
+      "MYB Exon 9-NFIB Exon 8c",
+      "MYB Exon 14-NFIB Exon 8c",
+      "Negative"
+    ],
+    "order": 1
+  },
+  {
+    "key": "overall_patient_histology",
+    "name": "MYB-NFIB Rearrangement",
+    "description": "MYB-NFIB Rearrangement Description",
+    "data_type": "STRING",
+    "notes": "MYB-NFIB Rearrangement",
+    "allowed_values": [
+      "Cribriform/Tubular",
+      "Cribriform",
+      "Solid/Trabecular",
+      "Cribriform/Solid"
+    ],
+    "order": 1
+  },
+  {
+    "key": "neoadjuvant_chemo",
+    "name": "Overall Patient Histology",
+    "description": "Overall Patient Histology",
+    "data_type": "STRING",
+    "notes": "Overall Patient Histology",
+    "allowed_values": [
+      "Not performed",
+      "Adriamycine, Endoxan, Taxotere"
+    ],
+    "order": 1
+  },
+  {
+    "key": "adjuvant_chemo",
+    "name": "Neoadjuvant Chemotherapy",
+    "description": "Neoadjuvant Chemotherapy.",
+    "data_type": "STRING",
+    "notes": "Neoadjuvant Chemotherapy",
+    "allowed_values": [
+      "Not performed",
+      "FEC 100 + taxanes"
+    ],
+    "order": 1
+  },
+  {
+    "key": "radiation_therapy",
+    "name": "Adjuvant Chemotherapy",
+    "description": "Adjuvant Chemotherapy",
+    "data_type": "STRING",
+    "notes": "Adjuvant Chemotherapy",
+    "allowed_values": [
+      "Not performed",
+      "Performed"
+    ],
+    "order": 1
+  },
+  {
+    "key": "adjuvant_tx",
+    "name": "Radiation Therapy",
+    "description": "Radiation Therapy.",
+    "data_type": "STRING",
+    "notes": "Radiation Therapy",
+    "allowed_values": [
+      "Not performed",
+      "Chemotherapy/Radiation Therapy",
+      "Radiation Therapy"
+    ],
+    "order": 1
+  },
+  {
+    "key": "followup_years",
+    "name": "Adjuvant Treatment",
+    "description": "Adjuvant treatment.",
+    "data_type": "STRING",
+    "notes": "Adjuvant Treatment",
+    "allowed_values": [
+      8.0,
+      12.0,
+      4.0,
+      3.0,
+      11.0,
+      7.0,
+      10.0
+    ],
+    "order": 1
+  },
+  {
+    "key": "vital_status",
+    "name": "Followup (years)",
+    "description": "Followup in years",
+    "data_type": "NUMBER",
+    "notes": "Followup (years)",
+    "allowed_values": [
+      "Alive",
+      "Died of other causes"
+    ],
+    "order": 1
+  },
+  {
+    "key": "local_regional_recurrence",
+    "name": "Patient's Vital Status",
+    "description": "The survival state of the person.",
+    "data_type": "STRING",
+    "notes": "Patient's Vital Status",
+    "allowed_values": [
+      "Positive",
+      "Negative"
+    ],
+    "order": 1
+  },
+  {
+    "key": "time_to_met_months",
+    "name": "Local Regional Recurrence",
+    "description": "Local Regional Recurrence",
+    "data_type": "STRING",
+    "notes": "Local Regional Recurrence",
+    "allowed_values": [
+      120.0
+    ],
+    "order": 1
+  },
+  {
+    "key": "study",
+    "name": "Time to Metastasis (months)",
+    "description": "Time to metastasis (months).",
+    "data_type": "NUMBER",
+    "notes": "Time to Metastasis (months)",
+    "allowed_values": [
+      "ACbC (MSKCC/Breast 2015)"
+    ],
+    "order": 1
+  }
+]

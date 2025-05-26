@@ -1,4 +1,4 @@
-use crate::model::{
+use crate::model::datafile::{
     Config, File, FileStatResponse, FileTagsResponse, Hash, QueryFilter, RecordResponse, URL,
 };
 use crate::repo_config::{RepoConfig, SignData};
@@ -12,7 +12,6 @@ use poem_openapi::{
     payload::{Json, PlainText},
     ApiResponse, Object, OpenApi, Tags,
 };
-use rbatis::{rbatis::Rbatis, PageRequest};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
