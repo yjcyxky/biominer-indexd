@@ -42,11 +42,12 @@ use crate::query_builder::sql_builder::ComposeQuery;
 use anyhow::{bail, Error, Result};
 use duckdb::{params, Connection};
 use log::info;
+use poem_openapi::Object;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::{fs, path::Path, path::PathBuf};
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone, Object)]
 pub struct DataDictionaryField {
     pub key: String,
     pub name: String,
@@ -57,12 +58,12 @@ pub struct DataDictionaryField {
     pub order: usize,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Object)]
 pub struct DataDictionary {
     pub fields: Vec<DataDictionaryField>,
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone, Object)]
 pub struct DatasetMetadata {
     pub key: String,
     pub name: String,
@@ -82,8 +83,18 @@ impl DatasetMetadata {
             description: value["description"].as_str().unwrap().to_string(),
             citation: value["citation"].as_str().unwrap().to_string(),
             pmid: value["pmid"].as_str().unwrap().to_string(),
-            groups: value["groups"].as_array().unwrap().iter().map(|v| v.as_str().unwrap().to_string()).collect(),
-            tags: value["tags"].as_array().unwrap().iter().map(|v| v.as_str().unwrap().to_string()).collect(),
+            groups: value["groups"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|v| v.as_str().unwrap().to_string())
+                .collect(),
+            tags: value["tags"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|v| v.as_str().unwrap().to_string())
+                .collect(),
             num_of_samples: value["num_of_samples"].as_u64().unwrap() as usize,
         }
     }
@@ -99,6 +110,22 @@ pub struct Dataset {
 pub struct Datasets {
     pub records: Vec<Dataset>,
     pub base_path: PathBuf,
+}
+
+#[derive(Serialize, Deserialize, Clone, Object)]
+pub struct DatasetsResponse {
+    pub records: Vec<DatasetMetadata>,
+    pub total: usize,
+    pub page: usize,
+    pub page_size: usize,
+}
+
+#[derive(Serialize, Deserialize, Clone, Object)]
+pub struct DatasetDataResponse {
+    pub records: Vec<serde_json::Value>,
+    pub total: usize,
+    pub page: usize,
+    pub page_size: usize,
 }
 
 impl Datasets {
@@ -135,7 +162,7 @@ impl Datasets {
     /// let base_path = Path::new("/path/to/dataset");
     /// let datasets = Datasets::load(base_path)?;
     /// ```
-    pub fn load(base_path: &Path) -> Result<Self, Error> {
+    pub fn load(base_path: &PathBuf) -> Result<Self, Error> {
         let index_path = base_path.join("index.json");
         let content = fs::read_to_string(&index_path)?;
         let index_entries: Vec<DatasetMetadata> = serde_json::from_str(&content)?;
@@ -309,13 +336,13 @@ impl Datasets {
     ///
     /// This function depends on the `read_json_auto` virtual table feature in Duckdb.
     pub fn search(
-        &self,
+        base_path: &PathBuf,
         query: &Option<ComposeQuery>,
-        page: Option<u64>,
-        page_size: Option<u64>,
+        page: Option<usize>,
+        page_size: Option<usize>,
         order_by: Option<&str>,
-    ) -> Result<Vec<DatasetMetadata>, Error> {
-        let index_path = self.base_path.join("index.json");
+    ) -> Result<DatasetsResponse, Error> {
+        let index_path = base_path.join("index.json");
         let conn = Connection::open_in_memory()?;
         conn.execute(
             "CREATE TABLE datasets AS SELECT * FROM read_json(?)",
@@ -364,16 +391,19 @@ impl Datasets {
 
         let mut stmt = conn.prepare(&sql)?;
         let rows = stmt.query_map([], |row| {
-            let record = row_to_json(row, &[
-                "key".to_string(),
-                "name".to_string(),
-                "description".to_string(),
-                "citation".to_string(),
-                "pmid".to_string(),
-                "groups".to_string(),
-                "tags".to_string(),
-                "num_of_samples".to_string(),
-            ]);
+            let record = row_to_json(
+                row,
+                &[
+                    "key".to_string(),
+                    "name".to_string(),
+                    "description".to_string(),
+                    "citation".to_string(),
+                    "pmid".to_string(),
+                    "groups".to_string(),
+                    "tags".to_string(),
+                    "num_of_samples".to_string(),
+                ],
+            );
 
             Ok(record.unwrap())
         })?;
@@ -385,7 +415,15 @@ impl Datasets {
             })
             .collect::<Result<Vec<DatasetMetadata>, Error>>()?;
 
-        Ok(results)
+        let total_sql = format!("SELECT COUNT(*) FROM datasets WHERE {}", query_str);
+        let total: i64 = conn.query_row(&total_sql, [], |row| row.get(0))?;
+
+        Ok(DatasetsResponse {
+            records: results,
+            total: total as usize,
+            page: page.unwrap_or(1),
+            page_size: page_size.unwrap_or(10),
+        })
     }
 
     /// Retrieves a dataset by its unique key.
@@ -575,7 +613,7 @@ impl Dataset {
         page: Option<u64>,
         page_size: Option<u64>,
         order_by: Option<&str>,
-    ) -> Result<serde_json::Value, Error> {
+    ) -> Result<DatasetDataResponse, Error> {
         let parquet_path = self.path.join("data.parquet");
         if !parquet_path.exists() {
             bail!("Dataset parquet file not found at {:?}", parquet_path);
@@ -603,24 +641,20 @@ impl Dataset {
             format!("ORDER BY {}", order_by.unwrap())
         };
 
-        let pagination_str = if page.is_none() && page_size.is_none() {
-            "LIMIT 10 OFFSET 0".to_string()
-        } else {
-            let page = match page {
-                Some(page) => page,
-                None => 1,
-            };
-
-            let page_size = match page_size {
-                Some(page_size) => page_size,
-                None => 10,
-            };
-
-            let limit = page_size;
-            let offset = (page - 1) * page_size;
-
-            format!("LIMIT {} OFFSET {}", limit, offset)
+        let page = match page {
+            Some(page) => page,
+            None => 1,
         };
+
+        let page_size = match page_size {
+            Some(page_size) => page_size,
+            None => 10,
+        };
+
+        let limit = page_size;
+        let offset = (page - 1) * page_size;
+
+        let pagination_str = format!("LIMIT {} OFFSET {}", limit, offset);
 
         let sql = format!(
             "SELECT * FROM data WHERE {} {} {}",
@@ -650,12 +684,12 @@ impl Dataset {
         let count_sql = format!("SELECT COUNT(*) FROM data WHERE {}", query_str);
         let count: i64 = conn.query_row(&count_sql, [], |row| row.get(0))?;
 
-        Ok(serde_json::json!({
-            "records": records,
-            "page_size": page_size,
-            "page": page,
-            "total": count
-        }))
+        Ok(DatasetDataResponse {
+            records,
+            total: count as usize,
+            page: page as usize,
+            page_size: page_size as usize,
+        })
     }
 
     /// Loads the data dictionary for this dataset.
@@ -683,7 +717,7 @@ impl Dataset {
     ///     println!("{}: {}", field.key, field.data_type);
     /// }
     /// ```
-    pub fn load_data_dictionary(&self) -> Result<DataDictionary, Error> {
+    pub fn load_data_dictionary(self: &Self) -> Result<DataDictionary, Error> {
         let dict_path = self.path.join("data_dictionary.json");
         let content = fs::read_to_string(&dict_path)?;
         let fields: Vec<DataDictionaryField> = serde_json::from_str(&content)?;
@@ -699,10 +733,12 @@ mod tests {
 
     #[test]
     fn test_validate_example_dataset() {
-        let path = Path::new("examples/datasets");
-        Datasets::index(path, true).expect("Failed to index example datasets");
-        Datasets::validate(&path.to_path_buf()).expect("Failed to validate example datasets");
-        let datasets = Datasets::load(path).expect("Failed to load example datasets");
+        let path = PathBuf::from("examples/datasets");
+
+        Datasets::index(&path, true).expect("Failed to index example datasets");
+        Datasets::validate(&path).expect("Failed to validate example datasets");
+
+        let datasets = Datasets::load(&path).expect("Failed to load example datasets");
         assert!(datasets.records.len() > 0);
 
         let ds = datasets
@@ -713,8 +749,9 @@ mod tests {
 
     #[test]
     fn test_load_data_dictionary() {
-        let path = Path::new("examples/datasets");
-        let datasets = Datasets::load(path).expect("Failed to load example datasets");
+        let path = PathBuf::from("examples/datasets");
+
+        let datasets = Datasets::load(&path).expect("Failed to load example datasets");
         let ds = datasets
             .get("acbc_mskcc_2015")
             .expect("Missing expected dataset 'acbc_mskcc_2015'");
@@ -726,31 +763,28 @@ mod tests {
 
     #[test]
     fn test_search_datasets() {
-        let path = Path::new("examples/datasets");
-        let datasets = Datasets::load(path).expect("Failed to load example datasets");
-        let result = datasets
-            .search(&None, None, None, None)
-            .expect("Search failed");
-        assert!(result.len() > 0);
+        let path = PathBuf::from("examples/datasets");
+        let result = Datasets::search(&path, &None, None, None, None).expect("Search failed");
+        assert!(result.total > 0);
     }
 
     #[test]
     fn test_search_example_dataset() {
-        let path = Path::new("examples/datasets");
+        let path = PathBuf::from("examples/datasets");
 
-        Datasets::index(path, true).expect("Failed to index example datasets");
-        Datasets::validate(&path.to_path_buf()).expect("Failed to validate example datasets");
+        Datasets::index(&path, true).expect("Failed to index example datasets");
+        Datasets::validate(&path).expect("Failed to validate example datasets");
 
-        let datasets = Datasets::load(path).expect("Failed to load example datasets");
+        let datasets = Datasets::load(&path).expect("Failed to load example datasets");
         let ds = datasets
             .get("acbc_mskcc_2015")
             .expect("Missing expected dataset 'acbc_mskcc_2015'");
 
-        let result: Value = ds
+        let result: DatasetDataResponse = ds
             .search(&None, Some(1), Some(5), None)
             .expect("Search failed");
-        assert!(result["total"].as_i64().unwrap() > 0);
-        assert!(result["records"].as_array().unwrap().len() > 0);
-        assert_eq!(result["page"].as_u64().unwrap(), 1);
+        assert!(result.total > 0);
+        assert!(result.records.len() > 0);
+        assert_eq!(result.page, 1);
     }
 }

@@ -78,8 +78,8 @@ struct Opt {
     pool_size: Option<u32>,
 
     /// The path of the data directory.
-    #[structopt(name = "data-dir", short = "D", long = "data-dir")]
-    data_dir: Option<String>,
+    #[structopt(name = "data-dir", short = "D", long = "data-dir", required = true)]
+    data_dir: String,
 }
 
 #[derive(RustEmbed)]
@@ -177,6 +177,8 @@ async fn main() -> Result<(), std::io::Error> {
     }
     let base_path = OsPath::new("/").join(&base_path[..]);
 
+    env::set_var("BIOMINER_INDEXD_DATA_DIR", args.data_dir);
+
     println!(
         "\n\t\t*** Launch biominer-indexd on {}:{}{} ***",
         host,
@@ -219,7 +221,7 @@ async fn main() -> Result<(), std::io::Error> {
     info!("Initialize Config with `{:?}`", config);
     let shared_config = AddData::new(Arc::new(config));
 
-    let api_service = OpenApiService::new(api::files::BioMinerIndexdApi, "BioMiner Indexd", "v0.1.0")
+    let api_service = OpenApiService::new(api::route::BioMinerIndexdApi, "BioMiner Indexd", "v0.1.0")
                                                                   .summary("A RESTful API for BioMiner Indexd")
                                                                   .description("BioMiner Indexd is a hash-based data indexing and tracking service providing globally unique identifiers.")
                                                                   .license("GNU AFFERO GENERAL PUBLIC LICENSE v3")

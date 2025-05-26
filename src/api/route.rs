@@ -1,6 +1,8 @@
 use crate::model::datafile::{
     Config, File, FileStatResponse, FileTagsResponse, Hash, QueryFilter, RecordResponse, URL,
 };
+use crate::model::dataset::{DataDictionary, DatasetDataResponse, Datasets, DatasetsResponse};
+use crate::query_builder::sql_builder::ComposeQuery;
 use crate::repo_config::{RepoConfig, SignData};
 use crate::util;
 use log::{debug, info, warn};
@@ -19,6 +21,12 @@ use std::sync::Arc;
 enum FileApiTags {
     Files,
     File,
+}
+
+#[derive(Tags)]
+enum DatasetApiTags {
+    Datasets,
+    Dataset,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Object)]
@@ -193,6 +201,51 @@ enum PutResponse {
 enum PostResponse {
     #[oai(status = 201)]
     Ok(Json<GuidResponse>),
+
+    #[oai(status = 400)]
+    BadRequest(PlainText<String>),
+}
+
+#[derive(ApiResponse)]
+enum GetDatasetsResponse {
+    #[oai(status = 200)]
+    Ok(Json<DatasetsResponse>),
+
+    #[oai(status = 500)]
+    InternalError(PlainText<String>),
+
+    #[oai(status = 400)]
+    BadRequest(PlainText<String>),
+
+    #[oai(status = 404)]
+    NotFound(PlainText<String>),
+}
+
+#[derive(ApiResponse)]
+enum GetDatasetDataDictionaryResponse {
+    #[oai(status = 200)]
+    Ok(Json<DataDictionary>),
+
+    #[oai(status = 404)]
+    NotFound(PlainText<String>),
+
+    #[oai(status = 500)]
+    InternalError(PlainText<String>),
+
+    #[oai(status = 400)]
+    BadRequest(PlainText<String>),
+}
+
+#[derive(ApiResponse)]
+enum GetDatasetDataResponse {
+    #[oai(status = 200)]
+    Ok(Json<DatasetDataResponse>),
+
+    #[oai(status = 404)]
+    NotFound(PlainText<String>),
+
+    #[oai(status = 500)]
+    InternalError(PlainText<String>),
 
     #[oai(status = 400)]
     BadRequest(PlainText<String>),
@@ -719,6 +772,162 @@ impl BioMinerIndexdApi {
             Ok(stat) => GetStatResponse::Ok(Json(stat)),
             Err(e) => GetStatResponse::InternalError(PlainText(e.to_string())),
         }
+    }
+
+    /// Call `/api/v1/datasets` to get the datasets.
+    #[oai(
+        path = "/datasets",
+        method = "get",
+        tag = "DatasetApiTags::Datasets",
+        operation_id = "getDatasets"
+    )]
+    async fn get_datasets(
+        &self,
+        page: Query<Option<usize>>,
+        page_size: Query<Option<usize>>,
+        query_str: Query<Option<String>>,
+    ) -> GetDatasetsResponse {
+        let base_path = std::env::var("BIOMINER_INDEXD_DATA_DIR").unwrap();
+        let page = page.0.unwrap_or(1);
+        let page_size = page_size.0.unwrap_or(10);
+        let query_str = query_str.0;
+
+        let query = match query_str {
+            Some(query_str) => match ComposeQuery::from_str(&query_str) {
+                Ok(query) => query,
+                Err(e) => {
+                    let err = format!("Failed to parse query string: {}", e);
+                    warn!("{}", err);
+                    return GetDatasetsResponse::BadRequest(PlainText(err));
+                }
+            },
+            None => None,
+        };
+
+        let datasets =
+            match Datasets::search(&base_path.into(), &query, Some(page), Some(page_size), None) {
+                Ok(datasets) => datasets,
+                Err(e) => {
+                    warn!("Failed to search datasets: {}", e);
+                    return GetDatasetsResponse::InternalError(PlainText(e.to_string()));
+                }
+            };
+
+        GetDatasetsResponse::Ok(Json(datasets))
+    }
+
+    /// Call `/api/v1/datasets` to get the datasets.
+    #[oai(
+        path = "/datasets/:key/data-dictionary",
+        method = "get",
+        tag = "DatasetApiTags::Datasets",
+        operation_id = "getDataDictionary"
+    )]
+    async fn get_data_dictionary(&self, key: Path<String>) -> GetDatasetDataDictionaryResponse {
+        let base_path = match std::env::var("BIOMINER_INDEXD_DATA_DIR") {
+            Ok(path) => path,
+            Err(e) => {
+                warn!("Failed to get BIOMINER_INDEXD_DATA_DIR: {}", e);
+                return GetDatasetDataDictionaryResponse::InternalError(PlainText(e.to_string()));
+            }
+        };
+
+        let datasets = match Datasets::load(&base_path.into()) {
+            Ok(datasets) => datasets,
+            Err(e) => {
+                warn!("Failed to load datasets: {}", e);
+                return GetDatasetDataDictionaryResponse::InternalError(PlainText(e.to_string()));
+            }
+        };
+
+        let dataset = match datasets.get(&key.0) {
+            Ok(dataset) => dataset,
+            Err(e) => {
+                warn!("Failed to get dataset: {}", e);
+                return GetDatasetDataDictionaryResponse::NotFound(PlainText(e.to_string()));
+            }
+        };
+
+        let data_dictionary = match dataset.load_data_dictionary() {
+            Ok(data_dictionary) => data_dictionary,
+            Err(e) => {
+                warn!("Failed to load data dictionary: {}", e);
+                return GetDatasetDataDictionaryResponse::InternalError(PlainText(e.to_string()));
+            }
+        };
+
+        GetDatasetDataDictionaryResponse::Ok(Json(data_dictionary))
+    }
+
+    /// Call `/api/v1/datasets/:key/data` to get the dataset data.
+    #[oai(
+        path = "/datasets/:key/data",
+        method = "get",
+        tag = "DatasetApiTags::Datasets",
+        operation_id = "getDatasetData"
+    )]
+    async fn get_dataset_data(
+        &self,
+        key: Path<String>,
+        query: Query<Option<String>>,
+        page: Query<Option<usize>>,
+        page_size: Query<Option<usize>>,
+        order_by: Query<Option<String>>,
+    ) -> GetDatasetDataResponse {
+        let base_path = match std::env::var("BIOMINER_INDEXD_DATA_DIR") {
+            Ok(path) => path,
+            Err(e) => {
+                warn!("Failed to get BIOMINER_INDEXD_DATA_DIR: {}", e);
+                return GetDatasetDataResponse::InternalError(PlainText(e.to_string()));
+            }
+        };
+
+        let query = match query.0 {
+            Some(query) => match ComposeQuery::from_str(&query) {
+                Ok(query) => query,
+                Err(e) => {
+                    warn!("Failed to parse query string: {}", e);
+                    return GetDatasetDataResponse::BadRequest(PlainText(e.to_string()));
+                }
+            },
+            None => None,
+        };
+
+        let page = page.0.unwrap_or(1);
+        let page_size = page_size.0.unwrap_or(10);
+        let order_by = order_by.0;
+
+        let datasets = match Datasets::load(&base_path.into()) {
+            Ok(datasets) => datasets,
+            Err(e) => {
+                warn!("Failed to load datasets: {}", e);
+                return GetDatasetDataResponse::InternalError(PlainText(e.to_string()));
+            }
+        };
+
+        let dataset = match datasets.get(&key.0) {
+            Ok(dataset) => dataset,
+            Err(e) => {
+                warn!("Failed to get dataset: {}", e);
+                return GetDatasetDataResponse::NotFound(PlainText(e.to_string()));
+            }
+        };
+
+        let data = match dataset.search(
+            &query,
+            Some(page as u64),
+            Some(page_size as u64),
+            order_by.as_deref(),
+        )
+        {
+            Ok(data) => data,
+            Err(e) => {
+                warn!("Failed to search dataset: {}", e);
+                return GetDatasetDataResponse::InternalError(PlainText(e.to_string()));
+            }
+        };
+
+        GetDatasetDataResponse::Ok(Json(data))
     }
 }
 
