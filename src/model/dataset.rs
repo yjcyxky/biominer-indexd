@@ -41,7 +41,7 @@ use super::duckdb_util::row_to_json;
 use crate::query_builder::sql_builder::ComposeQuery;
 use anyhow::{bail, Error, Result};
 use duckdb::{params, Connection};
-use log::info;
+use log::{info, warn};
 use poem_openapi::Object;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
@@ -256,32 +256,38 @@ impl Datasets {
 
         for dataset in &records {
             if !dataset.path.is_dir() {
-                bail!("Dataset directory {:?} does not exist", dataset.path);
+                warn!("Dataset directory {:?} does not exist", dataset.path);
+                continue;
             }
 
             let dict = dataset.load_data_dictionary()?;
             for field in &dict.fields {
                 if !key_re.is_match(&field.key) {
-                    bail!(
+                    warn!(
                         "Invalid key '{}' in dataset '{}'.",
                         field.key,
                         dataset.metadata.key
                     );
+
+                    continue;
                 }
 
                 if !matches!(field.data_type.as_str(), "STRING" | "NUMBER" | "BOOLEAN") {
-                    bail!(
+                    warn!(
                         "Invalid data_type '{}' in dataset '{}', key '{}'.",
                         field.data_type,
                         dataset.metadata.key,
                         field.key
                     );
+
+                    continue;
                 }
             }
 
             let parquet_path = dataset.path.join("data.parquet");
             if !parquet_path.exists() {
-                bail!("Missing data.parquet in {:?}", dataset.path);
+                warn!("Missing data.parquet in {:?}", dataset.path);
+                continue;
             }
         }
 
@@ -452,7 +458,7 @@ impl Datasets {
     pub fn get(&self, key: &str) -> Result<Dataset, Error> {
         let dataset = self.records.iter().find(|d| d.metadata.key == key);
         if dataset.is_none() {
-            bail!("Dataset not found: {}", key);
+            return Err(anyhow::anyhow!("Dataset not found: {}", key));
         }
         Ok(dataset.unwrap().clone())
     }
@@ -494,12 +500,25 @@ impl Datasets {
     pub fn index(base_path: &Path, save_to_file: bool) -> Result<Self, Error> {
         let mut datasets = Vec::new();
         // List all subdirectories in base_path
-        let entries = fs::read_dir(base_path)?;
+        let entries = match fs::read_dir(base_path) {
+            Ok(entries) => entries,
+            Err(e) => {
+                return Err(anyhow::anyhow!("Failed to read directory {:?}: {}", base_path, e));
+            }
+        };
+
         for entry in entries {
             let entry = entry?;
+
             let path = entry.path();
             if path.is_dir() {
-                let dataset = Dataset::load(&path)?;
+                let dataset = match Dataset::load(&path) {
+                    Ok(dataset) => dataset,
+                    Err(e) => {
+                        warn!("{}", e);
+                        continue;
+                    }
+                };
                 datasets.push(dataset);
             }
         }
@@ -547,7 +566,13 @@ impl Dataset {
     /// ```
     pub fn load(dataset_path: &Path) -> Result<Self, Error> {
         let metadata_path = dataset_path.join("dataset.json");
-        let content = fs::read_to_string(&metadata_path)?;
+        let content = match fs::read_to_string(&metadata_path) {
+            Ok(content) => content,
+            Err(e) => {
+                return Err(anyhow::anyhow!("Failed to read dataset.json at {:?}: {}", metadata_path, e));
+            }
+        };
+
         let metadata: DatasetMetadata = serde_json::from_str(&content)?;
         Ok(Self {
             metadata,
@@ -616,7 +641,7 @@ impl Dataset {
     ) -> Result<DatasetDataResponse, Error> {
         let parquet_path = self.path.join("data.parquet");
         if !parquet_path.exists() {
-            bail!("Dataset parquet file not found at {:?}", parquet_path);
+            return Err(anyhow::anyhow!("Dataset parquet file not found at {:?}", parquet_path));
         }
 
         let conn = Connection::open_in_memory()?;
@@ -728,8 +753,6 @@ impl Dataset {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde_json::Value;
-    use std::path::Path;
 
     #[test]
     fn test_validate_example_dataset() {

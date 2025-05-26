@@ -32,7 +32,7 @@
   },
   {
     name: 'data-repo',
-    icon: 'database',
+    icon: 'file',
     path: '/data-repo',
     component: './DataRepo',
   },

@@ -46,7 +46,8 @@
             height: 100%;
             width: 220px;
 
-            .ant-layout-sider-children, .ant-layout-sider-children ul {
+            .ant-layout-sider-children,
+            .ant-layout-sider-children ul {
                 background-color: #f1f6fe;
             }
 
@@ -64,10 +65,27 @@
             height: 100%;
             width: calc(100% - 220px);
 
+            .ant-spin-nested-loading,
+            .ant-spin-container,
+            .ant-list-items {
+                height: 100%;
+            }
+
+            .ant-list-items {
+                overflow: scroll;
+            }
+
             .dataset-item {
                 border-bottom: 1px solid #e8e8e8;
                 margin: 0 16px;
             }
         }
+    }
+}
+
+.dataset-info-modal {
+    .ant-modal-body {
+        height: 50vh;
+        overflow: scroll;
     }
 }

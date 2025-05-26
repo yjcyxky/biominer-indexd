@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Layout, Menu, List, Button, Typography, message, Input, Row, Col } from 'antd';
+import { Layout, Menu, List, Button, Typography, message, Input, Row, Col, Modal } from 'antd';
 import { getDatasets } from '@/services/biominer/Datasets';
 import './index.less';
-import { FileTextFilled, PieChartFilled } from '@ant-design/icons';
+import { DownloadOutlined, FileTextFilled, InfoCircleFilled, PieChartFilled } from '@ant-design/icons';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 const { Sider } = Layout;
 
@@ -17,6 +19,8 @@ const DatasetList: React.FC = () => {
     const [selectedTag, setSelectedTag] = useState<string>('All');
     const [tagDatasetsMap, setTagDatasetsMap] = useState<Record<string, API.DatasetMetadata[]>>({});
     const [searchValue, setSearchValue] = useState<string>('');
+    const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+    const [markdown, setMarkdown] = useState<string>('');
 
     useEffect(() => {
         getDatasets({ page: 1, page_size: 1000 })
@@ -45,6 +49,10 @@ const DatasetList: React.FC = () => {
 
     const onSearch = (value: string) => {
         setSearchValue(value);
+    };
+
+    const handleCancel = () => {
+        setIsModalOpen(false);
     };
 
     const filteredDatasets = (tag: string, searchValue: string) => {
@@ -102,6 +110,20 @@ const DatasetList: React.FC = () => {
                                     onClick={() => window.open(`https://pubmed.ncbi.nlm.nih.gov/${item.pmid}`, '_blank')}>
                                     Cite
                                 </Button>,
+                                <Button type="link" icon={<InfoCircleFilled />}
+                                    onClick={() => {
+                                        // TODO: Show the markdown content of the dataset in another modal.
+                                        setIsModalOpen(true);
+                                        setMarkdown(item.description);
+                                    }}>
+                                    Info
+                                </Button>,
+                                <Button type="link" icon={<DownloadOutlined />}
+                                    onClick={() => {
+                                        // TODO: Redirect to the data-repo page.
+                                    }}>
+                                    Download
+                                </Button>,
                                 <Button type="link" icon={<PieChartFilled />} onClick={() => {
                                     console.log(item);
                                 }}>
@@ -111,13 +133,23 @@ const DatasetList: React.FC = () => {
                         >
                             <List.Item.Meta
                                 title={<Typography.Text strong>{item.name}</Typography.Text>}
-                                description={<Typography.Text type="secondary">{item.description}</Typography.Text>}
+                                description={<p dangerouslySetInnerHTML={{ __html: item.description }} />}
                             />
                             <div className="sample-count">{item.num_of_samples} samples</div>
                         </List.Item>
                     )}
                 />
             </Col>
+            <Modal
+                width="50%"
+                className='dataset-info-modal'
+                title="Dataset Info"
+                open={isModalOpen}
+                onCancel={handleCancel}
+                footer={null}
+            >
+                <ReactMarkdown remarkPlugins={[remarkGfm]} children={markdown}></ReactMarkdown>
+            </Modal>
         </Row>
     );
 };

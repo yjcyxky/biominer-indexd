@@ -169,7 +169,7 @@ def convert_cbioportal_study(study_dir, output_dir):
     }
 
     # 明确所有需要当作缺失值处理的值
-    missing_values = {"NA", "N/A", "", "null", "NULL"}
+    missing_values = {"NA", "N/A", "", "null", "NULL", "[Not Available]", "Na"}
 
     for col in combined_df.columns:
         dtype = dtype_dict.get(col, "STRING")
