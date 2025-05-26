@@ -18,12 +18,6 @@ declare namespace API {
     uploader?: string;
   };
 
-  type Alias = {
-    id: number;
-    name: string;
-    file?: string;
-  };
-
   type CreateFile = {
     filename?: string;
     uploader?: string;
@@ -31,6 +25,49 @@ declare namespace API {
     size: number;
     alias?: string;
     url?: string;
+  };
+
+  type DataDictionary = {
+    fields: DataDictionaryField[];
+  };
+
+  type DataDictionaryField = {
+    key: string;
+    name: string;
+    data_type: string;
+    description: string;
+    notes: string;
+    allowed_values: any;
+    order: number;
+  };
+
+  type DatasetDataResponse = {
+    records: any[];
+    total: number;
+    page: number;
+    page_size: number;
+  };
+
+  type DatasetMetadata = {
+    key: string;
+    name: string;
+    description: string;
+    citation: string;
+    pmid: string;
+    groups: string[];
+    tags: string[];
+    num_of_samples: number;
+  };
+
+  type DatasetsResponse = {
+    records: DatasetMetadata[];
+    total: number;
+    page: number;
+    page_size: number;
+  };
+
+  type ErrorMessage = {
+    msg: string;
   };
 
   type File = {
@@ -46,25 +83,10 @@ declare namespace API {
     uploader: string;
     access: string;
     acl?: string;
-    urls?: URL[];
-    hashes?: Hash[];
-    aliases?: Alias[];
-    tags?: Tag[];
-  };
-
-  type FilePageResponse = {
-    /** data */
-    records: File[];
-    /** total num */
-    total: number;
-    /** pages */
-    pages: number;
-    /** current page index */
-    page_no: number;
-    /** default 10 */
-    page_size: number;
-    /** is search_count */
-    search_count: boolean;
+    urls?: any;
+    hashes?: any;
+    aliases?: any;
+    tags?: any;
   };
 
   type FileStatResponse = {
@@ -94,6 +116,17 @@ declare namespace API {
     msg: string;
   };
 
+  type RecordResponse = {
+    /** data */
+    records: File[];
+    /** total num */
+    total: number;
+    /** current page index */
+    page: number;
+    /** default 10 */
+    page_size: number;
+  };
+
   type SignData = {
     header: string[];
     data: string[];
@@ -107,22 +140,6 @@ declare namespace API {
     size: number;
     hashes: Hash[];
     filename: string;
-  };
-
-  type Tag = {
-    id: number;
-    field_name: string;
-    field_value: string;
-    file?: string;
-  };
-
-  type URL = {
-    id: number;
-    url: string;
-    created_at: number;
-    status: string;
-    uploader: string;
-    file?: string;
   };
 
   type fetchFilesParams = {
@@ -173,5 +190,23 @@ declare namespace API {
 
   type addTagToFileParams = {
     id: string;
+  };
+
+  type getDatasetsParams = {
+    page?: number;
+    page_size?: number;
+    query_str?: string;
+  };
+
+  type getDataDictionaryParams = {
+    key: string;
+  };
+
+  type getDatasetDataParams = {
+    key: string;
+    query?: string;
+    page?: number;
+    page_size?: number;
+    order_by?: string;
   };
 }

@@ -52,5 +52,6 @@ export default {
 
   // Customized
   'menu.data-repo': '数据仓库',
+  'menu.datasets': '数据集',
   'menu.about': '帮助',
 };

@@ -4,7 +4,9 @@
 // API 唯一标识：
 import * as Files from './Files';
 import * as File from './File';
+import * as Datasets from './Datasets';
 export default {
   Files,
   File,
+  Datasets,
 };

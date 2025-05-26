@@ -1,0 +1,228 @@
+[
+  {
+    "key": "patient_id",
+    "name": "Patient Identifier",
+    "description": "Identifier to uniquely specify a patient.",
+    "data_type": "STRING",
+    "notes": "Patient Identifier",
+    "allowed_values": [],
+    "order": 1
+  },
+  {
+    "key": "sample_id",
+    "name": "Sample Identifier",
+    "description": "A unique sample identifier.",
+    "data_type": "STRING",
+    "notes": "Sample Identifier",
+    "allowed_values": [],
+    "order": 1
+  },
+  {
+    "key": "cancer_type",
+    "name": "Cancer Type",
+    "description": "Cancer Type",
+    "data_type": "STRING",
+    "notes": "Cancer Type",
+    "allowed_values": [
+      "Salivary Cancer",
+      "Breast Cancer",
+      "Non-Small Cell Lung Cancer"
+    ],
+    "order": 1
+  },
+  {
+    "key": "cancer_type_detailed",
+    "name": "Cancer Type Detailed",
+    "description": "Cancer Type Detailed",
+    "data_type": "STRING",
+    "notes": "Cancer Type Detailed",
+    "allowed_values": [
+      "Adenoid Cystic Carcinoma",
+      "Adenoid Cystic Breast Cancer",
+      "Adenoid Cystic Carcinoma of the Lung"
+    ],
+    "order": 1
+  },
+  {
+    "key": "sample_type",
+    "name": "Sample Type",
+    "description": "The type of sample (i.e., normal, primary, met, recurrence).",
+    "data_type": "STRING",
+    "notes": "Sample Type",
+    "allowed_values": [
+      "Primary",
+      "Metastatic",
+      "Recurrence",
+      "Metastasis"
+    ],
+    "order": 9
+  },
+  {
+    "key": "oncotree_code",
+    "name": "Oncotree Code",
+    "description": "Oncotree Code",
+    "data_type": "STRING",
+    "notes": "Oncotree Code",
+    "allowed_values": [
+      "ACYC",
+      "ACBC",
+      "LUACC"
+    ],
+    "order": 1
+  },
+  {
+    "key": "somatic_status",
+    "name": "Somatic Status",
+    "description": "Somatic Status",
+    "data_type": "STRING",
+    "notes": "Somatic Status",
+    "allowed_values": [
+      "Matched",
+      "Unmatched"
+    ],
+    "order": 1
+  },
+  {
+    "key": "tmb_nonsynonymous",
+    "name": "TMB (nonsynonymous)",
+    "description": "TMB (nonsynonymous)",
+    "data_type": "NUMBER",
+    "notes": "TMB (nonsynonymous)",
+    "allowed_values": [],
+    "order": 1
+  },
+  {
+    "key": "data_source",
+    "name": "Patient Identifier",
+    "description": "Identifier to uniquely specify a patient.",
+    "data_type": "STRING",
+    "notes": "Patient Identifier",
+    "allowed_values": [
+      "Sanger/MDACC",
+      "MSK",
+      "MDA",
+      "JHU",
+      "Foundation Medicine",
+      "MSK-IMPACT"
+    ],
+    "order": 1
+  },
+  {
+    "key": "study",
+    "name": "Data Source",
+    "description": "Data Source",
+    "data_type": "STRING",
+    "notes": "Data Source",
+    "allowed_values": [
+      "ACyC (Sanger unpubl.)",
+      "ACyC (MSKCC unpubl.)",
+      "ACyC (MDA 2015)",
+      "ACyC (Sanger 2013)",
+      "ACbC (MSKCC/Breast 2015)",
+      "ACyC (JHU unpubl.)",
+      "ACyC (FMI 2014)",
+      "ACyC, ACbC, LUACC Subtypes (MSK/FMI 2017)",
+      "ACyC, ACbC, LUACC Cohort (MSK-IMPACT, 2016)"
+    ],
+    "order": 10
+  },
+  {
+    "key": "age",
+    "name": "Study",
+    "description": "Study.",
+    "data_type": "STRING",
+    "notes": "Study",
+    "allowed_values": [
+      50.0,
+      49.0,
+      61.0,
+      43.0,
+      44.0,
+      59.0,
+      38.0,
+      68.0,
+      51.0,
+      56.0,
+      55.0,
+      53.0,
+      52.0,
+      62.0,
+      58.0,
+      72.0,
+      42.0,
+      48.0,
+      46.0,
+      76.0,
+      74.0,
+      54.0,
+      71.0,
+      45.0,
+      30.0,
+      31.0,
+      69.0,
+      40.0,
+      67.0,
+      85.0,
+      37.0,
+      75.0,
+      88.0,
+      73.0,
+      64.0,
+      78.0,
+      34.0,
+      80.0,
+      39.0,
+      83.0,
+      65.0,
+      29.0,
+      60.0,
+      63.0,
+      27.0,
+      21.0,
+      70.0,
+      47.0,
+      57.0,
+      41.0,
+      66.0,
+      77.0,
+      28.0,
+      36.0,
+      79.0,
+      18.0
+    ],
+    "order": 1
+  },
+  {
+    "key": "sex",
+    "name": "Diagnosis Age",
+    "description": "Age at which a condition or disease was first diagnosed.",
+    "data_type": "NUMBER",
+    "notes": "Diagnosis Age",
+    "allowed_values": [
+      "Male",
+      "Female"
+    ],
+    "order": 1
+  },
+  {
+    "key": "os_months",
+    "name": "Sex",
+    "description": "Sex",
+    "data_type": "STRING",
+    "notes": "Sex",
+    "allowed_values": [],
+    "order": 1
+  },
+  {
+    "key": "os_status",
+    "name": "Overall Survival (Months)",
+    "description": "Overall survival in months since initial diagonosis.",
+    "data_type": "NUMBER",
+    "notes": "Overall Survival (Months)",
+    "allowed_values": [
+      "0:LIVING",
+      "1:DECEASED"
+    ],
+    "order": 1
+  }
+]

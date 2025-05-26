@@ -8,7 +8,7 @@ export async function fetchFiles(
   params: API.fetchFilesParams,
   options?: { [key: string]: any },
 ) {
-  return request<API.FilePageResponse>('/api/v1/files', {
+  return request<API.RecordResponse>('/api/v1/files', {
     method: 'GET',
     params: {
       ...params,

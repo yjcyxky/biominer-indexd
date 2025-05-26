@@ -25,6 +25,12 @@
     component: './Index',
   },
   {
+    path: '/datasets',
+    name: 'datasets',
+    icon: 'database',
+    component: './DatasetList',
+  },
+  {
     name: 'data-repo',
     icon: 'database',
     path: '/data-repo',
