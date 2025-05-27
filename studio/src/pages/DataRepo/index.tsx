@@ -243,12 +243,12 @@ const FileList: React.FC = () => {
     let { current, pageSize, ...newParams } = params;
     newParams['page'] = current ? current : 1;
     newParams['page_size'] = pageSize ? pageSize : 10;
-    let response = await biominerAPI.Files.fetchFiles(newParams);
+    let response = await biominerAPI.files.fetchFiles(newParams);
     return {
       data: response.records,
       total: response.total,
       success: true,
-      current: response.page_no,
+      current: response.page,
       pageSize: response.page_size,
     };
   };

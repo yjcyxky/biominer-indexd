@@ -27,17 +27,17 @@ jobs:
           working-directory: studio
       - name: Build studio
         run: cd studio && yarn openapi && yarn build:embed && cd ..
-      # Install gnu-tools and build-essential
-      - name: Install gnu-gcc and build-essential
+      # Install musl-tools and build-essential
+      - name: Install musl-gcc and build-essential
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential
+          sudo apt-get install -y musl-tools build-essential
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
-          target: x86_64-unknown-linux-gnu
-      - name: Install gnu target
-        run: rustup target add x86_64-unknown-linux-gnu
+          target: x86_64-unknown-linux-musl
+      - name: Install musl target
+        run: rustup target add x86_64-unknown-linux-musl
       - name: Configure environment
         id: config
         run: |
@@ -48,15 +48,19 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --release --target=x86_64-unknown-linux-gnu --all-features
-      - name: Move binary
-        run: mv target/x86_64-unknown-linux-gnu/release/biominer-indexd target/release/biominer-indexd-v${{ steps.config.outputs.version }}-x86_64-linux-gnu
+          args: --release --target=x86_64-unknown-linux-musl --all-features
+      - name: Move binary1
+        run: mv target/x86_64-unknown-linux-musl/release/biominer-indexd target/release/biominer-indexd-v${{ steps.config.outputs.version }}-x86_64-linux-musl
+      - name: Move binary2
+        run: mv target/x86_64-unknown-linux-musl/release/biominer-indexd-cli target/release/biominer-indexd-cli-v${{ steps.config.outputs.version }}-x86_64-linux-musl
       - uses: actions-rs/cargo@v1
         with:
           command: build
           args: --release --all-features
-      - name: Move binary
+      - name: Move binary3
         run: mv target/release/biominer-indexd target/release/biominer-indexd-v${{ steps.config.outputs.version }}-x86_64-linux
+      - name: Move binary4
+        run: mv target/release/biominer-indexd-cli target/release/biominer-indexd-cli-v${{ steps.config.outputs.version }}-x86_64-linux
       - name: Create a pre-release
         id: pre_release
         uses: marvinpinto/action-automatic-releases@latest
@@ -68,6 +72,5 @@ jobs:
           files: |
             LICENSE
             target/release/biominer-indexd-v*
-            target/x86_64-unknown-linux-gnu/release/biominer-indexd-v*
       - name: Output
         run: echo "${{steps.pre_release.outputs.automatic_releases_tag}}"

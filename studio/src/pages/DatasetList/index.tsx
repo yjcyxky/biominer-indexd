@@ -24,11 +24,19 @@ const DatasetList: React.FC = () => {
     const [markdown, setMarkdown] = useState<string>('');
     const [orderField, setOrderField] = useState<string>('num_of_samples');
     const history = useHistory();
+    const [loading, setLoading] = useState(false);
 
     useEffect(() => {
+        setLoading(true);
         getDatasets({ page: 1, page_size: 1000 })
-            .then(res => setDatasets(res))
-            .catch(err => message.error(err.message));
+            .then(res => {
+                setDatasets(res);
+                setLoading(false);
+            })
+            .catch(err => message.error(err.message))
+            .finally(() => {
+                setLoading(false);
+            });
     }, []);
 
     useEffect(() => {
@@ -121,6 +129,7 @@ const DatasetList: React.FC = () => {
                 </Sider>
 
                 <List
+                    loading={loading}
                     className="dataset-right-sider"
                     itemLayout="horizontal"
                     dataSource={filteredDatasets(selectedTag, searchValue, orderField) || []}
