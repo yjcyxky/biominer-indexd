@@ -1,4 +1,8 @@
 declare namespace API {
+  type addAliasToFileParams = {
+    id: string;
+  };
+
   type AddFileAlias = {
     alias: string;
   };
@@ -16,6 +20,18 @@ declare namespace API {
     url: string;
     status?: string;
     uploader?: string;
+  };
+
+  type addHashToFileParams = {
+    id: string;
+  };
+
+  type addTagToFileParams = {
+    id: string;
+  };
+
+  type addUrlToFileParams = {
+    id: string;
   };
 
   type CreateFile = {
@@ -70,6 +86,24 @@ declare namespace API {
     msg: string;
   };
 
+  type fetchFilesParams = {
+    page?: number;
+    page_size?: number;
+    guid?: string;
+    filename?: string;
+    baseid?: string;
+    status?: string;
+    uploader?: string;
+    hash?: string;
+    alias?: string;
+    url?: string;
+    field_name?: string;
+    field_value?: string;
+    contain_alias?: boolean;
+    contain_url?: boolean;
+    contain_tag?: boolean;
+  };
+
   type File = {
     guid: string;
     filename: string;
@@ -99,6 +133,28 @@ declare namespace API {
 
   type FileTagsResponse = {
     field_names: string[];
+  };
+
+  type getDataDictionaryParams = {
+    key: string;
+  };
+
+  type getDatasetDataParams = {
+    key: string;
+    query?: string;
+    page?: number;
+    page_size?: number;
+    order_by?: string;
+  };
+
+  type getDatasetsParams = {
+    page?: number;
+    page_size?: number;
+    query_str?: string;
+  };
+
+  type getFileParams = {
+    id: string;
   };
 
   type GuidResponse = {
@@ -135,78 +191,20 @@ declare namespace API {
     params: string[];
   };
 
-  type SignResponse = {
-    sign: SignData;
-    size: number;
-    hashes: Hash[];
-    filename: string;
-  };
-
-  type fetchFilesParams = {
-    page?: number;
-    page_size?: number;
-    guid?: string;
-    filename?: string;
-    baseid?: string;
-    status?: string;
-    uploader?: string;
-    hash?: string;
-    alias?: string;
-    url?: string;
-    field_name?: string;
-    field_value?: string;
-    contain_alias?: boolean;
-    contain_url?: boolean;
-    contain_tag?: boolean;
-  };
-
-  type getFileParams = {
-    id: string;
-  };
-
   type signFileParams = {
     id: string;
     which_repo?: string;
-    'X-Auth-Groups'?: string;
   };
 
   type signFileWithHashParams = {
     hash: string;
     which_repo?: string;
-    'X-Auth-Groups'?: string;
   };
 
-  type addUrlToFileParams = {
-    id: string;
-  };
-
-  type addAliasToFileParams = {
-    id: string;
-  };
-
-  type addHashToFileParams = {
-    id: string;
-  };
-
-  type addTagToFileParams = {
-    id: string;
-  };
-
-  type getDatasetsParams = {
-    page?: number;
-    page_size?: number;
-    query_str?: string;
-  };
-
-  type getDataDictionaryParams = {
-    key: string;
-  };
-
-  type getDatasetDataParams = {
-    key: string;
-    query?: string;
-    page?: number;
-    page_size?: number;
-    order_by?: string;
+  type SignResponse = {
+    sign: SignData;
+    size: number;
+    hashes: Hash[];
+    filename: string;
   };
 }

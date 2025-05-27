@@ -219,7 +219,7 @@ const FileList: React.FC = () => {
   useEffect(() => {
     // Avoid request frequently, only request when the data is empty
     if (fileStat.total_size === -1 || fileStat.num_of_files === -1) {
-      biominerAPI.Files.getFileStat()
+      biominerAPI.files.getFileStat()
         .then((res) => {
           setFileStat(res);
         })

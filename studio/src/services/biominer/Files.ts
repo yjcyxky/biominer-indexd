@@ -19,7 +19,7 @@ export async function fetchFiles(
 
 /** Call `/api/v1/files` to create a file instance. POST /api/v1/files */
 export async function createFile(body: API.CreateFile, options?: { [key: string]: any }) {
-  return request<any>('/api/v1/files', {
+  return request<API.GuidResponse>('/api/v1/files', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -29,17 +29,17 @@ export async function createFile(body: API.CreateFile, options?: { [key: string]
   });
 }
 
-/** Call `/api/v1/files/tags` to fetch all tags. GET /api/v1/files/tags */
-export async function getTags(options?: { [key: string]: any }) {
-  return request<API.FileTagsResponse>('/api/v1/files/tags', {
+/** Call `/api/v1/files/stat` to get the statistics data. GET /api/v1/files/stat */
+export async function getFileStat(options?: { [key: string]: any }) {
+  return request<API.FileStatResponse>('/api/v1/files/stat', {
     method: 'GET',
     ...(options || {}),
   });
 }
 
-/** Call `/api/v1/files/stat` to get the statistics data. GET /api/v1/files/stat */
-export async function getFileStat(options?: { [key: string]: any }) {
-  return request<API.FileStatResponse>('/api/v1/files/stat', {
+/** Call `/api/v1/files/tags` to fetch all tags. GET /api/v1/files/tags */
+export async function getTags(options?: { [key: string]: any }) {
+  return request<API.FileTagsResponse>('/api/v1/files/tags', {
     method: 'GET',
     ...(options || {}),
   });

@@ -2,11 +2,11 @@
 /* eslint-disable */
 // API 更新时间：
 // API 唯一标识：
-import * as Files from './Files';
-import * as File from './File';
-import * as Datasets from './Datasets';
+import * as files from './files';
+import * as file from './file';
+import * as datasets from './datasets';
 export default {
-  Files,
-  File,
-  Datasets,
+  files,
+  file,
+  datasets,
 };

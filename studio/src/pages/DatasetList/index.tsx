@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Layout, Menu, List, Button, Typography, message, Input, Row, Col, Modal } from 'antd';
-import { getDatasets } from '@/services/biominer/Datasets';
+import { getDatasets } from '@/services/biominer/datasets';
 import './index.less';
 import { DownloadOutlined, FileTextFilled, InfoCircleFilled, PieChartFilled, SortAscendingOutlined, SortDescendingOutlined } from '@ant-design/icons';
 import ReactMarkdown from 'react-markdown';

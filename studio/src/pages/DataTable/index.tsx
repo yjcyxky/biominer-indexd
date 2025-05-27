@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Table, Button, Modal, Typography, Row, Col, Space, message, Tooltip, Popover } from 'antd';
 import { useEffect } from 'react';
-import { getDatasetData, getDataDictionary, getDatasets } from '@/services/biominer/Datasets';
+import { getDatasetData, getDataDictionary, getDatasets } from '@/services/biominer/datasets';
 import { history } from 'umi';
 import ColumnSelector from './ColumnSelector';
 import { filters2string } from './Filter';

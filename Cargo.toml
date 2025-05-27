@@ -18,6 +18,9 @@ path = "src/bin/biominer-indexd.rs"
 name = "biominer-indexd-cli"
 path = "src/bin/biominer-indexd-cli.rs"
 
+[target.x86_64-unknown-linux-gnu]
+linker = "x86_64-unknown-linux-gnu-gcc"
+
 [dependencies]
 anyhow = "1.0"
 chrono = "^0"
@@ -53,3 +56,4 @@ include_dir = "0.7.3"
 tempfile = "3.2.0"
 duckdb = { version = "1.2.2", features = ["bundled", "serde_json"] }
 hex = "0.4.3"
+openssl = { version = "0.10.36", features = ["vendored"] }
