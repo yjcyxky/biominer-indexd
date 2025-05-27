@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, Button, Empty, Space, Tooltip } from 'antd';
 import { CloseCircleFilled, CloseOutlined, InfoCircleFilled, InfoCircleOutlined } from '@ant-design/icons';
 import { Pie, Bar } from '@ant-design/plots';
@@ -6,7 +6,8 @@ import { Pie, Bar } from '@ant-design/plots';
 interface ChartCardProps {
     field: API.DataDictionaryField;
     data: API.DatasetDataResponse['records'];
-    onClose: () => void;
+    onClose?: () => void;
+    className?: string;
 }
 
 // 构建频率统计数据
@@ -22,7 +23,7 @@ const buildPlotData = (records: API.DatasetDataResponse['records'], key: string)
 };
 
 // 推荐图类型逻辑
-const getRecommendedChartType = (field: API.DataDictionaryField): 'pie' | 'bar' | 'unsupported' => {
+export const getRecommendedChartType = (field: API.DataDictionaryField): 'pie' | 'bar' | 'unsupported' => {
     if (field.data_type === 'BOOLEAN') return 'pie';
     if (field.data_type === 'STRING') {
         const count = field.allowed_values?.length || 0;
@@ -38,9 +39,16 @@ const getRecommendedChartType = (field: API.DataDictionaryField): 'pie' | 'bar' 
     return 'unsupported';
 };
 
-const ChartCard: React.FC<ChartCardProps> = ({ field, data, onClose }) => {
+const ChartCard: React.FC<ChartCardProps> = ({ field, data, onClose, className }) => {
     const plotData = buildPlotData(data, field.key);
     const chartType = getRecommendedChartType(field);
+
+    useEffect(() => {
+        // 强制让图表库重新计算尺寸
+        setTimeout(() => {
+            window.dispatchEvent(new Event('resize'));
+        }, 100);
+    }, []);
 
     const renderVisualization = () => {
         if (!field.allowed_values && chartType !== 'bar') {
@@ -85,11 +93,12 @@ const ChartCard: React.FC<ChartCardProps> = ({ field, data, onClose }) => {
                     <Tooltip title={field.description}>
                         <Button type="text" size="small" icon={<InfoCircleOutlined />} />
                     </Tooltip>
-                    <Button type="text" size="small" icon={<CloseOutlined />} onClick={onClose} />
+                    {onClose && <Button type="text" size="small" icon={<CloseOutlined />} onClick={onClose} />}
                 </Space>
             }
             style={{ height: '100%', overflow: 'hidden' }}
             bodyStyle={{ height: 'calc(100% - 40px)', overflow: 'auto' }}
+            className={className}
         >
             {renderVisualization()}
         </Card>

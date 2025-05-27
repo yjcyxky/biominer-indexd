@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Table, Button, Modal, Typography, Row, Col, Space, message, Tooltip } from 'antd';
+import { Table, Button, Modal, Typography, Row, Col, Space, message, Tooltip, Popover } from 'antd';
 import { useEffect } from 'react';
 import { getDatasetData, getDataDictionary, getDatasets } from '@/services/biominer/Datasets';
 import { history } from 'umi';
@@ -9,7 +9,6 @@ import type { ComposeQueryItem } from './Filter';
 import { BarChartOutlined, DownloadOutlined, FileOutlined, FilterOutlined, InfoCircleOutlined, MoreOutlined } from '@ant-design/icons';
 import QueryBuilder from './QueryBuilder';
 import ChartCard from './ChartCard';
-import { isNull } from 'lodash';
 import VisualPanel from './VisualPanel';
 
 import './index.less';
@@ -24,9 +23,7 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
     const [dataDictionary, setDataDictionary] = useState<API.DataDictionary>({
         fields: [],
     });
-    const [visColumn, setVisColumn] = useState<API.DataDictionaryField | null>(null);
     const [filterModalVisible, setFilterModalVisible] = useState<boolean>(false);
-    const [modalVisible, setModalVisible] = useState<boolean>(false);
     const [datasetMetadata, setDatasetMetadata] = useState<API.DatasetMetadata | null>(null);
     const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
     // TODO: Use a correct type for the columns
@@ -75,7 +72,10 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
             setDataDictionary(dataDictionary);
             setSelectedColumns(dataDictionary.fields.filter(col => col.order <= 5).map(col => col.key).slice(0, 5));
 
-            const datasets = await getDatasets({});
+            const datasets = await getDatasets({
+                page: 1,
+                page_size: 1000,
+            });
             const dataset = datasets.records.find(ds => ds.key === datasetKey);
             if (!dataset) {
                 history.push('/');
@@ -118,9 +118,12 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
                     <span>{col.name}</span>
                     <Space>
                         <Tooltip title={col.description}>
-                            <Button size="small" onClick={() => handleVisualize(col)} icon={<InfoCircleOutlined />} />
+                            <Button size="small" icon={<InfoCircleOutlined />} />
                         </Tooltip>
-                        <Button size="small" onClick={() => handleVisualize(col)} icon={<BarChartOutlined />} type="primary" />
+                        <Popover content={<ChartCard className='chart-card-popover' field={col} data={data.records} />}
+                            trigger="click" destroyTooltipOnHide>
+                            <Button size="small" icon={<BarChartOutlined />} type="primary" />
+                        </Popover>
                     </Space>
                 </div>
             ),
@@ -136,17 +139,14 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
         setPageSize(100);
     }
 
-    const handleVisualize = (col: API.DataDictionaryField) => {
-        setVisColumn(col);
-        setModalVisible(true);
-    };
-
     return (
         <>
             <Row className="datatable-header">
                 <Col span={8} className="datatable-header-left">
                     <Typography.Title level={5}>{datasetMetadata?.name}</Typography.Title>
-                    <Typography.Text>{datasetMetadata?.description}</Typography.Text>
+                    <Tooltip title={datasetMetadata?.description}>
+                        <p style={{ width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>{datasetMetadata?.description}</p>
+                    </Tooltip>
                 </Col>
                 <Col span={16} className="datatable-header-right">
                     <Space>
@@ -216,16 +216,6 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
                     }}
                 />
             }
-            <Modal
-                className="datatable-visualization-modal"
-                open={modalVisible && !isNull(visColumn)}
-                title={null}
-                onCancel={() => setModalVisible(false)}
-                footer={null}
-                closable={false}
-            >
-                {visColumn && <ChartCard field={visColumn} data={data.records} onClose={() => setModalVisible(false)} />}
-            </Modal>
             <QueryBuilder
                 visible={filterModalVisible}
                 onCancel={() => setFilterModalVisible(false)}

@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { WidthProvider, Responsive, Layouts } from 'react-grid-layout';
 // @ts-ignore
 import ChartCard from './ChartCard';
+// @ts-ignore
+import { getRecommendedChartType } from './ChartCard';
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
@@ -9,7 +11,7 @@ const VisualPanel: React.FC<{
     fields: API.DataDictionaryField[];
     data: API.DatasetDataResponse['records'];
 }> = ({ fields, data }) => {
-    const [visibleCharts, setVisibleCharts] = useState(fields);
+    const [visibleCharts, setVisibleCharts] = useState<API.DataDictionaryField[]>(fields.sort((a, b) => a.key.localeCompare(b.key)));
 
     useEffect(() => {
         // 强制让图表库重新计算尺寸
@@ -39,6 +41,7 @@ const VisualPanel: React.FC<{
         xs: 1,
         xxs: 1,
     };
+
     const generateLayout = (colsCount: number) =>
         visibleCharts.map((field, index) => ({
             i: field.key,
@@ -63,9 +66,24 @@ const VisualPanel: React.FC<{
         setVisibleCharts(prev => prev.filter(f => f.key !== fieldKey));
     };
 
+    const isValidChart = (field: API.DataDictionaryField) => {
+        // const chartType = getRecommendedChartType(field);
+        // console.log(field, chartType);
+        // if (!field.allowed_values && chartType !== 'bar') {
+        //     return false;
+        // }
+
+        // if (chartType == 'pie' || chartType == 'bar') {
+        //     return true;
+        // }
+
+        // return false;
+        return true;
+    };
+
     return (
         <ResponsiveGridLayout
-            className="layout"
+            className="visual-panel-layout"
             layouts={layouts}
             breakpoints={breakpoints}
             cols={cols}
@@ -75,7 +93,7 @@ const VisualPanel: React.FC<{
             draggableHandle=".chart-drag-handle"
             useCSSTransforms
         >
-            {visibleCharts.map(field => (
+            {visibleCharts.filter(isValidChart).map(field => (
                 <div key={field.key}>
                     <ChartCard field={field} data={data} onClose={() => handleClose(field.key)} />
                 </div>

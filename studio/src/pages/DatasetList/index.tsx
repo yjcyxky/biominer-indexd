@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Layout, Menu, List, Button, Typography, message, Input, Row, Col, Modal } from 'antd';
 import { getDatasets } from '@/services/biominer/Datasets';
 import './index.less';
-import { DownloadOutlined, FileTextFilled, InfoCircleFilled, PieChartFilled } from '@ant-design/icons';
+import { DownloadOutlined, FileTextFilled, InfoCircleFilled, PieChartFilled, SortAscendingOutlined, SortDescendingOutlined } from '@ant-design/icons';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useHistory } from 'umi';
@@ -22,6 +22,7 @@ const DatasetList: React.FC = () => {
     const [searchValue, setSearchValue] = useState<string>('');
     const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
     const [markdown, setMarkdown] = useState<string>('');
+    const [orderField, setOrderField] = useState<string>('num_of_samples');
     const history = useHistory();
 
     useEffect(() => {
@@ -57,11 +58,25 @@ const DatasetList: React.FC = () => {
         setIsModalOpen(false);
     };
 
-    const filteredDatasets = (tag: string, searchValue: string) => {
+    const filteredDatasets = (tag: string, searchValue: string, orderField: string) => {
         if (searchValue === '') {
-            return tagDatasetsMap[tag];
+            return tagDatasetsMap[tag] && tagDatasetsMap[tag].sort((a: any, b: any) => {
+                if (orderField === 'name') {
+                    return a.name.localeCompare(b.name);
+                } else if (orderField === 'num_of_samples') {
+                    return b.num_of_samples - a.num_of_samples;
+                }
+            });
         }
-        return tagDatasetsMap[tag].filter(ds => ds.name.includes(searchValue));
+
+        const data = tagDatasetsMap[tag].filter(ds => ds.name.includes(searchValue));
+        return data && data.sort((a: any, b: any) => {
+            if (orderField === 'name') {
+                return a.name.localeCompare(b.name);
+            } else if (orderField === 'num_of_samples') {
+                return b.num_of_samples - a.num_of_samples;
+            }
+        });
     };
 
     return (
@@ -69,6 +84,12 @@ const DatasetList: React.FC = () => {
             <Col className="dataset-header" span={24}>
                 <div className="dataset-header-title">Select Datasets for Visualization & Analysis:</div>
                 <div className="dataset-search">
+                    <Button type="text" icon={<SortAscendingOutlined />} onClick={() => {
+                        setOrderField('name');
+                    }}>Sort by Name</Button>
+                    <Button type="text" icon={<SortAscendingOutlined />} onClick={() => {
+                        setOrderField('num_of_samples');
+                    }}>Sort by Sample Count</Button>
                     <Input.Search
                         placeholder="Search by dataset name"
                         enterButton="Search"
@@ -102,7 +123,7 @@ const DatasetList: React.FC = () => {
                 <List
                     className="dataset-right-sider"
                     itemLayout="horizontal"
-                    dataSource={filteredDatasets(selectedTag, searchValue) || []}
+                    dataSource={filteredDatasets(selectedTag, searchValue, orderField) || []}
                     locale={{ emptyText: 'No datasets available' }}
                     renderItem={item => (
                         <List.Item
@@ -117,19 +138,19 @@ const DatasetList: React.FC = () => {
                                         // TODO: Show the markdown content of the dataset in another modal.
                                         setIsModalOpen(true);
                                         setMarkdown(item.description);
-                                    }} disabled>
+                                    }}>
                                     Info
                                 </Button>,
                                 <Button type="link" icon={<DownloadOutlined />}
                                     onClick={() => {
                                         // TODO: Redirect to the data-repo page.
-                                    }} disabled>
+                                    }}>
                                     Download
                                 </Button>,
                                 <Button type="link" icon={<PieChartFilled />} onClick={() => {
                                     history.push(`/datatable/${item.key}`);
                                 }}>
-                                    View
+                                    Visualize
                                 </Button>,
                             ]}
                         >
