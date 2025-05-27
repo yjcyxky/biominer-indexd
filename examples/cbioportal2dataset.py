@@ -47,30 +47,30 @@ def build_data_dictionary_from_header(df, header_lines):
     fields = []
     name_row, desc_row, type_row, order_row = header_lines[:4]
     try:
-        order_row = [int(x) for x in order_row]
+        order_row = {key: int(value) for key, value in order_row.items()}
     except:
         pass
 
     for idx, key in enumerate(df.columns):
         col_key = key.strip().lower().replace(" ", "_")
-        data_type = type_row[idx].strip().upper() if idx < len(type_row) else "STRING"
+        data_type = type_row[col_key].strip().upper() if col_key in type_row else "STRING"
         data_type = (
             data_type if data_type in ("STRING", "NUMBER", "BOOLEAN") else "STRING"
         )
 
         allowed_values = df[key].dropna().unique().tolist()
-        if len(allowed_values) > 100:
-            allowed_values = []
+        # if len(allowed_values) > 100:
+        #     allowed_values = []
 
         fields.append(
             {
                 "key": col_key,
-                "name": name_row[idx] if idx < len(name_row) else key,
-                "description": desc_row[idx] if idx < len(desc_row) else "",
+                "name": name_row[col_key],
+                "description": desc_row[col_key],
                 "data_type": data_type,
-                "notes": name_row[idx] if idx < len(name_row) else key,
+                "notes": "",
                 "allowed_values": allowed_values,
-                "order": order_row[idx] if idx < len(order_row) else idx,
+                "order": order_row[col_key],
             }
         )
     return fields
@@ -135,10 +135,10 @@ def convert_cbioportal_study(study_dir, output_dir):
     clinical_files = ["data_clinical_sample.txt", "data_clinical_patient.txt"]
     dfs = []
     headers = []
-    names = []
-    descs = []
-    types = []
-    orders = []
+    names = {}
+    descs = {}
+    types = {}
+    orders = {}
     dtype_dict = {}
     for fname in clinical_files:
         fpath = study_dir / fname
@@ -147,10 +147,10 @@ def convert_cbioportal_study(study_dir, output_dir):
             df = format_column_name(df)
 
             dtype_dict.update(dict(zip(df.columns, header[2])))
-            names.extend(header[0])
-            descs.extend(header[1])
-            types.extend(header[2])
-            orders.extend(header[3])
+            names.update(dict(zip(df.columns, header[0])))
+            descs.update(dict(zip(df.columns, header[1])))
+            types.update(dict(zip(df.columns, header[2])))
+            orders.update(dict(zip(df.columns, header[3])))
             dfs.append(df)
 
     print(dtype_dict)

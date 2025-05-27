@@ -31,6 +31,13 @@
     component: './DatasetList',
   },
   {
+    path: '/datatable/:key',
+    name: 'datatable',
+    icon: 'table',
+    component: './DataTable',
+    hideInMenu: true,
+  },
+  {
     name: 'data-repo',
     icon: 'file',
     path: '/data-repo',

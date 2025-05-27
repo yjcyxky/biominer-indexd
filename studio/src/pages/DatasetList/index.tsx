@@ -5,6 +5,7 @@ import './index.less';
 import { DownloadOutlined, FileTextFilled, InfoCircleFilled, PieChartFilled } from '@ant-design/icons';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { useHistory } from 'umi';
 
 const { Sider } = Layout;
 
@@ -21,6 +22,7 @@ const DatasetList: React.FC = () => {
     const [searchValue, setSearchValue] = useState<string>('');
     const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
     const [markdown, setMarkdown] = useState<string>('');
+    const history = useHistory();
 
     useEffect(() => {
         getDatasets({ page: 1, page_size: 1000 })
@@ -115,17 +117,17 @@ const DatasetList: React.FC = () => {
                                         // TODO: Show the markdown content of the dataset in another modal.
                                         setIsModalOpen(true);
                                         setMarkdown(item.description);
-                                    }}>
+                                    }} disabled>
                                     Info
                                 </Button>,
                                 <Button type="link" icon={<DownloadOutlined />}
                                     onClick={() => {
                                         // TODO: Redirect to the data-repo page.
-                                    }}>
+                                    }} disabled>
                                     Download
                                 </Button>,
                                 <Button type="link" icon={<PieChartFilled />} onClick={() => {
-                                    console.log(item);
+                                    history.push(`/datatable/${item.key}`);
                                 }}>
                                     View
                                 </Button>,

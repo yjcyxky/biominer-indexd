@@ -1,0 +1,67 @@
+import { Dropdown, Button, Input, Checkbox } from 'antd';
+import { useState, useMemo } from 'react';
+
+const ColumnSelector = ({ fields, selectedKeys, onChange }: { fields: API.DataDictionaryField[], selectedKeys: string[], onChange: (keys: string[]) => void }) => {
+    const [search, setSearch] = useState('');
+
+    const filteredFields = useMemo(() => {
+        return fields.filter(field =>
+            field.name.toLowerCase().includes(search.toLowerCase())
+        );
+    }, [search, fields]);
+
+    const onToggle = (key: string, checked: boolean) => {
+        onChange(checked ? [...selectedKeys, key] : selectedKeys.filter(k => k !== key));
+    };
+
+    const onToggleAll = () => {
+        if (selectedKeys.length === fields.length) {
+            onChange([]);
+        } else {
+            onChange(fields.map(f => f.key));
+        }
+    };
+
+    const menu = (
+        <div style={{ padding: 8, width: 300, backgroundColor: 'white', borderRadius: 8, border: '1px solid #d9d9d9' }}>
+            <div style={{ marginBottom: 8, display: 'flex', gap: 8 }}>
+                <Button size="small" onClick={onToggleAll}>
+                    {selectedKeys.length === fields.length ? 'Clear all' : `Select all (${fields.length})`}
+                </Button>
+                <Input.Search
+                    placeholder="Search..."
+                    size="small"
+                    allowClear
+                    onChange={e => setSearch(e.target.value)}
+                    style={{ flex: 1 }}
+                />
+            </div>
+            <div className="column-selector-header" style={{ fontWeight: 'bold', display: 'flex', padding: '4px 0' }}>
+                <div style={{ flex: 1 }}>Name</div>
+                <div style={{ width: 50, textAlign: 'right' }}>Freq</div>
+            </div>
+            <div style={{ maxHeight: 240, overflowY: 'auto' }}>
+                {filteredFields.map(field => (
+                    <div key={field.key} style={{ display: 'flex', alignItems: 'center', padding: '2px 0' }}>
+                        <Checkbox
+                            checked={selectedKeys.includes(field.key)}
+                            onChange={e => onToggle(field.key, e.target.checked)}
+                            style={{ flex: 1 }}
+                        >
+                            {field.name}
+                        </Checkbox>
+                        <div style={{ width: 50, textAlign: 'right', fontSize: 12, color: '#888' }}>Coming soon</div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+
+    return (
+        <Dropdown overlay={menu} trigger={['click']}>
+            <Button>Select Columns</Button>
+        </Dropdown>
+    );
+};
+
+export default ColumnSelector;
