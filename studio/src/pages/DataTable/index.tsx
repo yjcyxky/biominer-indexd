@@ -10,7 +10,8 @@ import { BarChartOutlined, DownloadOutlined, FileOutlined, FilterOutlined, InfoC
 import QueryBuilder from './QueryBuilder';
 import ChartCard from './ChartCard';
 import VisualPanel from './VisualPanel';
-import VirtualTable from './VirtualTable';
+// import VirtualTable from './VirtualTable';
+import VirtualTable from './VirtualTableFaster';
 
 import './index.less';
 import DataInfo from './DataInfo';
@@ -35,7 +36,7 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
     const [loading, setLoading] = useState<boolean>(false);
     const [cachedDatasetKey, setCachedDatasetKey] = useState<string | undefined>(undefined);
     const [filters, setFilters] = useState<ComposeQueryItem | undefined>(undefined);
-    const [visualPanelVisible, setVisualPanelVisible] = useState<boolean>(false);
+    const [visualPanelVisible, setVisualPanelVisible] = useState<boolean>(true);
     const [currentRecord, setCurrentRecord] = useState<Record<string, any> | null>(null);
 
     useEffect(() => {
@@ -119,32 +120,32 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
     }, [page, pageSize, cachedDatasetKey, filters])
 
     useEffect(() => {
-        const columns = dataDictionary.fields.map((col) => ({
-            title: (
-                <div style={{ display: 'flex', justifyContent: 'space-between', whiteSpace: 'nowrap', gap: 4, alignItems: 'center' }}>
-                    <span>{col.name}</span>
-                    <Space>
-                        <Tooltip title={col.description}>
-                            <Button size="small" icon={<InfoCircleOutlined />} />
-                        </Tooltip>
-                        <Popover content={<ChartCard className='chart-card-popover' field={col} data={data.records} total={data.total} />}
-                            trigger="click" destroyTooltipOnHide>
-                            <Button size="small" icon={<BarChartOutlined />} type="primary" />
-                        </Popover>
-                    </Space>
-                </div>
-            ),
-            dataIndex: col.key,
-            key: col.key,
-            render: (value: any) => {
-                if (col.key === 'patient_id') {
-                    return <a onClick={() => setCurrentRecord(data.records.find(r => r.patient_id === value))}>{value}</a>;
-                }
-                return value;
-            }
-        }));
+        // const columns = dataDictionary.fields.map((col) => ({
+        //     title: (
+        //         <div style={{ display: 'flex', justifyContent: 'space-between', whiteSpace: 'nowrap', gap: 4, alignItems: 'center' }}>
+        //             <span>{col.name}</span>
+        //             <Space>
+        //                 <Tooltip title={col.description}>
+        //                     <Button size="small" icon={<InfoCircleOutlined />} />
+        //                 </Tooltip>
+        //                 <Popover content={<ChartCard className='chart-card-popover' field={col} data={data.records} total={data.total} />}
+        //                     trigger="click" destroyTooltipOnHide>
+        //                     <Button size="small" icon={<BarChartOutlined />} type="primary" />
+        //                 </Popover>
+        //             </Space>
+        //         </div>
+        //     ),
+        //     dataIndex: col.key,
+        //     key: col.key,
+        //     render: (value: any) => {
+        //         if (col.key === 'patient_id') {
+        //             return <a onClick={() => setCurrentRecord(data.records.find(r => r.patient_id === value))}>{value}</a>;
+        //         }
+        //         return value;
+        //     }
+        // }));
 
-        setColumns(columns.filter(col => selectedColumns.includes(col.key)));
+        setColumns(dataDictionary.fields.filter(col => selectedColumns.includes(col.key)));
     }, [dataDictionary, selectedColumns]);
 
     const resetParams = () => {
@@ -152,7 +153,8 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
         setPageSize(100);
     }
 
-    const tableHeight = window.innerHeight - 275;
+    const tableHeight = window.innerHeight - 240;
+    const tableWidth = window.innerWidth - 48;
 
     return (
         <Spin spinning={loading} tip="Loading...">
@@ -197,13 +199,18 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
                                         // TODO: Download the dataset
                                     }} icon={<DownloadOutlined />} disabled type="default" />
                                 </Tooltip>
-                                <Button onClick={() => {
-                                    setPage(1);
-                                    if (data.total > 1000) {
-                                        message.warning('The dataset is too large, it will take a while to load.');
+                                <Button
+                                    disabled={data.records.length === data.total}
+                                    onClick={
+                                        () => {
+                                            setPage(1);
+                                            if (data.total > 1000) {
+                                                message.warning('The dataset is too large, it will take a while to load.');
+                                            }
+                                            setPageSize(data.total);
+                                        }
                                     }
-                                    setPageSize(data.total);
-                                }} icon={<MoreOutlined />} type="default">
+                                    icon={<MoreOutlined />} type="default">
                                     Load All ({data.total})
                                 </Button>
                                 <ColumnSelector fields={dataDictionary.fields} selectedKeys={selectedColumns} onChange={setSelectedColumns} />
@@ -229,18 +236,17 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
                         setSelectedColumns(selectedColumns.filter(col => col !== field.key));
                     }} /> :
                 <VirtualTable
-                    className={filters ? 'datatable-table-with-filters' : 'datatable-table'}
-                    size="small"
+                    className='datatable-table'
                     dataSource={data.records}
-                    columns={columns}
-                    rowKey={(record, idx) => idx?.toString() ?? ''}
-                    scroll={{ y: tableHeight }}
+                    dataDictionary={columns}
+                    loading={loading}
+                    scroll={{ y: tableHeight, x: tableWidth }}
                     pagination={{
                         position: ['bottomRight'],
                         pageSize: pageSize,
                         current: page,
                         total: data.total,
-                        onChange: (page, pageSize) => {
+                        onChange: (page: number, pageSize: number) => {
                             setPage(page);
                             setPageSize(pageSize);
                         },
@@ -248,7 +254,32 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
                         showQuickJumper: true,
                         pageSizeOptions: [100, 200, 300, 500, 1000],
                     }}
+                    onCellClick={(record, row, col) => {
+                        setCurrentRecord(record);
+                    }}
                 />
+                // <VirtualTable
+                //     className={filters ? 'datatable-table-with-filters' : 'datatable-table'}
+                //     size="small"
+                //     dataSource={data.records}
+                //     columns={columns}
+                //     rowKey={(record, idx) => idx?.toString() ?? ''}
+                //     scroll={{ y: tableHeight }}
+                //     loading={loading}
+                //     pagination={{
+                //         position: ['bottomRight'],
+                //         pageSize: pageSize,
+                //         current: page,
+                //         total: data.total,
+                //         onChange: (page: number, pageSize: number) => {
+                //             setPage(page);
+                //             setPageSize(pageSize);
+                //         },
+                //         showSizeChanger: true,
+                //         showQuickJumper: true,
+                //         pageSizeOptions: [100, 200, 300, 500, 1000],
+                //     }}
+                // />
             }
             <QueryBuilder
                 visible={filterModalVisible}
