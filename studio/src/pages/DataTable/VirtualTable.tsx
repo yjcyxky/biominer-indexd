@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import ResizeObserver from 'rc-resize-observer';
-import { Table } from 'antd';
+import { Spin, Table } from 'antd';
 import { VariableSizeGrid as Grid } from 'react-window';
 import type { TableProps } from 'antd';
 
@@ -21,6 +21,7 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
     const [tableWidth, setTableWidth] = useState(0);
     const gridRef = useRef<any>();
     const headerRef = useRef<HTMLDivElement>(null);
+    const [internalLoading, setInternalLoading] = useState(false);
 
     const [connectObject] = useState(() => {
         const obj = {};
@@ -44,6 +45,12 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
             gridRef.current.resetAfterColumnIndex(0, true);
         }
     }, [columns.length, tableWidth]);
+
+    useEffect(() => {
+        if (dataSource && dataSource.length > 0) {
+            setInternalLoading(true);
+        }
+    }, [dataSource]);
 
     // 自动补全列宽
     const widthColumnCount = columns.filter(c => !c.width).length;
@@ -94,6 +101,13 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
                             headerRef.current.scrollLeft = scrollLeft;
                         }
                     }}
+                    onItemsRendered={() => {
+                        if (internalLoading) {
+                            setTimeout(() => {
+                                setInternalLoading(false);
+                            }, 30);
+                        }
+                    }}
                 >
                     {({ columnIndex, rowIndex, style }) => {
                         const column = mergedColumns[columnIndex];
@@ -123,32 +137,34 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
     };
 
     return (
-        <ResizeObserver onResize={({ width }) => setTableWidth(width)}>
-            <Table
-                {...rest}
-                bordered={true}
-                columns={mergedColumns}
-                dataSource={dataSource}
-                pagination={pagination}
-                loading={loading}
-                rowKey={rowKey}
-                scroll={scroll}
-                showHeader={false}
-                components={{
-                    // @ts-ignore
-                    body: renderVirtualList,
-                }}
-                summary={() => (
-                    <Table.Summary fixed>
-                        <Table.Summary.Row style={{ fontSize: 16, fontWeight: 500 }}>
-                            <Table.Summary.Cell index={0} colSpan={columns.length}>
-                                {/* @ts-ignore */}
-                                🔢 Showing {dataSource.length} of {pagination?.total} samples
-                            </Table.Summary.Cell>
-                        </Table.Summary.Row>
-                    </Table.Summary>
-                )}
-            />
+        <ResizeObserver onResize={({ width }) => setTableWidth(width - 32)}>
+            <Spin spinning={internalLoading}>
+                <Table
+                    {...rest}
+                    bordered={true}
+                    columns={mergedColumns}
+                    dataSource={dataSource}
+                    pagination={pagination}
+                    loading={loading}
+                    rowKey={rowKey}
+                    scroll={scroll}
+                    showHeader={false}
+                    components={{
+                        // @ts-ignore
+                        body: renderVirtualList,
+                    }}
+                    summary={() => (
+                        <Table.Summary fixed>
+                            <Table.Summary.Row style={{ fontSize: 16, fontWeight: 500 }}>
+                                <Table.Summary.Cell index={0} colSpan={columns.length}>
+                                    {/* @ts-ignore */}
+                                    🔢 Showing {dataSource.length} of {pagination?.total} samples
+                                </Table.Summary.Cell>
+                            </Table.Summary.Row>
+                        </Table.Summary>
+                    )}
+                />
+            </Spin>
         </ResizeObserver>
     );
 };

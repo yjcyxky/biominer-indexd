@@ -1,35 +1,46 @@
-.muuri-grid {
-    position: relative;
+.visual-panel-container {
+    width: 100%;
+    height: calc(100vh - 190px);
+    padding: 0 10px;
+    display: flex;
+    flex-direction: row;
+    overflow-y: auto;
 
-    .item {
-        position: absolute;
-        width: 100px; // 默认宽度，Muuri 初始化时会自动调整
-        height: 100px;
-        z-index: 1;
+    .muuri-grid {
+        width: 100%;
+        height: 100%;
+        position: relative;
 
-        .item-content {
-            width: 100%;
-            height: 100%;
-            box-sizing: border-box;
-            border-radius: 6px;
-            overflow: visible; // 允许显示 resize handle
+        .item {
+            position: absolute;
+            width: 100px; // 默认宽度，Muuri 初始化时会自动调整
+            height: 100px;
+            z-index: 1;
+
+            .item-content {
+                width: 100%;
+                height: 100%;
+                box-sizing: border-box;
+                border-radius: 6px;
+                overflow: visible; // 允许显示 resize handle
+            }
         }
-    }
 
-    .item.muuri-item-releasing {
-        z-index: 2;
-    }
+        .item.muuri-item-releasing {
+            z-index: 2;
+        }
 
-    .item.muuri-item-dragging {
-        z-index: 3;
-    }
+        .item.muuri-item-dragging {
+            z-index: 3;
+        }
 
-    .item.muuri-item-hidden {
-        display: none !important;
-    }
+        .item.muuri-item-hidden {
+            display: none !important;
+        }
 
-    .react-resizable-handle {
-        z-index: 4;
+        .react-resizable-handle {
+            z-index: 4;
+        }
     }
 }
 

@@ -13,6 +13,7 @@ import VisualPanel from './VisualPanel';
 import VirtualTable from './VirtualTable';
 
 import './index.less';
+import DataInfo from './DataInfo';
 
 const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
     const [data, setData] = useState<API.DatasetDataResponse>({
@@ -35,6 +36,7 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
     const [cachedDatasetKey, setCachedDatasetKey] = useState<string | undefined>(undefined);
     const [filters, setFilters] = useState<ComposeQueryItem | undefined>(undefined);
     const [visualPanelVisible, setVisualPanelVisible] = useState<boolean>(false);
+    const [currentRecord, setCurrentRecord] = useState<Record<string, any> | null>(null);
 
     useEffect(() => {
         let datasetKey = key ?? '';
@@ -125,7 +127,7 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
                         <Tooltip title={col.description}>
                             <Button size="small" icon={<InfoCircleOutlined />} />
                         </Tooltip>
-                        <Popover content={<ChartCard className='chart-card-popover' field={col} data={data.records} />}
+                        <Popover content={<ChartCard className='chart-card-popover' field={col} data={data.records} total={data.total} />}
                             trigger="click" destroyTooltipOnHide>
                             <Button size="small" icon={<BarChartOutlined />} type="primary" />
                         </Popover>
@@ -134,6 +136,12 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
             ),
             dataIndex: col.key,
             key: col.key,
+            render: (value: any) => {
+                if (col.key === 'patient_id') {
+                    return <a onClick={() => setCurrentRecord(data.records.find(r => r.patient_id === value))}>{value}</a>;
+                }
+                return value;
+            }
         }));
 
         setColumns(columns.filter(col => selectedColumns.includes(col.key)));
@@ -215,9 +223,11 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
                 </Col>
             </Row>
             {visualPanelVisible ?
-                <VisualPanel fields={dataDictionary.fields} data={data.records} selectedColumns={selectedColumns} onClose={(field) => {
-                    setSelectedColumns(selectedColumns.filter(col => col !== field.key));
-                }} /> :
+                <VisualPanel fields={dataDictionary.fields} data={data.records}
+                    total={data.total} selectedColumns={selectedColumns}
+                    onClose={(field) => {
+                        setSelectedColumns(selectedColumns.filter(col => col !== field.key));
+                    }} /> :
                 <VirtualTable
                     className={filters ? 'datatable-table-with-filters' : 'datatable-table'}
                     size="small"
@@ -255,6 +265,19 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
                 }}
                 dataDictionary={dataDictionary}
             />
+            {
+                currentRecord ?
+                    <Modal
+                        className="datatable-data-info-modal"
+                        open={currentRecord !== null}
+                        width={800}
+                        onCancel={() => setCurrentRecord(null)}
+                        footer={null}
+                    >
+                        <DataInfo data={currentRecord} dataDictionary={dataDictionary} title={`Patient ${currentRecord.patient_id} - Details`} />
+                    </Modal>
+                    : null
+            }
         </Spin>
     );
 };
