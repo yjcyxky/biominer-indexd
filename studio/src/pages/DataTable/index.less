@@ -1,34 +1,114 @@
+@header-height: 120px;
+@global-header-height: 48px;
+
+.datatable-header,
+.datatable-table {
+    margin: 0 16px;
+}
+
 .datatable-header {
+    height: @header-height;
     margin-bottom: 8px;
 
-    .datatable-header-left {
+    .datatable-header-upper {
         display: flex;
         flex-direction: column;
-        justify-content: space-between;
+        justify-content: flex-start;
+        align-items: flex-start;
+
+        .ant-typography {
+            margin-bottom: 0;
+        }
     }
 
-    .datatable-header-right {
+    .datatable-header-lower {
         display: flex;
         flex-direction: row;
-        justify-content: flex-end;
-    }
+        justify-content: space-between;
+        align-items: flex-end;
+        width: 100%;
 
-    .ant-typography {
-        margin-bottom: 0;
+        .datatable-header-lower-left {
+            display: flex;
+            flex-direction: row;
+            justify-content: flex-start;
+            align-items: flex-start;
+
+            .datatable-filters {
+                width: 60%;
+                margin-bottom: 8px;
+                width: 100%;
+                height: 16px;
+
+                .ant-space {
+                    width: 100%;
+                }
+            }
+
+            @keyframes pulse {
+                0% {
+                    box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.4);
+                }
+
+                70% {
+                    box-shadow: 0 0 0 10px rgba(255, 193, 7, 0);
+                }
+
+                100% {
+                    box-shadow: 0 0 0 0 rgba(255, 193, 7, 0);
+                }
+            }
+
+            .sample-count {
+                min-width: 450px;
+                width: max-content;
+                background-color: #fff3cd;
+                /* 柔和黄色 */
+                color: #856404;
+                /* 深黄色文字 */
+                font-weight: bold;
+                padding: 6px 16px;
+                border-left: 4px solid #ffc107;
+                border-radius: 4px;
+                margin: 0;
+                animation: pulse 2s infinite;
+            }
+        }
+
+        .datatable-header-lower-right {
+            display: flex;
+            flex-direction: row;
+            justify-content: flex-end;
+            align-items: flex-end;
+
+            .ant-btn {
+                margin-left: 8px;
+            }
+        }
     }
 }
 
-@keyframes pulse {
-    0% {
-        box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.4);
+.datatable-table {
+    height: calc(100vh - @header-height - @global-header-height - 30px);
+
+    .ant-pagination {
+        position: absolute;
+        bottom: 10px;
+        right: 5px;
+        margin: 0;
+        z-index: 1000;
     }
 
-    70% {
-        box-shadow: 0 0 0 10px rgba(255, 193, 7, 0);
-    }
+    .datatable-table-grid {
+        background-color: #f0f2f5;
 
-    100% {
-        box-shadow: 0 0 0 0 rgba(255, 193, 7, 0);
+        .datatable-table-grid-row-even {
+            background-color: #f0f2f5;
+        }
+
+        .datatable-table-grid-row-odd {
+            background-color: #fff;
+        }
     }
 }
 
@@ -36,60 +116,9 @@
     width: 500px;
 }
 
-.datatable-header-right {
-    .sample-count {
-        background-color: #fff3cd;
-        /* 柔和黄色 */
-        color: #856404;
-        /* 深黄色文字 */
-        font-weight: bold;
-        padding: 12px 16px;
-        border-left: 4px solid #ffc107;
-        border-radius: 4px;
-        margin: 12px 0;
-        animation: pulse 2s infinite;
-    }
-}
-
 .datatable-visualization-modal {
     .ant-modal-body {
         padding: 0;
-    }
-}
-
-.datatable-filters {
-    margin-bottom: 8px;
-    width: 100%;
-    height: 48px;
-
-    .ant-space {
-        width: 100%;
-    }
-}
-
-.datatable-table-with-filters {
-    .ant-pagination {
-        position: absolute;
-        top: -58px;
-        right: 10px;
-    }
-}
-
-.datatable-table {
-    .ant-pagination {
-        position: absolute;
-        top: -60px;
-        left: 45%;
-    }
-}
-
-// 通用控制
-.datatable-table,
-.datatable-table-with-filters {
-    @media (max-width: 2300px) {
-        .ant-pagination {
-            display: none !important;
-        }
     }
 }
 
@@ -101,7 +130,7 @@
 
 // 隐藏左侧头部组件，在中小屏下
 @media (max-width: 1024px) {
-    .datatable-header-left {
+    .datatable-header-lower-left {
         visibility: hidden;
     }
 }

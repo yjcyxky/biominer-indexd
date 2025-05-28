@@ -42,10 +42,6 @@ export const filters2string = (filter: ComposeQueryItem, level = 0): React.React
             size={[8, 4]}
             wrap
             style={{
-                border: '1px solid #d9d9d9',
-                borderRadius: 4,
-                padding: '4px 8px',
-                background: '#fafafa',
                 marginBottom: 0,
                 height: '100%'
             }}

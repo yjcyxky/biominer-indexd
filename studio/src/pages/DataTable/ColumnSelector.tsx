@@ -1,4 +1,5 @@
-import { Dropdown, Button, Input, Checkbox } from 'antd';
+import { InfoCircleOutlined, PercentageOutlined } from '@ant-design/icons';
+import { Dropdown, Button, Input, Checkbox, Tooltip } from 'antd';
 import { useState, useMemo } from 'react';
 
 const ColumnSelector = ({ fields, selectedKeys, onChange }: { fields: API.DataDictionaryField[], selectedKeys: string[], onChange: (keys: string[]) => void }) => {
@@ -49,8 +50,13 @@ const ColumnSelector = ({ fields, selectedKeys, onChange }: { fields: API.DataDi
                             style={{ flex: 1 }}
                         >
                             {field.name}
+                            <Tooltip title={field.description || field.name}>
+                                <InfoCircleOutlined style={{ marginLeft: 4 }} />
+                            </Tooltip>
                         </Checkbox>
-                        <div style={{ width: 50, textAlign: 'right', fontSize: 12, color: '#888' }}>Coming soon</div>
+                        <div style={{ width: 50, textAlign: 'right', fontSize: 12, color: '#888' }}>
+                            <PercentageOutlined />
+                        </div>
                     </div>
                 ))}
             </div>

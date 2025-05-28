@@ -1,104 +1,135 @@
-import React, { useEffect, useState } from 'react';
-import { WidthProvider, Responsive, Layouts } from 'react-grid-layout';
-// @ts-ignore
+import React, { useEffect, useRef, useState } from 'react';
+import Muuri from 'muuri';
 import ChartCard from './ChartCard';
-// @ts-ignore
-import { getRecommendedChartType } from './ChartCard';
+import './VisualPanel.less';
+import { Resizable } from 're-resizable';
 
-const ResponsiveGridLayout = WidthProvider(Responsive);
+const GRID_UNIT = 20;
 
-const VisualPanel: React.FC<{
+const chartMap: Record<string, { w: number; h: number }> = {
+    bar: { w: 15, h: 15 },
+    pie: { w: 15, h: 15 },
+    histogram: { w: 15, h: 15 },
+    dotplot: { w: 15, h: 15 },
+    default: { w: 15, h: 15 },
+};
+
+interface VisualPanelProps {
     fields: API.DataDictionaryField[];
     data: API.DatasetDataResponse['records'];
-}> = ({ fields, data }) => {
-    const [visibleCharts, setVisibleCharts] = useState<API.DataDictionaryField[]>(fields.sort((a, b) => a.key.localeCompare(b.key)));
+    selectedColumns: string[];
+    onClose?: (field: API.DataDictionaryField) => void;
+}
+
+const VisualPanel: React.FC<VisualPanelProps> = ({ fields, data, selectedColumns, onClose }) => {
+    const gridRef = useRef<HTMLDivElement>(null);
+    const muuriRef = useRef<Muuri | null>(null);
+
+    const [resizing, setResizing] = useState<boolean>(false);
+    const [filteredFields, setFilteredFields] = useState<API.DataDictionaryField[]>([]);
+    const [sizes, setSizes] = useState<Record<string, { width: number; height: number }>>({});
+
+    const getInitialSize = (fieldKey: string, chartType: string) => {
+        if (sizes[fieldKey]) return sizes[fieldKey];
+        const { w, h } = chartMap[chartType] || chartMap.default;
+        return {
+            width: w * GRID_UNIT,
+            height: h * GRID_UNIT,
+        };
+    };
 
     useEffect(() => {
-        // 强制让图表库重新计算尺寸
-        setTimeout(() => {
-            window.dispatchEvent(new Event('resize'));
-        }, 100);
-    }, []);
+        if (gridRef.current) {
+            muuriRef.current = new Muuri(gridRef.current, {
+                dragEnabled: true,
+                layoutOnInit: true,
+                layoutDuration: 300,
+                layoutEasing: 'ease',
+                dragSort: true,
+                dragSortPredicate: {
+                    threshold: 50,
+                    action: 'move'
+                },
+                dragStartPredicate: {
+                    distance: 10,
+                    delay: 100,
+                },
+                dragHandle: '.chart-drag-handle'
+            });
+        }
 
-    const breakpoints = {
-        xxxl: 1920,   // 超宽屏 / 4K 全屏窗口
-        xxl: 1600,    // MacBook Pro 16" 全屏或高分外接屏
-        xl: 1400,     // 台式机大屏
-        lg: 1200,     // 普通笔记本
-        md: 996,
-        sm: 768,
-        xs: 480,
-        xxs: 0,
-    };
+        return () => {
+            muuriRef.current?.destroy();
+        };
+    }, [filteredFields]);
 
-    const cols = {
-        xxxl: 10,
-        xxl: 8,
-        xl: 6,
-        lg: 4,
-        md: 3,
-        sm: 2,
-        xs: 1,
-        xxs: 1,
-    };
-
-    const generateLayout = (colsCount: number) =>
-        visibleCharts.map((field, index) => ({
-            i: field.key,
-            x: index % colsCount,
-            y: Math.floor(index / colsCount),
-            w: 1,
-            h: 2,
-        }));
-
-    const layouts: Layouts = {
-        xxxl: generateLayout(cols.xxxl),
-        xxl: generateLayout(cols.xxl),
-        xl: generateLayout(cols.xl),
-        lg: generateLayout(cols.lg),
-        md: generateLayout(cols.md),
-        sm: generateLayout(cols.sm),
-        xs: generateLayout(cols.xs),
-        xxs: generateLayout(cols.xxs),
-    };
-
-    const handleClose = (fieldKey: string) => {
-        setVisibleCharts(prev => prev.filter(f => f.key !== fieldKey));
-    };
-
-    const isValidChart = (field: API.DataDictionaryField) => {
-        // const chartType = getRecommendedChartType(field);
-        // console.log(field, chartType);
-        // if (!field.allowed_values && chartType !== 'bar') {
-        //     return false;
-        // }
-
-        // if (chartType == 'pie' || chartType == 'bar') {
-        //     return true;
-        // }
-
-        // return false;
-        return true;
-    };
+    useEffect(() => {
+        setFilteredFields(fields.filter((f) => selectedColumns.includes(f.key)));
+    }, [fields, selectedColumns]);
 
     return (
-        <ResponsiveGridLayout
-            className="visual-panel-layout"
-            layouts={layouts}
-            breakpoints={breakpoints}
-            cols={cols}
-            rowHeight={160}
-            isResizable
-            isDraggable
-            draggableHandle=".chart-drag-handle"
-            useCSSTransforms
-        >
-            {visibleCharts.filter(isValidChart).map(field => (
-                <div key={field.key}>
-                    <ChartCard field={field} data={data} onClose={() => handleClose(field.key)} />
-                </div>
-            ))}
-        </ResponsiveGridLayout>
+        <div className="muuri-grid" ref={gridRef}>
+            {filteredFields.map((field) => {
+                const chartType = field.data_type;
+                const { width, height } = getInitialSize(field.key, chartType);
+                const style = {
+                    width: `${width}px`,
+                    height: `${height}px`,
+                };
+                return (
+                    <div className="item" key={field.key} style={style}>
+                        <div className="item-content">
+                            <Resizable
+                                defaultSize={{
+                                    width: width,
+                                    height: height,
+                                }}
+                                minWidth={5 * GRID_UNIT}
+                                minHeight={5 * GRID_UNIT}
+                                onResizeStart={() => setResizing(true)}
+                                onResizeStop={(e, direction, ref) => {
+                                    setResizing(false);
+                                    const newWidth = ref.offsetWidth;
+                                    const newHeight = ref.offsetHeight;
+
+                                    setSizes(prev => ({
+                                        ...prev,
+                                        [field.key]: {
+                                            width: newWidth,
+                                            height: newHeight,
+                                        },
+                                    }));
+
+                                    muuriRef.current?.refreshItems();
+                                    muuriRef.current?.layout(true);
+                                }}
+                                handleClasses={{ bottomRight: 'resizable-handle' }}
+                                enable={{
+                                    top: false,
+                                    right: true,
+                                    bottom: true,
+                                    left: false,
+                                    topRight: false,
+                                    bottomRight: true,
+                                    topLeft: false,
+                                    bottomLeft: false,
+                                }}
+                            >
+                                <div className="resizable-container">
+                                    {resizing && <div className="resize-indicator" />}
+                                    <ChartCard field={field} data={data}
+                                        onClose={() => {
+                                            onClose?.(field);
+                                        }} resize={() => {
+                                            muuriRef.current?.refreshItems().layout(true);
+                                        }} />
+                                </div>
+                            </Resizable>
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
     );
 };
 

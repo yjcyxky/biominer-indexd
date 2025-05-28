@@ -1,16 +1,18 @@
-import React, { useEffect, useState } from 'react';
-import { Card, Button, Empty, Space, Tooltip } from 'antd';
-import { CloseCircleFilled, CloseOutlined, InfoCircleFilled, InfoCircleOutlined } from '@ant-design/icons';
+import React, { useEffect, useRef } from 'react';
+import { Card, Button, Empty, Space, Tooltip, Row } from 'antd';
+import { CloseOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import { Pie, Bar } from '@ant-design/plots';
+
+import './ChartCard.less';
 
 interface ChartCardProps {
     field: API.DataDictionaryField;
     data: API.DatasetDataResponse['records'];
     onClose?: () => void;
     className?: string;
+    resize?: () => void;
 }
 
-// 构建频率统计数据
 const buildPlotData = (records: API.DatasetDataResponse['records'], key: string): { value: string; count: number }[] => {
     const freqMap = new Map<string, number>();
     records.forEach((r) => {
@@ -22,32 +24,45 @@ const buildPlotData = (records: API.DatasetDataResponse['records'], key: string)
     return Array.from(freqMap.entries()).map(([value, count]) => ({ value, count }));
 };
 
-// 推荐图类型逻辑
 export const getRecommendedChartType = (field: API.DataDictionaryField): 'pie' | 'bar' | 'unsupported' => {
     if (field.data_type === 'BOOLEAN') return 'pie';
     if (field.data_type === 'STRING') {
         const count = field.allowed_values?.length || 0;
         if (count <= 6) return 'pie';
-        // if (count <= 20) return 'bar';
         return 'unsupported';
     }
     if (field.data_type === 'NUMBER') {
-        // TODO: Support histogram
-        // return 'bar'; // 可扩展 histogram
         return 'unsupported';
     }
     return 'unsupported';
 };
 
-const ChartCard: React.FC<ChartCardProps> = ({ field, data, onClose, className }) => {
+const ChartCard: React.FC<ChartCardProps> = ({ field, data, onClose, className, resize }) => {
     const plotData = buildPlotData(data, field.key);
     const chartType = getRecommendedChartType(field);
 
+    const chartRef = useRef<any>(null);        // 获取图表组件实例
+    const containerRef = useRef<HTMLDivElement>(null); // 监听容器尺寸
+
+    // 监听自身尺寸变化以触发图表重绘
     useEffect(() => {
-        // 强制让图表库重新计算尺寸
-        setTimeout(() => {
-            window.dispatchEvent(new Event('resize'));
-        }, 100);
+        const observer = new ResizeObserver(() => {
+            if (chartRef.current?.chart?.forceFit) {
+                chartRef.current.chart.forceFit(); // 对于 Ant Design Plots 图表实例
+            } else {
+                window.dispatchEvent(new Event('resize')); // fallback
+            }
+
+            resize?.();
+        });
+
+        if (containerRef.current) {
+            observer.observe(containerRef.current);
+        }
+
+        return () => {
+            observer.disconnect();
+        };
     }, []);
 
     const renderVisualization = () => {
@@ -64,6 +79,7 @@ const ChartCard: React.FC<ChartCardProps> = ({ field, data, onClose, className }
                     colorField="value"
                     radius={0.8}
                     label={{ type: 'spider', labelHeight: 28 }}
+                    ref={chartRef}
                 />
             );
         }
@@ -77,31 +93,33 @@ const ChartCard: React.FC<ChartCardProps> = ({ field, data, onClose, className }
                     yField="value"
                     seriesField="value"
                     legend={false}
+                    ref={chartRef}
                 />
             );
         }
 
-        return <Empty description={`Unsupported ${field.data_type} field`} style={{ margin: '20%' }} />;
+        return <Empty description={`Unsupported ${field.data_type} field`} className="chart-empty" />;
     };
 
     return (
-        <Card
-            size="small"
-            title={<div className="chart-drag-handle">{field.name}</div>}
-            extra={
-                <Space size={0}>
-                    <Tooltip title={field.description}>
-                        <Button type="text" size="small" icon={<InfoCircleOutlined />} />
-                    </Tooltip>
-                    {onClose && <Button type="text" size="small" icon={<CloseOutlined />} onClick={onClose} />}
-                </Space>
-            }
-            style={{ height: '100%', overflow: 'hidden' }}
-            bodyStyle={{ height: 'calc(100% - 40px)', overflow: 'auto' }}
-            className={className}
-        >
-            {renderVisualization()}
-        </Card>
+        <Row className="chart-card">
+            <Card
+                size="small"
+                title={<div className="chart-drag-handle">{field.name}</div>}
+                extra={
+                    <Space size={0}>
+                        <Tooltip title={field.description}>
+                            <Button type="text" size="small" icon={<InfoCircleOutlined />} />
+                        </Tooltip>
+                        {onClose && <Button type="text" size="small" icon={<CloseOutlined />} onClick={onClose} />}
+                    </Space>
+                }
+                className={className}
+                ref={containerRef}
+            >
+                {renderVisualization()}
+            </Card>
+        </Row>
     );
 };
 
