@@ -140,7 +140,7 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
         <Spin spinning={loading}>
             <Row className="datatable-header">
                 <Col span={24} className="datatable-header-upper">
-                    <Typography.Title level={4}>
+                    <Typography.Title level={4} style={{ height: 28 }}>
                         {datasetMetadata?.name}
                         {!loading ?
                             <Tooltip title="Cite the dataset">
@@ -156,7 +156,7 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
                         dangerouslySetInnerHTML={{ __html: datasetMetadata?.description ?? '' }} />
                 </Col>
                 <Col span={24} className="datatable-header-lower">
-                    <Col span={12} className="datatable-header-lower-left">
+                    <Col span={14} className="datatable-header-lower-left">
                         {!loading ?
                             <>
                                 <Typography.Text style={{ fontSize: 16 }} className="sample-count">
@@ -165,19 +165,24 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
                                         <QuestionCircleOutlined style={{ marginLeft: 8 }} />
                                     </Tooltip>
                                 </Typography.Text>
-                                <Row className="datatable-filters">
-                                    {filters && filters2string(filters)}
-                                </Row>
+                                {
+                                    filters && <Row className="datatable-filters">
+                                        {filters2string(filters)}
+                                    </Row>
+                                }
                             </>
                             : null}
                     </Col>
-                    <Col span={12} className="datatable-header-lower-right">
+                    <Col span={10} className="datatable-header-lower-right">
                         {!loading ?
                             <>
-                                <Tooltip title="Download the dataset">
-                                    <Button onClick={() => {
-                                        // TODO: Download the dataset
-                                    }} icon={<DownloadOutlined />} disabled type="default" />
+                                <Tooltip title="Coming soon...">
+                                    <Button
+                                        onClick={() => {
+                                            // TODO: Download the dataset
+                                        }} icon={<DownloadOutlined />} disabled type="default">
+                                        Download Dataset
+                                    </Button>
                                 </Tooltip>
                                 <Button
                                     disabled={data.records.length === data.total}

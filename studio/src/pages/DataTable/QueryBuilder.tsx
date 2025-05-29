@@ -84,7 +84,7 @@ const QueryBuilder: React.FC<QueryBuilderProps> = ({ visible, onCancel, onConfir
                 />
                 <Select
                     mode={isMulti ? 'multiple' : undefined}
-                    value={rule.value || []}
+                    value={isMulti ? (rule.value ?? []) : (rule.value ?? null)}
                     onChange={val => updateRule({ value: val })}
                     options={
                         dataDictionary.fields.find(f => f.key === rule.field)?.allowed_values?.map(v => ({ label: v, value: v })) || []
@@ -97,26 +97,47 @@ const QueryBuilder: React.FC<QueryBuilderProps> = ({ visible, onCancel, onConfir
     };
 
     const renderGroup = (group: RuleGroup, groupPath: number[] = []) => {
+        const isRoot = groupPath.length === 0;
+
+        const removeGroup = () => {
+            const updated = { ...queryGroup };
+            let parent: any = updated;
+            for (let i = 0; i < groupPath.length - 1; i++) {
+                parent = parent.rules[groupPath[i]];
+            }
+            parent.rules.splice(groupPath[groupPath.length - 1], 1);
+            setQueryGroup(updated);
+        };
+
         return (
-            <div style={{ border: '1px solid #ddd', padding: 12, marginBottom: 12 }}>
+            <div style={{ border: '1px solid #ddd', padding: 12, marginBottom: 12 }} key={groupPath.join('-')}>
                 <Space direction="vertical" style={{ width: '100%' }}>
-                    <Select
-                        value={group.operator}
-                        onChange={val => {
-                            const updated = { ...queryGroup };
-                            let cursor: any = updated;
-                            for (const i of groupPath) cursor = cursor.rules[i];
-                            cursor.operator = val;
-                            setQueryGroup(updated);
-                        }}
-                        options={[{ label: 'AND', value: 'and' }, { label: 'OR', value: 'or' }]}
-                        style={{ width: 80 }}
-                    />
+                    <Space align="center">
+                        <Select
+                            value={group.operator}
+                            onChange={val => {
+                                const updated = { ...queryGroup };
+                                let cursor: any = updated;
+                                for (const i of groupPath) cursor = cursor.rules[i];
+                                cursor.operator = val;
+                                setQueryGroup(updated);
+                            }}
+                            options={[{ label: 'AND', value: 'and' }, { label: 'OR', value: 'or' }]}
+                            style={{ width: 80 }}
+                        />
+                        {!isRoot && (
+                            <Button danger size="small" onClick={removeGroup}>
+                                Remove Group
+                            </Button>
+                        )}
+                    </Space>
+
                     {group.rules.map((r, idx) =>
                         'field' in r
                             ? renderRule(r as Rule, groupPath, idx)
                             : renderGroup(r as RuleGroup, [...groupPath, idx])
                     )}
+
                     <Space>
                         <Button onClick={() => {
                             const updated = { ...queryGroup };
@@ -127,6 +148,7 @@ const QueryBuilder: React.FC<QueryBuilderProps> = ({ visible, onCancel, onConfir
                             cursor.rules.push({ field, operator: op, value: '' });
                             setQueryGroup(updated);
                         }}>+ Add Rule</Button>
+
                         <Button onClick={() => {
                             const updated = { ...queryGroup };
                             let cursor: any = updated;
@@ -154,18 +176,28 @@ const QueryBuilder: React.FC<QueryBuilderProps> = ({ visible, onCancel, onConfir
         return val;
     };
 
-    const transformToComposeQuery = (group: RuleGroup): any => ({
-        operator: group.operator,
-        items: group.rules.map(r =>
-            'field' in r
-                ? {
-                    field: r.field,
-                    operator: r.operator,
-                    value: transformValue(r.value, getFieldType(r.field), r.operator),
-                }
-                : transformToComposeQuery(r as RuleGroup)
-        ),
-    });
+    const transformToComposeQuery = (group: RuleGroup): any | null => {
+        const transformedItems = group.rules
+            .map((r) =>
+                'field' in r
+                    ? {
+                        field: r.field,
+                        operator: r.operator,
+                        value: transformValue(r.value, getFieldType(r.field), r.operator),
+                    }
+                    : transformToComposeQuery(r as RuleGroup)
+            )
+            .filter(Boolean); // 去除 null
+
+        // 空组：返回 null（表示无效）
+        if (transformedItems.length === 0) return null;
+
+        // 正常情况：返回 operator + items
+        return {
+            operator: group.operator,
+            items: transformedItems,
+        };
+    };
 
     return (
         <Modal

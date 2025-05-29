@@ -132,7 +132,7 @@ def convert_cbioportal_study(study_dir, output_dir):
     dataset_meta = parse_meta_study(meta_path)
 
     # Load and merge clinical sample and patient data
-    clinical_files = ["data_clinical_sample.txt", "data_clinical_patient.txt"]
+    clinical_files = ["data_clinical_sample.txt", "data_clinical_patient.txt", "data_clinical_patient.tsv", "data_clinical_sample.tsv"]
     dfs = []
     headers = []
     names = {}

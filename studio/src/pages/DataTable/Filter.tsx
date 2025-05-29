@@ -27,7 +27,7 @@ const renderQueryItem = (item: QueryItem, color: string, key: number) => {
         valueStr = `${item.value}`;
     }
     return (
-        <Tag key={key} color={color} style={{ marginBottom: 0, marginRight: 0 }}>
+        <Tag key={key} color={color} style={{ marginBottom: 0, marginRight: 0, borderRadius: 5 }}>
             <strong>{item.field}</strong> {item.operator} <strong>{valueStr}</strong>
         </Tag>
     );
@@ -40,22 +40,33 @@ export const filters2string = (filter: ComposeQueryItem, level = 0): React.React
     return (
         <Space
             size={[8, 4]}
-            wrap
             style={{
                 marginBottom: 0,
-                height: '100%'
+                height: '100%',
+                overflowX: 'scroll'
             }}
         >
-            {filter.items.map((item, idx) => (
+            <span style={{ marginRight: 4, color: '#999' }}>(</span>
+            {filter.items && filter.items.length > 0 && filter.items.map((item, idx) => (
                 <React.Fragment key={idx}>
                     {isQueryItem(item)
                         ? renderQueryItem(item, color, idx)
                         : filters2string(item as ComposeQueryItem, level + 1)}
                     {idx !== filter.items.length - 1 && (
-                        <span style={{ color: '#999', fontSize: 13 }}>{filter.operator.toUpperCase()}</span>
+                        <span
+                            style={{
+                                margin: '0 6px',
+                                color: '#666',
+                                fontWeight: 500,
+                                fontSize: 13,
+                            }}
+                        >
+                            {filter.operator.toUpperCase()}
+                        </span>
                     )}
                 </React.Fragment>
             ))}
+            <span style={{ marginLeft: 4, color: '#999' }}>)</span>
         </Space>
     );
 };

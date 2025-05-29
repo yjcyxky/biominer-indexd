@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Layout, Menu, List, Button, Typography, message, Input, Row, Col, Modal } from 'antd';
+import { Layout, Menu, List, Button, Typography, message, Input, Row, Col, Modal, Tooltip } from 'antd';
 import { getDatasets } from '@/services/biominer/datasets';
 import './index.less';
 import { DownloadOutlined, FileTextFilled, InfoCircleFilled, PieChartFilled, SortAscendingOutlined, SortDescendingOutlined } from '@ant-design/icons';
@@ -142,20 +142,24 @@ const DatasetList: React.FC = () => {
                                     onClick={() => window.open(`https://pubmed.ncbi.nlm.nih.gov/${item.pmid}`, '_blank')}>
                                     Cite
                                 </Button>,
-                                <Button type="link" icon={<InfoCircleFilled />}
-                                    onClick={() => {
-                                        // TODO: Show the markdown content of the dataset in another modal.
-                                        setIsModalOpen(true);
-                                        setMarkdown(item.description);
-                                    }}>
-                                    Info
-                                </Button>,
-                                <Button type="link" icon={<DownloadOutlined />}
-                                    onClick={() => {
-                                        // TODO: Redirect to the data-repo page.
-                                    }}>
-                                    Download
-                                </Button>,
+                                <Tooltip title="Coming soon...">
+                                    <Button type="link" icon={<InfoCircleFilled />} disabled
+                                        onClick={() => {
+                                            // TODO: Show the markdown content of the dataset in another modal.
+                                            setIsModalOpen(true);
+                                            setMarkdown(item.description);
+                                        }}>
+                                        Info
+                                    </Button>
+                                </Tooltip>,
+                                <Tooltip title="Coming soon...">
+                                    <Button type="link" icon={<DownloadOutlined />} disabled
+                                        onClick={() => {
+                                            // TODO: Redirect to the data-repo page.
+                                        }}>
+                                        Download
+                                    </Button>
+                                </Tooltip>,
                                 <Button type="link" icon={<PieChartFilled />} onClick={() => {
                                     history.push(`/datatable/${item.key}`);
                                 }}>

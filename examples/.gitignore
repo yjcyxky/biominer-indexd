@@ -4,3 +4,4 @@ cbioportal_datasets/*
 !cbioportal_datasets/index.json
 
 custom_datasets/*
+datasets/*

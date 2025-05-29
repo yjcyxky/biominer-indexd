@@ -765,9 +765,9 @@ mod tests {
         assert!(datasets.records.len() > 0);
 
         let ds = datasets
-            .get("acbc_mskcc_2015")
-            .expect("Missing expected dataset 'acbc_mskcc_2015'");
-        assert_eq!(ds.metadata.key, "acbc_mskcc_2015");
+            .get("fuscc_cbcga_773")
+            .expect("Missing expected dataset 'fuscc_cbcga_773'");
+        assert_eq!(ds.metadata.key, "fuscc_cbcga_773");
     }
 
     #[test]

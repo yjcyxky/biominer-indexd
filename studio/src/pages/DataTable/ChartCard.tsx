@@ -24,9 +24,9 @@ type KMPoint = {
 }
 
 const computeKaplanMeier = (data: API.DatasetDataResponse['records'], timeKey: string, eventKey: string): KMPoint[] => {
-    const formatEvent = (event: string | number) => {
-        if (event === '1' || event === 1) return 1;
-        if (event === '0' || event === 0) return 0;
+    const formatEvent = (event: string | number | boolean) => {
+        if (event === '1' || event === 1 || event === true || event === 1.0) return 1;
+        if (event === '0' || event === 0 || event === false || event === 0.0) return 0;
 
         if (typeof event === 'string' && event.startsWith('1')) return 1;
         if (typeof event === 'string' && event.startsWith('0')) return 0;
@@ -73,23 +73,50 @@ interface ChartCardProps {
     total: number;
 }
 
-const buildPlotData = (records: API.DatasetDataResponse['records'], key: string): { value: string; count: number }[] => {
+const buildPlotData = (
+    records: API.DatasetDataResponse['records'],
+    key: string
+): { value: string; count: number }[] => {
     const freqMap = new Map<string, number>();
+
     records.forEach((r) => {
-        const val = r[key];
+        let val = r[key];
+
         if (val !== undefined && val !== null) {
+            // 如果是数字类型并且是整数的浮点数，则转为整数
+            if (typeof val === 'number' && Number.isInteger(val)) {
+                val = val.toString(); // 转换为字符串作为 Map 键
+            } else if (typeof val === 'number') {
+                val = val.toFixed(2).replace(/\.?0+$/, ''); // 清理多余小数点
+            } else {
+                val = String(val);
+            }
+
             freqMap.set(val, (freqMap.get(val) || 0) + 1);
         }
     });
+
     return Array.from(freqMap.entries()).map(([value, count]) => ({ value, count }));
 };
 
-const isKaplanMeier = (field: API.DataDictionaryField, selectedColumns: string[]): boolean => {
-    return (selectedColumns?.includes('os_months') && selectedColumns?.includes('os_status') &&
-        field.key === 'os_months') ||
-        (selectedColumns?.includes('dfs_months') && selectedColumns?.includes('dfs_status') &&
-            field.key === 'dfs_months');
-}
+const isKaplanMeier = (
+    field: API.DataDictionaryField,
+    selectedColumns: string[]
+): boolean => {
+    const kmPairs: [timeKey: string, eventKey: string][] = [
+        ['os_months', 'os_status'],
+        ['dfs_months', 'dfs_status'],
+        ['rfs_months', 'rfs_status'],
+        ['dmfs_months', 'dmfs_status'],
+    ];
+
+    return kmPairs.some(
+        ([timeKey, eventKey]) =>
+            selectedColumns.includes(timeKey) &&
+            selectedColumns.includes(eventKey) &&
+            field.key === timeKey
+    );
+};
 
 export const getRecommendedChartType = (field: API.DataDictionaryField, length: number, total: number, selectedColumns?: string[]): ChartType => {
     const allowedValuesLength = field.allowed_values?.length || 0;
@@ -175,6 +202,12 @@ const ChartCard: React.FC<ChartCardProps> = ({ field, data, total, onClose, clas
             } else if (field.key === 'dfs_months' || field.key === 'dfs_status') {
                 eventKey = 'dfs_status';
                 timeKey = 'dfs_months';
+            } else if (field.key === 'rfs_months' || field.key === 'rfs_status') {
+                eventKey = 'rfs_status';
+                timeKey = 'rfs_months';
+            } else if (field.key === 'dmfs_months' || field.key === 'dmfs_status') {
+                eventKey = 'dmfs_status';
+                timeKey = 'dmfs_months';
             }
 
             const curve = computeKaplanMeier(data, timeKey, eventKey);
@@ -311,7 +344,7 @@ const ChartCard: React.FC<ChartCardProps> = ({ field, data, total, onClose, clas
         if (chartType === 'summary') {
             const loadedCount = data.length;
             const percentage = loadedCount / total * 100;
-            const percentageStr = percentage.toFixed(2);
+            const percentageStr = percentage > 0 ? percentage.toFixed(2) : '0.00';
 
             return (
                 <Statistic title="Loaded Samples [Total]" valueRender={() => (
@@ -324,15 +357,19 @@ const ChartCard: React.FC<ChartCardProps> = ({ field, data, total, onClose, clas
             const plotData = buildPlotData(data, field.key);
 
             return (
-                <Pie
-                    autoFit
-                    data={plotData}
-                    angleField="count"
-                    colorField="value"
-                    radius={0.8}
-                    label={{ type: 'spider', labelHeight: 28 }}
-                    ref={chartRef}
-                />
+                plotData.length > 0 ? (
+                    <Pie
+                        autoFit
+                        data={plotData}
+                        angleField="count"
+                        colorField="value"
+                        radius={0.8}
+                        label={{ type: 'spider', labelHeight: 28 }}
+                        ref={chartRef}
+                    />
+                ) : (
+                    <Empty description={`No data to show`} className="chart-empty" />
+                )
             );
         }
 
@@ -340,6 +377,7 @@ const ChartCard: React.FC<ChartCardProps> = ({ field, data, total, onClose, clas
             const formatedData = data.map((r) => ({
                 [field.key]: r[field.key] === null || r[field.key] === undefined || r[field.key] === '' ? 'NA' : r[field.key],
             }));
+
             const tableData = Object.entries(groupBy(formatedData, field.key)).map(([value, records]) => ({
                 [field.key]: value,
                 count: records.length,
@@ -350,47 +388,56 @@ const ChartCard: React.FC<ChartCardProps> = ({ field, data, total, onClose, clas
             });
 
             return (
-                <Bar
-                    autoFit
-                    data={tableData}
-                    xField={field.key}      // ✅ 类别作为 x 轴
-                    yField="count"          // ✅ 数值作为 y 轴
-                    legend={false}
-                    ref={chartRef}
-                    xAxis={{
-                        title: {
-                            text: field.name,
-                            style: { fontSize: 12 },
-                        },
-                        label: {
-                            autoHide: false,
-                            autoRotate: true,     // ✅ 避免标签重叠
-                        },
-                    }}
-                    yAxis={{
-                        title: {
-                            text: 'Frequency',
-                            style: { fontSize: 12 },
-                        },
-                    }}
-                    columnStyle={{
-                        radius: [2, 2, 0, 0],
-                    }}
-                />
+                tableData.length > 0 ? (
+                    <Bar
+                        autoFit
+                        data={tableData}
+                        xField={field.key}      // ✅ 类别作为 x 轴
+                        yField="count"          // ✅ 数值作为 y 轴
+                        legend={false}
+                        ref={chartRef}
+                        xAxis={{
+                            title: {
+                                text: field.name,
+                                style: { fontSize: 12 },
+                            },
+                            label: {
+                                autoHide: false,
+                                autoRotate: true,     // ✅ 避免标签重叠
+                            },
+                        }}
+                        yAxis={{
+                            title: {
+                                text: 'Frequency',
+                                style: { fontSize: 12 },
+                            },
+                        }}
+                        columnStyle={{
+                            radius: [2, 2, 0, 0],
+                        }}
+                    />
+                ) : (
+                    <Empty description={`No data to show`} className="chart-empty" />
+                )
             );
         }
 
         if (chartType === 'histogram') {
             const numericValues = data.map((r) => r[field.key]).filter((v) => typeof v === 'number');
+
             return (
-                <Histogram
-                    data={numericValues.map((v) => ({ value: v }))}
-                    binField="value"
-                    binWidth={10} // 可调整
-                    xAxis={{ title: { text: field.name } }}
-                    yAxis={{ title: { text: 'Frequency' } }}
-                    autoFit
-                />
+                numericValues.length > 0 ? (
+                    <Histogram
+                        data={numericValues.map((v) => ({ value: v }))}
+                        binField="value"
+                        binWidth={10} // 可调整
+                        xAxis={{ title: { text: field.name } }}
+                        yAxis={{ title: { text: 'Frequency' } }}
+                        autoFit
+                    />
+                ) : (
+                    <Empty description={`No data to show`} className="chart-empty" />
+                )
             )
         }
 

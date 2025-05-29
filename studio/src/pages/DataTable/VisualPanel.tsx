@@ -3,6 +3,7 @@ import Muuri from 'muuri';
 import ChartCard from './ChartCard';
 import { getRecommendedChartType } from './ChartCard';
 import './VisualPanel.less';
+// @ts-ignore
 import { Resizable } from 're-resizable';
 import { Row } from 'antd';
 
@@ -10,12 +11,12 @@ const GRID_UNIT = 20;
 
 const chartMap: Record<string, { w: number; h: number }> = {
     id: { w: 16, h: 16 },
-    table: { w: 30, h: 16 },
-    bar: { w: 30, h: 16 },
+    table: { w: 32, h: 16 },
+    bar: { w: 32, h: 16 },
     pie: { w: 16, h: 16 },
-    histogram: { w: 30, h: 16 },
+    histogram: { w: 32, h: 16 },
     dotplot: { w: 16, h: 16 },
-    kaplan_meier: { w: 30, h: 16 },
+    kaplan_meier: { w: 32, h: 16 },
     default: { w: 16, h: 16 },
 };
 
@@ -104,7 +105,7 @@ const VisualPanel: React.FC<VisualPanelProps> = ({ fields, data, total, selected
                                     minWidth={5 * GRID_UNIT}
                                     minHeight={5 * GRID_UNIT}
                                     onResizeStart={() => setResizing(true)}
-                                    onResizeStop={(e, direction, ref) => {
+                                    onResizeStop={(e: any, direction: any, ref: any) => {
                                         setResizing(false);
                                         const newWidth = ref.offsetWidth;
                                         const newHeight = ref.offsetHeight;
