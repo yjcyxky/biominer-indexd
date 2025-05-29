@@ -1,6 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Card, Button, Empty, Space, Tooltip, Row, Col, Statistic, Table } from 'antd';
-import { CloseOutlined, InfoCircleOutlined } from '@ant-design/icons';
+import React, { FC, useEffect, useRef, useState } from 'react';
+import { Card, Button, Empty, Space, Tooltip, Row, Col, Statistic, Table, Popover } from 'antd';
+import { CloseOutlined, EyeFilled, InfoCircleOutlined } from '@ant-design/icons';
 import { Pie, Bar, Histogram } from '@ant-design/plots';
 import { groupBy, sumBy } from 'lodash';
 // @ts-ignore
@@ -73,31 +73,94 @@ interface ChartCardProps {
     total: number;
 }
 
-const buildPlotData = (
+const buildUnifiedPlotData = (
     records: API.DatasetDataResponse['records'],
-    key: string
-): { value: string; count: number }[] => {
+    key: string,
+    {
+        normalizeNull = true,
+        sort = false,
+    }: {
+        normalizeNull?: boolean;
+        sort?: boolean;
+    } = {}
+): { [key: string]: string | number; count: number }[] => {
     const freqMap = new Map<string, number>();
 
     records.forEach((r) => {
         let val = r[key];
 
-        if (val !== undefined && val !== null) {
-            // 如果是数字类型并且是整数的浮点数，则转为整数
-            if (typeof val === 'number' && Number.isInteger(val)) {
-                val = val.toString(); // 转换为字符串作为 Map 键
-            } else if (typeof val === 'number') {
-                val = val.toFixed(2).replace(/\.?0+$/, ''); // 清理多余小数点
-            } else {
-                val = String(val);
-            }
-
-            freqMap.set(val, (freqMap.get(val) || 0) + 1);
+        if (val === undefined || val === null || val === '') {
+            if (!normalizeNull) return;
+            val = 'NA';
         }
+
+        if (typeof val === 'number') {
+            val = Number.isInteger(val) ? val.toString() : val.toFixed(2).replace(/\.?0+$/, '');
+        } else {
+            val = String(val);
+        }
+
+        freqMap.set(val, (freqMap.get(val) || 0) + 1);
     });
 
-    return Array.from(freqMap.entries()).map(([value, count]) => ({ value, count }));
-};
+    const result = Array.from(freqMap.entries()).map(([value, count]) => ({
+        [key]: value,
+        count,
+    }));
+
+    if (sort) {
+        result.sort((a, b) => a[key].toString().toLowerCase().localeCompare(b[key].toString().toLowerCase()));
+    }
+
+    return result;
+}
+
+const TableComponent: FC<{
+    tableData: { [key: string]: string | number; count: number }[];
+    field: API.DataDictionaryField;
+    total: number;
+}> = ({ tableData, field, total }) => {
+    const columns = [
+        {
+            title: field.name,
+            dataIndex: field.key,
+            width: 'calc(100% - 160px)',
+            ellipsis: true,
+        },
+        {
+            title: '#',
+            dataIndex: 'count',
+            width: 80,
+        },
+        {
+            title: 'Freq (%)',
+            dataIndex: 'count',
+            width: 80,
+            render: (text: string, record: any) => (
+                <span style={{ color: '#1890ff' }}>{(record.count / total * 100).toFixed(2)}%</span>
+            )
+        }
+    ];
+
+    return (
+        <Table
+            dataSource={tableData}
+            columns={columns}
+            rowKey={(record, index) => `${record[field.key]}-${index}`}
+            // rowSelection={{
+            //     type: 'checkbox',
+            //     selectedRowKeys: tableData.map((r) => r[field.key]),
+            //     onChange: (selectedRowKeys) => {
+            //         console.log(selectedRowKeys);
+            //     }
+            // }}
+            showHeader={true}
+            size="small"
+            pagination={false}
+            sticky={true}
+        />
+    )
+}
 
 const isKaplanMeier = (
     field: API.DataDictionaryField,
@@ -157,6 +220,14 @@ const ChartCard: React.FC<ChartCardProps> = ({ field, data, total, onClose, clas
 
     const chartRef = useRef<any>(null);        // 获取图表组件实例
     const containerRef = useRef<HTMLDivElement>(null); // 监听容器尺寸
+    const [plotData, setPlotData] = useState<any[]>([]);
+
+    useEffect(() => {
+        setPlotData(buildUnifiedPlotData(data, field.key, {
+            normalizeNull: true,
+            sort: true,
+        }));
+    }, [data, field.key]);
 
     // 监听自身尺寸变化以触发图表重绘
     useEffect(() => {
@@ -354,18 +425,33 @@ const ChartCard: React.FC<ChartCardProps> = ({ field, data, total, onClose, clas
         }
 
         if (chartType === 'pie') {
-            const plotData = buildPlotData(data, field.key);
-
             return (
                 plotData.length > 0 ? (
                     <Pie
                         autoFit
                         data={plotData}
                         angleField="count"
-                        colorField="value"
+                        colorField={field.key}
                         radius={0.8}
-                        label={{ type: 'spider', labelHeight: 28 }}
+                        label={{
+                            text: 'count'
+                        }}
                         ref={chartRef}
+                        interaction={{
+                            elementHighlight: true,
+                        }}
+                        state={{
+                            inactive: { opacity: 0.5 },
+                        }}
+                        legend={false}
+                        tooltip={{
+                            title: field.key
+                        }}
+                        onReady={(plot) => {
+                            plot.chart.on('interval:pointerover', (evt: any) => {
+                                console.log("Pie tooltip: ", evt, plot);
+                            })
+                        }}
                     />
                 ) : (
                     <Empty description={`No data to show`} className="chart-empty" />
@@ -374,24 +460,11 @@ const ChartCard: React.FC<ChartCardProps> = ({ field, data, total, onClose, clas
         }
 
         if (chartType === 'bar') {
-            const formatedData = data.map((r) => ({
-                [field.key]: r[field.key] === null || r[field.key] === undefined || r[field.key] === '' ? 'NA' : r[field.key],
-            }));
-
-            const tableData = Object.entries(groupBy(formatedData, field.key)).map(([value, records]) => ({
-                [field.key]: value,
-                count: records.length,
-            })).sort((a, b) => {
-                const va = a[field.key]?.toString().toLowerCase();
-                const vb = b[field.key]?.toString().toLowerCase();
-                return va.localeCompare(vb); // ✅ 按照字母顺序排序
-            });
-
             return (
-                tableData.length > 0 ? (
+                plotData.length > 0 ? (
                     <Bar
                         autoFit
-                        data={tableData}
+                        data={plotData}
                         xField={field.key}      // ✅ 类别作为 x 轴
                         yField="count"          // ✅ 数值作为 y 轴
                         legend={false}
@@ -451,6 +524,17 @@ const ChartCard: React.FC<ChartCardProps> = ({ field, data, total, onClose, clas
                 title={<div className="chart-drag-handle">{fieldName}</div>}
                 extra={
                     <Space size={0}>
+                        <Popover
+                            placement="topRight"
+                            content={
+                                <TableComponent tableData={plotData} field={field} total={total} />
+                            }
+                            title={false} style={{ width: '300px' }} prefixCls='chart-card-table-popover'
+                            trigger="click" destroyTooltipOnHide
+                        >
+                            <Button type="text" size="small" icon={<EyeFilled />} />
+                        </Popover>
+
                         <Tooltip title={field.description}>
                             <Button type="text" size="small" icon={<InfoCircleOutlined />} />
                         </Tooltip>

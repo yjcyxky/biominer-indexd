@@ -1,7 +1,9 @@
 use crate::model::datafile::{
     Config, File, FileStatResponse, FileTagsResponse, Hash, QueryFilter, RecordResponse, URL,
 };
-use crate::model::dataset::{DataDictionary, DatasetDataResponse, Datasets, DatasetsResponse};
+use crate::model::dataset::{
+    DataDictionary, DatasetDataResponse, Datasets, DatasetsResponse, FieldGroupSummary,
+};
 use crate::query_builder::sql_builder::ComposeQuery;
 use crate::repo_config::{RepoConfig, SignData};
 use crate::util;
@@ -240,6 +242,21 @@ enum GetDatasetDataDictionaryResponse {
 enum GetDatasetDataResponse {
     #[oai(status = 200)]
     Ok(Json<DatasetDataResponse>),
+
+    #[oai(status = 404)]
+    NotFound(PlainText<String>),
+
+    #[oai(status = 500)]
+    InternalError(PlainText<String>),
+
+    #[oai(status = 400)]
+    BadRequest(PlainText<String>),
+}
+
+#[derive(ApiResponse)]
+enum GetDatasetGroupsResponse {
+    #[oai(status = 200)]
+    Ok(Json<Vec<FieldGroupSummary>>),
 
     #[oai(status = 404)]
     NotFound(PlainText<String>),
@@ -859,6 +876,85 @@ impl BioMinerIndexdApi {
         GetDatasetDataDictionaryResponse::Ok(Json(data_dictionary))
     }
 
+    /// Call `/api/v1/datasets/:key/groups` to get the dataset groups.
+    #[oai(
+        path = "/datasets/:key/groups",
+        method = "get",
+        tag = "DatasetApiTags::Datasets",
+        operation_id = "getDatasetGroups"
+    )]
+    async fn get_dataset_groups(
+        &self,
+        key: Path<String>,
+        field_key: Query<Option<String>>,
+        query: Query<Option<String>>,
+    ) -> GetDatasetGroupsResponse {
+        let base_path = match std::env::var("BIOMINER_INDEXD_DATA_DIR") {
+            Ok(path) => path,
+            Err(e) => {
+                warn!("Failed to get BIOMINER_INDEXD_DATA_DIR: {}", e);
+                return GetDatasetGroupsResponse::InternalError(PlainText(e.to_string()));
+            }
+        };
+
+        // TODO: Whether we should check the field is in the data dictionary?
+        if field_key.0.is_none() {
+            warn!("Field is required");
+            return GetDatasetGroupsResponse::BadRequest(PlainText("Field is required".to_string()));
+        }
+
+        let field_key = match field_key.0 {
+            Some(field_key) => {
+                if field_key.is_empty() {
+                    warn!("Field is required");
+                    return GetDatasetGroupsResponse::BadRequest(PlainText("Field is required".to_string()));
+                }
+                field_key
+            }
+            None => {
+                warn!("Field is required");
+                return GetDatasetGroupsResponse::BadRequest(PlainText("Field is required".to_string()));
+            }
+        };
+
+        let query = match query.0 {
+            Some(query) => match ComposeQuery::from_str(&query) {
+                Ok(query) => query,
+                Err(e) => {
+                    warn!("Failed to parse query string: {}", e);
+                    return GetDatasetGroupsResponse::BadRequest(PlainText(e.to_string()));
+                }
+            },
+            None => None,
+        };
+
+        let datasets = match Datasets::load(&base_path.into()) {
+            Ok(datasets) => datasets,
+            Err(e) => {
+                warn!("Failed to load datasets: {}", e);
+                return GetDatasetGroupsResponse::InternalError(PlainText(e.to_string()));
+            }
+        };
+
+        let dataset = match datasets.get(&key.0) {
+            Ok(dataset) => dataset,
+            Err(e) => {
+                warn!("Failed to get dataset: {}", e);
+                return GetDatasetGroupsResponse::NotFound(PlainText(e.to_string()));
+            }
+        };
+
+        let groups = match dataset.group_by(&field_key, &query) {
+            Ok(groups) => groups,
+            Err(e) => {
+                warn!("Failed to group dataset: {}", e);
+                return GetDatasetGroupsResponse::InternalError(PlainText(e.to_string()));
+            }
+        };
+
+        GetDatasetGroupsResponse::Ok(Json(groups))
+    }
+
     /// Call `/api/v1/datasets/:key/data` to get the dataset data.
     #[oai(
         path = "/datasets/:key/data",
@@ -918,8 +1014,7 @@ impl BioMinerIndexdApi {
             Some(page as u64),
             Some(page_size as u64),
             order_by.as_deref(),
-        )
-        {
+        ) {
             Ok(data) => data,
             Err(e) => {
                 warn!("Failed to search dataset: {}", e);

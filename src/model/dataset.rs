@@ -128,6 +128,13 @@ pub struct DatasetDataResponse {
     pub page_size: usize,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone, Object)]
+pub struct FieldGroupSummary {
+    pub value: String,     // 分组字段值
+    pub count: usize,      // 出现次数
+    pub freq_percent: f64, // 占总数百分比
+}
+
 impl Datasets {
     /// Loads a dataset collection from the specified base directory.
     ///
@@ -265,8 +272,7 @@ impl Datasets {
                 if !key_re.is_match(&field.key) {
                     warn!(
                         "Invalid key '{}' in dataset '{}'.",
-                        field.key,
-                        dataset.metadata.key
+                        field.key, dataset.metadata.key
                     );
 
                     continue;
@@ -275,9 +281,7 @@ impl Datasets {
                 if !matches!(field.data_type.as_str(), "STRING" | "NUMBER" | "BOOLEAN") {
                     warn!(
                         "Invalid data_type '{}' in dataset '{}', key '{}'.",
-                        field.data_type,
-                        dataset.metadata.key,
-                        field.key
+                        field.data_type, dataset.metadata.key, field.key
                     );
 
                     continue;
@@ -503,7 +507,11 @@ impl Datasets {
         let entries = match fs::read_dir(base_path) {
             Ok(entries) => entries,
             Err(e) => {
-                return Err(anyhow::anyhow!("Failed to read directory {:?}: {}", base_path, e));
+                return Err(anyhow::anyhow!(
+                    "Failed to read directory {:?}: {}",
+                    base_path,
+                    e
+                ));
             }
         };
 
@@ -569,7 +577,11 @@ impl Dataset {
         let content = match fs::read_to_string(&metadata_path) {
             Ok(content) => content,
             Err(e) => {
-                return Err(anyhow::anyhow!("Failed to read dataset.json at {:?}: {}", metadata_path, e));
+                return Err(anyhow::anyhow!(
+                    "Failed to read dataset.json at {:?}: {}",
+                    metadata_path,
+                    e
+                ));
             }
         };
 
@@ -641,7 +653,10 @@ impl Dataset {
     ) -> Result<DatasetDataResponse, Error> {
         let parquet_path = self.path.join("data.parquet");
         if !parquet_path.exists() {
-            return Err(anyhow::anyhow!("Dataset parquet file not found at {:?}", parquet_path));
+            return Err(anyhow::anyhow!(
+                "Dataset parquet file not found at {:?}",
+                parquet_path
+            ));
         }
 
         let conn = Connection::open_in_memory()?;
@@ -747,6 +762,71 @@ impl Dataset {
         let content = fs::read_to_string(&dict_path)?;
         let fields: Vec<DataDictionaryField> = serde_json::from_str(&content)?;
         Ok(DataDictionary { fields })
+    }
+
+    /// Group the dataset by a field.
+    pub fn group_by(
+        self: &Self,
+        field: &str,
+        query: &Option<ComposeQuery>,
+    ) -> Result<Vec<FieldGroupSummary>, Error> {
+        let parquet_path = self.path.join("data.parquet");
+        if !parquet_path.exists() {
+            return Err(anyhow::anyhow!(
+                "Dataset parquet file not found at {:?}",
+                parquet_path
+            ));
+        }
+
+        let conn = Connection::open_in_memory()?;
+        conn.execute(
+            "CREATE TABLE data AS SELECT * FROM read_parquet(?)",
+            params![parquet_path.to_str().unwrap()],
+        )?;
+
+        let mut query_str = match query {
+            Some(ComposeQuery::QueryItem(item)) => item.format(),
+            Some(ComposeQuery::ComposeQueryItem(item)) => item.format(),
+            None => "".to_string(),
+        };
+
+        if query_str.is_empty() {
+            query_str = "1=1".to_string();
+        }
+
+        // Group-by 查询：value、count、频率
+        let sql = format!(
+            r#"
+                SELECT
+                    COALESCE(CAST({field} AS TEXT), 'NA') AS value,
+                    COUNT(*) AS count,
+                    ROUND(100.0 * COUNT(*) / SUM(COUNT(*)) OVER (), 1) AS freq_percent
+                FROM data
+                WHERE {query_str}
+                GROUP BY {field}
+                ORDER BY count DESC
+        "#,
+            field = field,
+            query_str = query_str
+        );
+
+        info!("GroupBy SQL: {}", sql);
+
+        let mut stmt = conn.prepare(&sql)?;
+        let rows = stmt.query_map([], |row| {
+            Ok(FieldGroupSummary {
+                value: row.get::<_, String>(0)?,
+                count: row.get::<_, i64>(1)? as usize,
+                freq_percent: row.get::<_, f64>(2)?,
+            })
+        })?;
+
+        let mut results = Vec::new();
+        for row in rows {
+            results.push(row?);
+        }
+
+        Ok(results)
     }
 }
 
