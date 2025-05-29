@@ -109,7 +109,7 @@ const buildUnifiedPlotData = (
     }));
 
     if (sort) {
-        result.sort((a, b) => a[key].toString().toLowerCase().localeCompare(b[key].toString().toLowerCase()));
+        result.sort((a, b) => b.count - a.count);
     }
 
     return result;
@@ -432,7 +432,7 @@ const ChartCard: React.FC<ChartCardProps> = ({ field, data, total, onClose, clas
                         data={plotData}
                         angleField="count"
                         colorField={field.key}
-                        radius={0.8}
+                        radius={1}
                         label={{
                             text: 'count'
                         }}
