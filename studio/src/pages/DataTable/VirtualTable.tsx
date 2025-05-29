@@ -1,27 +1,65 @@
 import React, { useEffect, useRef, useState } from 'react';
 import ResizeObserver from 'rc-resize-observer';
-import { Spin, Table } from 'antd';
+import { Spin, Table, Space, Tooltip, Button, Popover } from 'antd';
 import { VariableSizeGrid as Grid } from 'react-window';
 import type { TableProps } from 'antd';
+import { InfoCircleOutlined, BarChartOutlined } from '@ant-design/icons';
+import ChartCard from './ChartCard';
 
-interface VirtualTableProps extends TableProps<any> { }
+import './VirtualTable.less';
+
+interface VirtualTableProps extends TableProps<any> {
+    dataSource: API.DatasetDataResponse['records'];
+    onCellClick?: (record: API.DatasetDataResponse['records'][number], row: number, col: API.DataDictionaryField) => void;
+    dataDictionary: API.DataDictionaryField[];
+}
 
 const VirtualTable: React.FC<VirtualTableProps> = ({
-    columns = [],
-    dataSource = [],
+    dataSource,
     scroll,
+    size,
     rowKey,
-    loading,
     pagination,
+    dataDictionary,
+    onCellClick,
     ...rest
 }) => {
     const totalHeight = (scroll?.y as number) ?? 500;
     const rowHeight = 42;
 
-    const [tableWidth, setTableWidth] = useState(0);
     const gridRef = useRef<any>();
     const headerRef = useRef<HTMLDivElement>(null);
-    const [internalLoading, setInternalLoading] = useState(false);
+    const [columns, setColumns] = useState<any[]>([]);
+
+    useEffect(() => {
+        const columnDefs = dataDictionary.map((col) => ({
+            title: (
+                <div style={{ display: 'flex', justifyContent: 'space-between', whiteSpace: 'nowrap', gap: 4, alignItems: 'center' }}>
+                    <span>{col.name}</span>
+                    <Space>
+                        <Tooltip title={col.description}>
+                            <Button size="small" icon={<InfoCircleOutlined />} />
+                        </Tooltip>
+                        <Popover content={<ChartCard className='chart-card-popover'
+                            field={col} data={dataSource} total={dataSource.length} />}
+                            trigger="click" destroyTooltipOnHide>
+                            <Button size="small" icon={<BarChartOutlined />} type="primary" />
+                        </Popover>
+                    </Space>
+                </div>
+            ),
+            dataIndex: col.key,
+            key: col.key,
+            render: (value: any, record: any, rowIndex: number) => {
+                if (col.key === 'patient_id') {
+                    return <a onClick={() => onCellClick?.(record, rowIndex, col)}>{value}</a>;
+                }
+                return value;
+            }
+        }));
+
+        setColumns(columnDefs);
+    }, [dataDictionary]);
 
     const [connectObject] = useState(() => {
         const obj = {};
@@ -44,13 +82,7 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
             console.log('🛠 Recalculating columns for Grid');
             gridRef.current.resetAfterColumnIndex(0, true);
         }
-    }, [columns.length, tableWidth]);
-
-    useEffect(() => {
-        if (dataSource && dataSource.length > 0) {
-            setInternalLoading(true);
-        }
-    }, [dataSource]);
+    }, [columns.length]);
 
     // 自动补全列宽
     const widthColumnCount = columns.filter(c => !c.width).length;
@@ -58,7 +90,7 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
         if (col.width) return col;
         return {
             ...col,
-            width: Math.floor(tableWidth / widthColumnCount),
+            width: Math.floor(scroll?.x as number / widthColumnCount),
         };
     });
 
@@ -68,7 +100,7 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
         return (
             <div>
                 {/* 表头同步 */}
-                <div ref={headerRef} style={{ display: 'flex', width: tableWidth, overflow: 'hidden' }}>
+                <div ref={headerRef} style={{ display: 'flex', width: scroll?.x as number, overflow: 'hidden' }}>
                     {mergedColumns.map((column, index) => (
                         <div
                             key={index}
@@ -94,7 +126,7 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
                     height={totalHeight}
                     rowCount={rawData.length}
                     rowHeight={() => rowHeight}
-                    width={tableWidth}
+                    width={scroll?.x as number}
                     onScroll={({ scrollLeft }) => {
                         onScroll({ scrollLeft });
                         if (headerRef.current) {
@@ -102,11 +134,7 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
                         }
                     }}
                     onItemsRendered={() => {
-                        if (internalLoading) {
-                            setTimeout(() => {
-                                setInternalLoading(false);
-                            }, 30);
-                        }
+                        // TODO: add loading state
                     }}
                 >
                     {({ columnIndex, rowIndex, style }) => {
@@ -123,6 +151,7 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
                                     whiteSpace: 'nowrap',
                                     overflow: 'hidden',
                                     textOverflow: 'ellipsis',
+                                    textAlign: `${column.align}` as 'left' | 'center' | 'right' | 'justify' | undefined,
                                 }}
                             >
                                 {typeof column.render === 'function'
@@ -137,35 +166,31 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
     };
 
     return (
-        <ResizeObserver onResize={({ width }) => setTableWidth(width - 32)}>
-            <Spin spinning={internalLoading}>
-                <Table
-                    {...rest}
-                    bordered={true}
-                    columns={mergedColumns}
-                    dataSource={dataSource}
-                    pagination={pagination}
-                    loading={loading}
-                    rowKey={rowKey}
-                    scroll={scroll}
-                    showHeader={false}
-                    components={{
-                        // @ts-ignore
-                        body: renderVirtualList,
-                    }}
-                    summary={() => (
-                        <Table.Summary fixed>
-                            <Table.Summary.Row style={{ fontSize: 16, fontWeight: 500 }}>
-                                <Table.Summary.Cell index={0} colSpan={columns.length}>
-                                    {/* @ts-ignore */}
-                                    🔢 Showing {dataSource.length} of {pagination?.total} samples
-                                </Table.Summary.Cell>
-                            </Table.Summary.Row>
-                        </Table.Summary>
-                    )}
-                />
-            </Spin>
-        </ResizeObserver>
+        <Table
+            {...rest}
+            size={size}
+            bordered={true}
+            columns={mergedColumns}
+            dataSource={dataSource}
+            pagination={pagination}
+            rowKey={rowKey}
+            scroll={scroll}
+            showHeader={false}
+            components={{
+                // @ts-ignore
+                body: renderVirtualList,
+            }}
+            summary={() => (
+                <Table.Summary fixed>
+                    <Table.Summary.Row style={{ fontSize: 16, fontWeight: 500 }}>
+                        <Table.Summary.Cell index={0} colSpan={columns.length}>
+                            {/* @ts-ignore */}
+                            🔢 Showing {dataSource.length} of {pagination?.total} samples
+                        </Table.Summary.Cell>
+                    </Table.Summary.Row>
+                </Table.Summary>
+            )}
+        />
     );
 };
 

@@ -9,14 +9,14 @@ import { Row } from 'antd';
 const GRID_UNIT = 20;
 
 const chartMap: Record<string, { w: number; h: number }> = {
-    id: { w: 15, h: 15 },
-    table: { w: 30, h: 15 },
-    bar: { w: 30, h: 15 },
-    pie: { w: 15, h: 15 },
-    histogram: { w: 30, h: 15 },
-    dotplot: { w: 15, h: 15 },
-    kaplan_meier: { w: 30, h: 15 },
-    default: { w: 15, h: 15 },
+    id: { w: 16, h: 16 },
+    table: { w: 30, h: 16 },
+    bar: { w: 30, h: 16 },
+    pie: { w: 16, h: 16 },
+    histogram: { w: 30, h: 16 },
+    dotplot: { w: 16, h: 16 },
+    kaplan_meier: { w: 30, h: 16 },
+    default: { w: 16, h: 16 },
 };
 
 interface VisualPanelProps {

@@ -7,13 +7,20 @@ import {
     GridColumn,
     Item,
     GridColumnIcon,
+    DrawHeaderCallback,
+    HeaderClickedEventArgs,
+    Rectangle,
+    Theme,
 } from "@glideapps/glide-data-grid";
-import { Divider, Pagination, Popover, Row, Tooltip } from "antd";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useLayer } from "react-laag";
-import { BarChartOutlined, InfoCircleOutlined } from "@ant-design/icons";
+import { Pagination, Row } from "antd";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ChartCard from "./ChartCard";
 import ButtonCellRenderer from "./ButtonCell";
+import { findIndex } from "lodash";
+import { useLayer } from "react-laag";
+
+import "./VirtualTableFaster.less";
+
 
 const allCells = [
     ButtonCellRenderer,
@@ -65,7 +72,6 @@ const VirtualTableFaster: React.FC<VirtualTableFasterProps> = ({
             value = JSON.stringify(value);
         }
 
-        console.log('Get data', columns[col].id, value);
         if (columns[col].id === 'patient_id') {
             return {
                 kind: GridCellKind.Custom,
@@ -98,68 +104,177 @@ const VirtualTableFaster: React.FC<VirtualTableFasterProps> = ({
                 title: col.name as string,
                 width: 200,
                 icon: col.data_type === 'STRING' ? GridColumnIcon.HeaderString : (col.data_type === 'NUMBER' ? GridColumnIcon.HeaderNumber : GridColumnIcon.HeaderBoolean),
-                hasMenu: true,
+                themeOverride: {
+                    baseFontStyle: "600 16px"
+                }
             }
         }));
     }, [dataDictionary]);
 
-    const [menu, setMenu] = useState<{ col: number; bounds: { x: number; y: number; width: number; height: number } }>();
-    const isOpen = !!menu;
+    const onColumnResize = useCallback((column, newSize) => {
+        setColumns(prevCols => {
+            const index = findIndex(prevCols, { id: column.id });
+            const newCols = [...prevCols];
+            newCols.splice(index, 1, {
+                ...prevCols[index],
+                width: newSize,
+            });
+            return newCols;
+        });
+    }, []);
+
+    // Configure icons for each column
+    const iconPositionsRef = useRef<Record<number, { x: number; y: number; size: number }[]>>({});
+
+    const drawHeader: DrawHeaderCallback = args => {
+        const { ctx, theme, rect, column, isHovered, columnIndex } = args;
+
+        if (columnIndex === -1) {
+            return;
+        }
+
+        ctx.save();
+
+        // Draw background
+        ctx.fillStyle = isHovered ? theme.bgHeaderHovered : theme.bgHeader;
+        ctx.fillRect(rect.x, rect.y, rect.width, rect.height);
+
+        // Draw title
+        ctx.fillStyle = theme.textHeader;
+        ctx.font = theme.headerFontStyle;
+        ctx.textBaseline = "middle";
+        ctx.fillText(column.title?.toString() ?? "", rect.x + 8, rect.y + rect.height / 2);
+
+        // Draw icons to the right
+        const iconSize = 16;
+        const gap = 4;
+        const iconY = rect.y + (rect.height - iconSize) / 2;
+
+        const icons = ["ℹ️", "📊"]; // replace with emojis, or draw actual icons
+        const iconPositions: { x: number; y: number; size: number }[] = [];
+        let iconX = rect.width - (icons.length * (iconSize + gap)) - 8;
+
+        for (const [index, icon] of icons.entries()) {
+            ctx.fillText(icon, rect.x + iconX, rect.y + iconY + iconSize / 2);
+            iconPositions.push({ x: iconX, y: iconY, size: iconSize });
+            iconX += iconSize + gap;
+        }
+
+        iconPositionsRef.current[columnIndex] = iconPositions;
+
+        ctx.restore();
+    };
+
+    const detectIconClickFromEvent = (
+        localX: number,
+        localY: number,
+        icons: { x: number; y: number; size: number }[]
+    ): number => {
+        for (let i = 0; i < icons.length; i++) {
+            const { x, y, size } = icons[i];
+            if (
+                localX >= x &&
+                localX <= x + size &&
+                localY >= y &&
+                localY <= y + size
+            ) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    const [popover, setPopover] = useState<{
+        col: number;
+        iconIndex: number;
+        bounds: Rectangle;
+    } | null>(null);
+
     const { layerProps, renderLayer } = useLayer({
-        isOpen,
-        auto: true,
-        placement: "bottom-end",
-        triggerOffset: 2,
-        onOutsideClick: () => setMenu(undefined),
+        isOpen: !!popover,
+        placement: "bottom-start",
+        triggerOffset: 4,
+        onOutsideClick: () => {
+            console.log('onOutsideClick');
+            setPopover(null);
+        },
         trigger: {
             getBounds: () => ({
-                left: menu?.bounds.x ?? 0,
-                top: menu?.bounds.y ?? 0,
-                width: menu?.bounds.width ?? 0,
-                height: menu?.bounds.height ?? 0,
-                right: (menu?.bounds.x ?? 0) + (menu?.bounds.width ?? 0),
-                bottom: (menu?.bounds.y ?? 0) + (menu?.bounds.height ?? 0),
+                left: popover?.bounds.x ?? 0,
+                top: popover?.bounds.y ?? 0,
+                width: popover?.bounds.width ?? 0,
+                height: popover?.bounds.height ?? 0,
+                right: (popover?.bounds.x ?? 0) + (popover?.bounds.width ?? 0),
+                bottom: (popover?.bounds.y ?? 0) + (popover?.bounds.height ?? 0),
             })
         }
     });
 
-    const onHeaderMenuClick = useCallback((col: number, bounds: { x: number; y: number; width: number; height: number }) => {
-        setMenu({ col, bounds });
-    }, []);
+    const onHeaderClicked = (col: number, e: HeaderClickedEventArgs) => {
+        console.log('onHeaderClicked', col, e);
+        const iconRects = iconPositionsRef.current[col];
+        if (!iconRects) return;
+
+        const iconIndex = detectIconClickFromEvent(e.localEventX, e.localEventY, iconRects);
+        if (iconIndex === -1) return;
+
+        const icon = iconRects[iconIndex];
+        const absoluteX = e.bounds.x + icon.x;
+        const absoluteY = e.bounds.y + icon.y + icon.size;
+
+        // 延迟激活 Popover，避免被 onOutsideClick 立即关闭
+        requestAnimationFrame(() => {
+            setPopover({
+                col,
+                iconIndex,
+                bounds: {
+                    x: absoluteX,
+                    y: absoluteY,
+                    width: icon.size,
+                    height: icon.size,
+                }
+            });
+        });
+    };
 
     return (
         <Row className={`datatable-table-grid ${className}`}>
             <DataEditor columns={columns} getCellContent={getData} width={scroll?.x} height={scroll?.y}
                 rows={dataSource.length} keybindings={{ search: true }} getCellsForSelection={true}
-                rowMarkers="number" onHeaderMenuClick={onHeaderMenuClick} customRenderers={allCells}
+                customRenderers={allCells} onHeaderClicked={onHeaderClicked} rowMarkers="number"
+                onColumnResize={onColumnResize} drawHeader={drawHeader} verticalBorder={false}
             />
-            {isOpen &&
+            {popover &&
                 renderLayer(
-                    <div {...layerProps} className="gdg-column-menu"
+                    <div
+                        {...layerProps}
                         style={{
-                            background: 'white', boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                            borderRadius: 4, padding: 8,
                             position: 'absolute',
-                            top: menu?.bounds.y + menu?.bounds.height + 10,
-                            left: menu?.bounds.x,
-                            zIndex: 1000
-                        }}>
-                        <div onClick={() => setMenu(undefined)}>
-                            <Tooltip title={dataDictionary[menu?.col ?? 0].description}>
-                                <InfoCircleOutlined />
-                                <span>Column Description</span>
-                            </Tooltip>
-                        </div>
-                        <Divider style={{ margin: '0' }} />
-                        <div onClick={() => setMenu(undefined)}>
-                            <Popover content={<ChartCard className='chart-card-popover' field={dataDictionary[menu?.col ?? 0]} data={dataSource} total={dataSource.length} />}
-                                trigger="hover" destroyTooltipOnHide>
-                                <BarChartOutlined />
-                                <span>Column Chart</span>
-                            </Popover>
-                        </div>
+                            top: popover.bounds.y + 10,
+                            left: popover.bounds.x,
+                            background: "#fff",
+                            boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                            borderRadius: 4,
+                            padding: 8,
+                            minWidth: 160,
+                            zIndex: 999,
+                        }}
+                    >
+                        {
+                            popover.iconIndex === 0 && (
+                                <span>{dataDictionary.find(col => col.key === columns[popover.col].id)?.description}</span>
+                            )
+                        }
+
+                        {
+                            popover.iconIndex === 1 && (
+                                <ChartCard className='chart-card-popover' field={dataDictionary.find(col => col.key === columns[popover.col].id)} data={dataSource} total={dataSource.length} />
+                            )
+                        }
+
                     </div>
-                )}
+                )
+            }
             <Row className="datatable-table-grid-footer">
                 <span className="datatable-table-grid-footer-text">🔢 Showing {dataSource.length} of {pagination?.total} samples</span>
                 <Pagination size="small" {...pagination} />

@@ -1,17 +1,15 @@
 import React, { useState } from 'react';
-import { Table, Button, Modal, Typography, Row, Col, Space, message, Tooltip, Popover, Spin } from 'antd';
+import { Button, Modal, Typography, Row, Col, message, Tooltip, Spin } from 'antd';
 import { useEffect } from 'react';
 import { getDatasetData, getDataDictionary, getDatasets } from '@/services/biominer/datasets';
 import { history } from 'umi';
-import ColumnSelector from './ColumnSelector';
+import ColumnSelector, { getDefaultSelectedKeys } from './ColumnSelector';
 import { filters2string } from './Filter';
 import type { ComposeQueryItem } from './Filter';
-import { BarChartOutlined, DownloadOutlined, FileOutlined, FilterOutlined, InfoCircleOutlined, MoreOutlined, QuestionCircleOutlined } from '@ant-design/icons';
+import { BarChartOutlined, DownloadOutlined, FileOutlined, FilterOutlined, MoreOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import QueryBuilder from './QueryBuilder';
-import ChartCard from './ChartCard';
 import VisualPanel from './VisualPanel';
-// import VirtualTable from './VirtualTable';
-import VirtualTable from './VirtualTableFaster';
+import VirtualTable from './VirtualTable';
 
 import './index.less';
 import DataInfo from './DataInfo';
@@ -54,20 +52,24 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
             setCachedDatasetKey(datasetKey);
         }
 
-        const fetchData = async () => {
+        const fetchData = () => {
             setLoading(true);
 
             // Fetch the dataset metadata.
-            const datasets = await getDatasets({
+            getDatasets({
                 page: 1,
                 page_size: 1000,
-            });
-            const dataset = datasets.records.find(ds => ds.key === datasetKey);
-            if (!dataset) {
+            }).then(datasets => {
+                const dataset = datasets.records.find(ds => ds.key === datasetKey);
+                if (!dataset) {
+                    history.push('/');
+                    return;
+                }
+                setDatasetMetadata(dataset);
+            }).catch(err => {
+                message.error('Failed to fetch the dataset metadata.');
                 history.push('/');
-                return;
-            }
-            setDatasetMetadata(dataset);
+            });
 
             // Fetch the dataset data.
             const queryMap: any = {
@@ -80,17 +82,23 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
                 queryMap.query = filters;
             }
 
-            const data = await getDatasetData(queryMap);
-            setData(data);
+            getDatasetData(queryMap).then(d => {
+                setData(d);
+                setLoading(false);
+            }).catch(err => {
+                message.error('Failed to fetch the dataset data.');
+                setLoading(false);
+            });
 
             // Fetch the dataset data dictionary.
-            const dataDictionary = await getDataDictionary({
+            getDataDictionary({
                 key: datasetKey,
+            }).then(dDictionary => {
+                setDataDictionary(dDictionary);
+                setSelectedColumns(getDefaultSelectedKeys(dDictionary.fields));
+            }).catch(err => {
+                message.error('Failed to fetch the dataset data dictionary.');
             });
-            setDataDictionary(dataDictionary);
-            setSelectedColumns(dataDictionary.fields.filter(col => col.order <= 5).map(col => col.key).slice(0, 5));
-
-            setLoading(false);
         };
 
         fetchData();
@@ -120,31 +128,6 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
     }, [page, pageSize, cachedDatasetKey, filters])
 
     useEffect(() => {
-        // const columns = dataDictionary.fields.map((col) => ({
-        //     title: (
-        //         <div style={{ display: 'flex', justifyContent: 'space-between', whiteSpace: 'nowrap', gap: 4, alignItems: 'center' }}>
-        //             <span>{col.name}</span>
-        //             <Space>
-        //                 <Tooltip title={col.description}>
-        //                     <Button size="small" icon={<InfoCircleOutlined />} />
-        //                 </Tooltip>
-        //                 <Popover content={<ChartCard className='chart-card-popover' field={col} data={data.records} total={data.total} />}
-        //                     trigger="click" destroyTooltipOnHide>
-        //                     <Button size="small" icon={<BarChartOutlined />} type="primary" />
-        //                 </Popover>
-        //             </Space>
-        //         </div>
-        //     ),
-        //     dataIndex: col.key,
-        //     key: col.key,
-        //     render: (value: any) => {
-        //         if (col.key === 'patient_id') {
-        //             return <a onClick={() => setCurrentRecord(data.records.find(r => r.patient_id === value))}>{value}</a>;
-        //         }
-        //         return value;
-        //     }
-        // }));
-
         setColumns(dataDictionary.fields.filter(col => selectedColumns.includes(col.key)));
     }, [dataDictionary, selectedColumns]);
 
@@ -153,11 +136,8 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
         setPageSize(100);
     }
 
-    const tableHeight = window.innerHeight - 240;
-    const tableWidth = window.innerWidth - 48;
-
     return (
-        <Spin spinning={loading} tip="Loading...">
+        <Spin spinning={loading}>
             <Row className="datatable-header">
                 <Col span={24} className="datatable-header-upper">
                     <Typography.Title level={4}>
@@ -235,12 +215,35 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
                     onClose={(field) => {
                         setSelectedColumns(selectedColumns.filter(col => col !== field.key));
                     }} /> :
+                // <VirtualTable
+                //     className='datatable-table'
+                //     dataSource={data.records}
+                //     dataDictionary={columns}
+                //     loading={loading}
+                //     scroll={{ y: window.innerHeight - 270, x: tableWidth }}
+                //     pagination={{
+                //         position: ['bottomRight'],
+                //         pageSize: pageSize,
+                //         current: page,
+                //         total: data.total,
+                //         onChange: (page: number, pageSize: number) => {
+                //             setPage(page);
+                //             setPageSize(pageSize);
+                //         },
+                //         showSizeChanger: true,
+                //         showQuickJumper: true,
+                //         pageSizeOptions: [100, 200, 300, 500, 1000],
+                //     }}
+                //     onCellClick={(record, row, col) => {
+                //         setCurrentRecord(record);
+                //     }}
+                // />
                 <VirtualTable
                     className='datatable-table'
+                    size="small"
                     dataSource={data.records}
-                    dataDictionary={columns}
-                    loading={loading}
-                    scroll={{ y: tableHeight, x: tableWidth }}
+                    rowKey={(record: any, idx: any) => idx?.toString() ?? ''}
+                    scroll={{ y: window.innerHeight - 276, x: window.innerWidth - 48 }}
                     pagination={{
                         position: ['bottomRight'],
                         pageSize: pageSize,
@@ -257,29 +260,8 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
                     onCellClick={(record, row, col) => {
                         setCurrentRecord(record);
                     }}
+                    dataDictionary={columns}
                 />
-                // <VirtualTable
-                //     className={filters ? 'datatable-table-with-filters' : 'datatable-table'}
-                //     size="small"
-                //     dataSource={data.records}
-                //     columns={columns}
-                //     rowKey={(record, idx) => idx?.toString() ?? ''}
-                //     scroll={{ y: tableHeight }}
-                //     loading={loading}
-                //     pagination={{
-                //         position: ['bottomRight'],
-                //         pageSize: pageSize,
-                //         current: page,
-                //         total: data.total,
-                //         onChange: (page: number, pageSize: number) => {
-                //             setPage(page);
-                //             setPageSize(pageSize);
-                //         },
-                //         showSizeChanger: true,
-                //         showQuickJumper: true,
-                //         pageSizeOptions: [100, 200, 300, 500, 1000],
-                //     }}
-                // />
             }
             <QueryBuilder
                 visible={filterModalVisible}

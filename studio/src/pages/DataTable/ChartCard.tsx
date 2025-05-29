@@ -95,7 +95,7 @@ export const getRecommendedChartType = (field: API.DataDictionaryField, length: 
     const allowedValuesLength = field.allowed_values?.length || 0;
     const ratio = allowedValuesLength / total;
     const threshold = 0.8;
-    console.log("GetRecommendedChartType: ", field, ratio, threshold, allowedValuesLength);
+    // console.log("GetRecommendedChartType: ", field, ratio, threshold, allowedValuesLength);
 
     if (isKaplanMeier(field, selectedColumns || [])) {
         return 'kaplan_meier';

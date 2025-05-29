@@ -1,0 +1,31 @@
+@header-height: 120px;
+@global-header-height: 48px;
+
+.datatable-table {
+    height: calc(100vh - @header-height - @global-header-height - 30px);
+
+    .ant-pagination {
+        position: absolute;
+        bottom: 10px;
+        right: 5px;
+        margin: 0;
+        z-index: 1000;
+    }
+
+    .datatable-table-grid {
+        background-color: #f0f2f5;
+
+        .datatable-table-grid-row-even {
+            background-color: #f0f2f5;
+        }
+
+        .datatable-table-grid-row-odd {
+            background-color: #fff;
+        }
+    }
+}
+
+.chart-card-popover {
+    width: 450px !important;
+    height: 380px !important;
+}
