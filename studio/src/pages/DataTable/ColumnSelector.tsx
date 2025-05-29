@@ -3,7 +3,7 @@ import { Dropdown, Button, Input, Checkbox, Tooltip } from 'antd';
 import { useState, useMemo } from 'react';
 
 export const getDefaultSelectedKeys = (fields: API.DataDictionaryField[]) => {
-    return fields.filter(field => field.order <= 5).map(field => field.key);
+    return fields.filter(field => field.order <= 5).map(field => field.key).slice(0, 10);
 }
 
 const ColumnSelector = ({ fields, selectedKeys, onChange }: { fields: API.DataDictionaryField[], selectedKeys: string[], onChange: (keys: string[]) => void }) => {

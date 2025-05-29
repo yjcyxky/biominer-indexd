@@ -1,11 +1,11 @@
 extern crate log;
 
 use log::*;
-use std::collections::HashMap;
+use std::{collections::HashMap, path::PathBuf};
 use structopt::StructOpt;
 use biominer_indexd::init_logger;
 use biominer_indexd::run_migrations;
-
+use biominer_indexd::model::dataset::Datasets;
 /// NOTE: In the first time, you need to follow the order to run the commands: initdb -> importdb.
 ///
 #[derive(StructOpt, Debug)]
@@ -27,6 +27,8 @@ enum SubCommands {
     ImportDB(ImportDBArguments),
     #[structopt(name = "cleandb")]
     CleanDB(CleanDBArguments),
+    #[structopt(name = "index-datasets")]
+    IndexDatasets(IndexDatasetsArguments),
 }
 
 /// Initialize the database, only for the postgres database. We might need to run the initdb command when we want to upgrade the database schema or the first time we run the application.
@@ -83,6 +85,14 @@ pub struct ImportDBArguments {
         default_value = "10000"
     )]
     batch_size: usize,
+}
+
+#[derive(StructOpt, PartialEq, Debug)]
+#[structopt(setting=structopt::clap::AppSettings::ColoredHelp, name="BiominerIndexd - index-datasets", author="Jingcheng Yang <yjcyxky@163.com>")]
+pub struct IndexDatasetsArguments {
+    /// [Required] The directory path of the datasets.
+    #[structopt(name = "datasets_dir", short = "d", long = "datasets-dir")]
+    datasets_dir: Option<String>,
 }
 
 #[tokio::main]
@@ -194,6 +204,35 @@ async fn main() {
                 }
             }
             
+        }
+        SubCommands::IndexDatasets(arguments) => {
+            let datasets_dir = arguments.datasets_dir;
+            let datasets_dir = if datasets_dir.is_none() {
+                match std::env::var("DATASETS_DIR") {
+                    Ok(v) => PathBuf::from(v),
+                    Err(_) => {
+                        error!("{}", "DATASETS_DIR is not set.");
+                        std::process::exit(1);
+                    }
+                }
+            } else {
+                PathBuf::from(datasets_dir.unwrap())
+            };
+
+            match Datasets::index(&datasets_dir, true) {
+                Ok(v) => v,
+                Err(e) => {
+                    error!("Index datasets failed: {}", e);
+                    std::process::exit(1);
+                }
+            };
+
+            info!("Index datasets successfully.");
+
+            match Datasets::validate(&datasets_dir) {
+                Ok(_) => info!("Validate datasets successfully."),
+                Err(e) => error!("Validate datasets failed: {}", e),
+            }
         }
     }
 }
