@@ -4,6 +4,7 @@ use crate::model::datafile::{
 use crate::model::dataset::{
     DataDictionary, DatasetDataResponse, Datasets, DatasetsResponse, FieldGroupSummary,
 };
+use crate::model::util::to_hashmap;
 use crate::query_builder::sql_builder::ComposeQuery;
 use crate::repo_config::{RepoConfig, SignData};
 use crate::util;
@@ -17,6 +18,7 @@ use poem_openapi::{
     ApiResponse, Object, OpenApi, Tags,
 };
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::sync::Arc;
 
 #[derive(Tags)]
@@ -254,9 +256,24 @@ enum GetDatasetDataResponse {
 }
 
 #[derive(ApiResponse)]
-enum GetDatasetGroupsResponse {
+enum GetDatasetGroupStatsResponse {
     #[oai(status = 200)]
     Ok(Json<Vec<FieldGroupSummary>>),
+
+    #[oai(status = 404)]
+    NotFound(PlainText<String>),
+
+    #[oai(status = 500)]
+    InternalError(PlainText<String>),
+
+    #[oai(status = 400)]
+    BadRequest(PlainText<String>),
+}
+
+#[derive(ApiResponse)]
+enum GetDatasetDatafilesResponse {
+    #[oai(status = 200)]
+    Ok(Json<Vec<HashMap<String, serde_json::Value>>>),
 
     #[oai(status = 404)]
     NotFound(PlainText<String>),
@@ -841,23 +858,7 @@ impl BioMinerIndexdApi {
         operation_id = "getDataDictionary"
     )]
     async fn get_data_dictionary(&self, key: Path<String>) -> GetDatasetDataDictionaryResponse {
-        let base_path = match std::env::var("BIOMINER_INDEXD_DATA_DIR") {
-            Ok(path) => path,
-            Err(e) => {
-                warn!("Failed to get BIOMINER_INDEXD_DATA_DIR: {}", e);
-                return GetDatasetDataDictionaryResponse::InternalError(PlainText(e.to_string()));
-            }
-        };
-
-        let datasets = match Datasets::load(&base_path.into()) {
-            Ok(datasets) => datasets,
-            Err(e) => {
-                warn!("Failed to load datasets: {}", e);
-                return GetDatasetDataDictionaryResponse::InternalError(PlainText(e.to_string()));
-            }
-        };
-
-        let dataset = match datasets.get(&key.0) {
+        let dataset = match Datasets::get(&key.0) {
             Ok(dataset) => dataset,
             Err(e) => {
                 warn!("Failed to get dataset: {}", e);
@@ -865,7 +866,7 @@ impl BioMinerIndexdApi {
             }
         };
 
-        let data_dictionary = match dataset.load_data_dictionary() {
+        let data_dictionary = match dataset.get_data_dictionary() {
             Ok(data_dictionary) => data_dictionary,
             Err(e) => {
                 warn!("Failed to load data dictionary: {}", e);
@@ -876,44 +877,75 @@ impl BioMinerIndexdApi {
         GetDatasetDataDictionaryResponse::Ok(Json(data_dictionary))
     }
 
-    /// Call `/api/v1/datasets/:key/groups` to get the dataset groups.
+    /// Call `/api/v1/datasets/:key/datafiles` to get the dataset datafiles.
     #[oai(
-        path = "/datasets/:key/groups",
+        path = "/datasets/:key/datafiles",
         method = "get",
         tag = "DatasetApiTags::Datasets",
-        operation_id = "getDatasetGroups"
+        operation_id = "getDatafiles"
     )]
-    async fn get_dataset_groups(
+    async fn get_datafiles(&self, key: Path<String>) -> GetDatasetDatafilesResponse {
+        let dataset = match Datasets::get(&key.0) {
+            Ok(dataset) => dataset,
+            Err(e) => {
+                warn!("Failed to get dataset: {}", e);
+                return GetDatasetDatafilesResponse::NotFound(PlainText(e.to_string()));
+            }
+        };
+
+        match dataset.get_datafiles() {
+            Ok(datafiles) => match to_hashmap(&datafiles) {
+                Ok(datafiles) => {
+                    return GetDatasetDatafilesResponse::Ok(Json(datafiles));
+                }
+                Err(e) => {
+                    warn!("Failed to convert datafiles to hashmap: {}", e);
+                    return GetDatasetDatafilesResponse::InternalError(PlainText(e.to_string()));
+                }
+            },
+            Err(e) => {
+                warn!("Failed to get datafiles: {}", e);
+                return GetDatasetDatafilesResponse::InternalError(PlainText(e.to_string()));
+            }
+        };
+    }
+
+    /// Call `/api/v1/datasets/:key/group-stats` to get the dataset groups.
+    #[oai(
+        path = "/datasets/:key/group-stats",
+        method = "get",
+        tag = "DatasetApiTags::Datasets",
+        operation_id = "getDatasetGroupStats"
+    )]
+    async fn get_dataset_group_stats(
         &self,
         key: Path<String>,
         field_key: Query<Option<String>>,
         query: Query<Option<String>>,
-    ) -> GetDatasetGroupsResponse {
-        let base_path = match std::env::var("BIOMINER_INDEXD_DATA_DIR") {
-            Ok(path) => path,
-            Err(e) => {
-                warn!("Failed to get BIOMINER_INDEXD_DATA_DIR: {}", e);
-                return GetDatasetGroupsResponse::InternalError(PlainText(e.to_string()));
-            }
-        };
-
+    ) -> GetDatasetGroupStatsResponse {
         // TODO: Whether we should check the field is in the data dictionary?
         if field_key.0.is_none() {
             warn!("Field is required");
-            return GetDatasetGroupsResponse::BadRequest(PlainText("Field is required".to_string()));
+            return GetDatasetGroupStatsResponse::BadRequest(PlainText(
+                "Field is required".to_string(),
+            ));
         }
 
         let field_key = match field_key.0 {
             Some(field_key) => {
                 if field_key.is_empty() {
                     warn!("Field is required");
-                    return GetDatasetGroupsResponse::BadRequest(PlainText("Field is required".to_string()));
+                    return GetDatasetGroupStatsResponse::BadRequest(PlainText(
+                        "Field is required".to_string(),
+                    ));
                 }
                 field_key
             }
             None => {
                 warn!("Field is required");
-                return GetDatasetGroupsResponse::BadRequest(PlainText("Field is required".to_string()));
+                return GetDatasetGroupStatsResponse::BadRequest(PlainText(
+                    "Field is required".to_string(),
+                ));
             }
         };
 
@@ -922,25 +954,17 @@ impl BioMinerIndexdApi {
                 Ok(query) => query,
                 Err(e) => {
                     warn!("Failed to parse query string: {}", e);
-                    return GetDatasetGroupsResponse::BadRequest(PlainText(e.to_string()));
+                    return GetDatasetGroupStatsResponse::BadRequest(PlainText(e.to_string()));
                 }
             },
             None => None,
         };
 
-        let datasets = match Datasets::load(&base_path.into()) {
-            Ok(datasets) => datasets,
-            Err(e) => {
-                warn!("Failed to load datasets: {}", e);
-                return GetDatasetGroupsResponse::InternalError(PlainText(e.to_string()));
-            }
-        };
-
-        let dataset = match datasets.get(&key.0) {
+        let dataset = match Datasets::get(&key.0) {
             Ok(dataset) => dataset,
             Err(e) => {
                 warn!("Failed to get dataset: {}", e);
-                return GetDatasetGroupsResponse::NotFound(PlainText(e.to_string()));
+                return GetDatasetGroupStatsResponse::NotFound(PlainText(e.to_string()));
             }
         };
 
@@ -948,11 +972,11 @@ impl BioMinerIndexdApi {
             Ok(groups) => groups,
             Err(e) => {
                 warn!("Failed to group dataset: {}", e);
-                return GetDatasetGroupsResponse::InternalError(PlainText(e.to_string()));
+                return GetDatasetGroupStatsResponse::InternalError(PlainText(e.to_string()));
             }
         };
 
-        GetDatasetGroupsResponse::Ok(Json(groups))
+        GetDatasetGroupStatsResponse::Ok(Json(groups))
     }
 
     /// Call `/api/v1/datasets/:key/data` to get the dataset data.
@@ -970,14 +994,6 @@ impl BioMinerIndexdApi {
         page_size: Query<Option<usize>>,
         order_by: Query<Option<String>>,
     ) -> GetDatasetDataResponse {
-        let base_path = match std::env::var("BIOMINER_INDEXD_DATA_DIR") {
-            Ok(path) => path,
-            Err(e) => {
-                warn!("Failed to get BIOMINER_INDEXD_DATA_DIR: {}", e);
-                return GetDatasetDataResponse::InternalError(PlainText(e.to_string()));
-            }
-        };
-
         let query = match query.0 {
             Some(query) => match ComposeQuery::from_str(&query) {
                 Ok(query) => query,
@@ -993,15 +1009,7 @@ impl BioMinerIndexdApi {
         let page_size = page_size.0.unwrap_or(10);
         let order_by = order_by.0;
 
-        let datasets = match Datasets::load(&base_path.into()) {
-            Ok(datasets) => datasets,
-            Err(e) => {
-                warn!("Failed to load datasets: {}", e);
-                return GetDatasetDataResponse::InternalError(PlainText(e.to_string()));
-            }
-        };
-
-        let dataset = match datasets.get(&key.0) {
+        let dataset = match Datasets::get(&key.0) {
             Ok(dataset) => dataset,
             Err(e) => {
                 warn!("Failed to get dataset: {}", e);

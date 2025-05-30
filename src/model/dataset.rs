@@ -10,8 +10,9 @@
 //   pmid, groups, tags, num_of_samples
 // - Each dataset folder contains:
 //   - `data_dictionary.json`: defines schema for the dataset
-//   - `data.parquet`: tabular data file, column names correspond to keys in dictionary
+//   - `data.parquet`: tabular file for metadata, column names correspond to keys in dictionary
 //   - `dataset.json`: study metadata
+//   - `datafile.tsv`: datafile metadata which contains the file path, file size, etc.
 //
 // ## Features
 // - Loads and validates dataset metadata and structure
@@ -37,15 +38,67 @@
 // ```
 // =====================================================================================
 
-use super::duckdb_util::row_to_json;
+use super::util::load_tsv;
+use super::{datafile::File, duckdb_util::row_to_json};
 use crate::query_builder::sql_builder::ComposeQuery;
 use anyhow::{bail, Error, Result};
 use duckdb::{params, Connection};
+use lazy_static::lazy_static;
 use log::{info, warn};
 use poem_openapi::Object;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::sync::Mutex;
 use std::{fs, path::Path, path::PathBuf};
+
+// Cache the dataset metadata and data dictionary for better performance
+lazy_static! {
+    static ref DATASET_METADATA_CACHE: Mutex<HashMap<String, Dataset>> = Mutex::new(HashMap::new());
+    static ref DATA_DICTIONARY_CACHE: Mutex<HashMap<String, DataDictionary>> =
+        Mutex::new(HashMap::new());
+    static ref DATAFILE_CACHE: Mutex<HashMap<String, Vec<File>>> = Mutex::new(HashMap::new());
+}
+
+/// Initialize the cache for the dataset metadata and data dictionary.
+///
+/// This function loads the dataset metadata and data dictionary from the specified base path
+/// and caches them in memory for faster access. You must call this function before using the
+/// dataset manager.
+///
+/// # Arguments
+/// * `base_path` - The path to the root directory containing `index.json` and dataset subdirectories.
+///
+/// # Returns
+/// Returns `Ok(())` if the cache is successfully initialized, or an `Err(Error)` if the cache
+/// initialization fails.
+///
+/// # Errors
+/// This function returns an error if:
+/// - The dataset metadata or data dictionary cannot be loaded from the specified base path.
+pub fn init_cache(base_path: &PathBuf) -> Result<(), Error> {
+    let datasets = Datasets::load(base_path)?;
+    for dataset in datasets.records {
+        let data_dictionary = dataset.load_data_dictionary()?;
+        DATA_DICTIONARY_CACHE
+            .lock()
+            .unwrap()
+            .insert(dataset.metadata.key.clone(), data_dictionary);
+
+        DATASET_METADATA_CACHE
+            .lock()
+            .unwrap()
+            .insert(dataset.metadata.key.clone(), dataset.clone());
+
+        // TODO: cache datafiles
+        // let datafiles = dataset.load_datafiles()?;
+        // DATAFILE_CACHE
+        //     .lock()
+        //     .unwrap()
+        //     .insert(dataset.metadata.key.clone(), datafiles);
+    }
+    Ok(())
+}
 
 #[derive(Debug, Deserialize, Serialize, Clone, Object)]
 pub struct DataDictionaryField {
@@ -171,8 +224,18 @@ impl Datasets {
     /// ```
     pub fn load(base_path: &PathBuf) -> Result<Self, Error> {
         let index_path = base_path.join("index.json");
-        let content = fs::read_to_string(&index_path)?;
-        let index_entries: Vec<DatasetMetadata> = serde_json::from_str(&content)?;
+        let content = match fs::read_to_string(&index_path) {
+            Ok(content) => content,
+            Err(e) => {
+                return Err(anyhow::anyhow!("Failed to read index file: {}", e));
+            }
+        };
+        let index_entries: Vec<DatasetMetadata> = match serde_json::from_str(&content) {
+            Ok(entries) => entries,
+            Err(e) => {
+                return Err(anyhow::anyhow!("Failed to parse index file: {}", e));
+            }
+        };
 
         let entries = index_entries
             .into_iter()
@@ -292,6 +355,20 @@ impl Datasets {
             if !parquet_path.exists() {
                 warn!("Missing data.parquet in {:?}", dataset.path);
                 continue;
+            }
+
+            let datafile_path = dataset.path.join("datafile.tsv");
+            if !datafile_path.exists() {
+                warn!("Missing datafile.tsv in {:?}", dataset.path);
+                continue;
+            }
+
+            match load_tsv(&datafile_path.to_path_buf()) {
+                Ok(datafiles) => {}
+                Err(e) => {
+                    warn!("Failed to load datafile.tsv in {:?}: {}", dataset.path, e);
+                    continue;
+                }
             }
         }
 
@@ -457,13 +534,18 @@ impl Datasets {
     /// # Example
     ///
     /// ```rust
-    /// let dataset = datasets.get("genomics_data")?;
+    /// let dataset = Datasets::get("genomics_data")?;
     /// ```
-    pub fn get(&self, key: &str) -> Result<Dataset, Error> {
-        let dataset = self.records.iter().find(|d| d.metadata.key == key);
+    pub fn get(key: &str) -> Result<Dataset, Error> {
+        let dataset_cache = DATASET_METADATA_CACHE.lock().unwrap();
+        let dataset = dataset_cache.get(key);
         if dataset.is_none() {
-            return Err(anyhow::anyhow!("Dataset not found: {}", key));
+            return Err(anyhow::anyhow!(
+                "Dataset not found: {}, it may not be cached or does not exist.",
+                key
+            ));
         }
+
         Ok(dataset.unwrap().clone())
     }
 
@@ -661,7 +743,7 @@ impl Dataset {
 
         let conn = Connection::open_in_memory()?;
         conn.execute(
-            "CREATE TABLE data AS SELECT * FROM read_parquet(?)",
+            "CREATE TABLE metadata AS SELECT * FROM read_parquet(?)",
             params![parquet_path.to_str().unwrap()],
         )?;
 
@@ -697,13 +779,13 @@ impl Dataset {
         let pagination_str = format!("LIMIT {} OFFSET {}", limit, offset);
 
         let sql = format!(
-            "SELECT * FROM data WHERE {} {} {}",
+            "SELECT * FROM metadata WHERE {} {} {}",
             query_str, order_by_str, pagination_str
         );
 
         info!("Query SQL: {}", sql);
 
-        let mut stmt = conn.prepare("PRAGMA table_info(data);")?;
+        let mut stmt = conn.prepare("PRAGMA table_info(metadata);")?;
         let columns: Vec<String> = stmt
             .query_map([], |row| row.get::<_, String>(1))?
             .filter_map(Result::ok)
@@ -721,7 +803,7 @@ impl Dataset {
             records.push(row?);
         }
 
-        let count_sql = format!("SELECT COUNT(*) FROM data WHERE {}", query_str);
+        let count_sql = format!("SELECT COUNT(*) FROM metadata WHERE {}", query_str);
         let count: i64 = conn.query_row(&count_sql, [], |row| row.get(0))?;
 
         Ok(DatasetDataResponse {
@@ -732,7 +814,7 @@ impl Dataset {
         })
     }
 
-    /// Loads the data dictionary for this dataset.
+    /// Get the data dictionary for this dataset.
     ///
     /// This method reads the `data_dictionary.json` file located in the dataset's directory,
     /// parses it into a list of `DataDictionaryField` entries, and returns a `DataDictionary` object.
@@ -757,11 +839,116 @@ impl Dataset {
     ///     println!("{}: {}", field.key, field.data_type);
     /// }
     /// ```
-    pub fn load_data_dictionary(self: &Self) -> Result<DataDictionary, Error> {
-        let dict_path = self.path.join("data_dictionary.json");
-        let content = fs::read_to_string(&dict_path)?;
-        let fields: Vec<DataDictionaryField> = serde_json::from_str(&content)?;
-        Ok(DataDictionary { fields })
+    pub fn get_data_dictionary(&self) -> Result<DataDictionary, Error> {
+        let data_dictionary_cache = DATA_DICTIONARY_CACHE.lock().unwrap();
+        let data_dictionary = data_dictionary_cache.get(&self.metadata.key);
+
+        if data_dictionary.is_none() {
+            return Err(anyhow::anyhow!(
+                "Data dictionary not found: {}, it may not be cached or does not exist.",
+                self.metadata.key
+            ));
+        }
+
+        Ok(data_dictionary.unwrap().clone())
+    }
+
+    /// Load the data dictionary for this dataset.
+    ///
+    /// This function loads the data dictionary for a dataset from the cache.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(DataDictionary)` if the data dictionary is found in the cache, or an `Err(Error)` if the data dictionary is not found in the cache.
+    ///
+    /// # Errors
+    ///
+    /// This function returns an error if:
+    /// - The data dictionary is not found in the cache.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// let dictionary = dataset.load_data_dictionary()?;
+    /// ```
+    pub fn load_data_dictionary(&self) -> Result<DataDictionary, Error> {
+        let data_dictionary_path = self.path.join("data_dictionary.json");
+        let data_dictionary = match fs::read_to_string(&data_dictionary_path) {
+            Ok(data_dictionary) => data_dictionary,
+            Err(e) => {
+                return Err(anyhow::anyhow!("Failed to read data dictionary file: {}", e));
+            }
+        };
+        let data_dictionary: Vec<DataDictionaryField> = match serde_json::from_str(&data_dictionary) {
+            Ok(data_dictionary) => data_dictionary,
+            Err(e) => {
+                return Err(anyhow::anyhow!("Failed to parse data dictionary file: {}", e));
+            }
+        };
+
+        Ok(DataDictionary {
+            fields: data_dictionary,
+        })
+    }
+
+    /// Loads the datafiles for a dataset.
+    ///
+    /// This function loads the datafiles for a dataset from the specified path.
+    ///
+    /// # Arguments
+    ///
+    /// * `dataset_path` - The path to the dataset directory.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(Vec<File>)` if the datafiles are loaded successfully, or an `Err(Error)` if the datafiles cannot be loaded.
+    ///
+    /// # Errors
+    ///
+    /// This function returns an error if:
+    /// - The `datafile.tsv` file does not exist.
+    /// - The `datafile.tsv` file cannot be read.
+    /// - The `datafile.tsv` file cannot be parsed.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// let datafiles = dataset.load_datafiles()?;
+    /// ```
+    pub fn load_datafiles(&self) -> Result<Vec<File>, Error> {
+        let datafile_path = self.path.join("datafile.tsv");
+        return load_tsv(&datafile_path)
+    }
+
+    /// Get the datafiles for a dataset.
+    ///
+    /// This function returns the datafiles for a dataset from the cache.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(Vec<File>)` if the datafiles are found in the cache, or an `Err(Error)` if the datafiles are not found in the cache.
+    ///
+    /// # Errors
+    ///
+    /// This function returns an error if:
+    /// - The datafiles are not found in the cache.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// let datafiles = dataset.get_datafiles()?;
+    /// ```
+    pub fn get_datafiles(&self) -> Result<Vec<File>, Error> {
+        let datafiles_cache = DATAFILE_CACHE.lock().unwrap();
+        let datafiles = datafiles_cache.get(&self.metadata.key);
+        if datafiles.is_none() {
+            return Err(anyhow::anyhow!(
+                "Datafiles not found: {}, it may not be cached or does not exist.",
+                self.metadata.key
+            ));
+        }
+
+        Ok(datafiles.unwrap().clone())
     }
 
     /// Group the dataset by a field.
@@ -780,7 +967,7 @@ impl Dataset {
 
         let conn = Connection::open_in_memory()?;
         conn.execute(
-            "CREATE TABLE data AS SELECT * FROM read_parquet(?)",
+            "CREATE TABLE metadata AS SELECT * FROM read_parquet(?)",
             params![parquet_path.to_str().unwrap()],
         )?;
 
@@ -801,7 +988,7 @@ impl Dataset {
                     COALESCE(CAST({field} AS TEXT), 'NA') AS value,
                     COUNT(*) AS count,
                     ROUND(100.0 * COUNT(*) / SUM(COUNT(*)) OVER (), 1) AS freq_percent
-                FROM data
+                FROM metadata
                 WHERE {query_str}
                 GROUP BY {field}
                 ORDER BY count DESC
@@ -836,52 +1023,39 @@ mod tests {
 
     #[test]
     fn test_validate_example_dataset() {
-        let path = PathBuf::from("examples/datasets");
+        let path = PathBuf::from("examples/cbioportal_datasets");
 
         Datasets::index(&path, true).expect("Failed to index example datasets");
         Datasets::validate(&path).expect("Failed to validate example datasets");
 
-        let datasets = Datasets::load(&path).expect("Failed to load example datasets");
-        assert!(datasets.records.len() > 0);
-
-        let ds = datasets
-            .get("fuscc_cbcga_773")
-            .expect("Missing expected dataset 'fuscc_cbcga_773'");
-        assert_eq!(ds.metadata.key, "fuscc_cbcga_773");
+        init_cache(&path).expect("Failed to init cache");
     }
 
     #[test]
-    fn test_load_data_dictionary() {
-        let path = PathBuf::from("examples/datasets");
+    fn test_get_data_dictionary() {
+        init_cache(&PathBuf::from("examples/cbioportal_datasets")).expect("Failed to init cache");
 
-        let datasets = Datasets::load(&path).expect("Failed to load example datasets");
-        let ds = datasets
-            .get("acbc_mskcc_2015")
-            .expect("Missing expected dataset 'acbc_mskcc_2015'");
+        let ds =
+            Datasets::get("acbc_mskcc_2015").expect("Missing expected dataset 'acbc_mskcc_2015'");
         let dict = ds
-            .load_data_dictionary()
+            .get_data_dictionary()
             .expect("Failed to load data dictionary");
         assert!(dict.fields.len() > 0);
     }
 
     #[test]
     fn test_search_datasets() {
-        let path = PathBuf::from("examples/datasets");
+        let path = PathBuf::from("examples/cbioportal_datasets");
         let result = Datasets::search(&path, &None, None, None, None).expect("Search failed");
         assert!(result.total > 0);
     }
 
     #[test]
     fn test_search_example_dataset() {
-        let path = PathBuf::from("examples/datasets");
+        init_cache(&PathBuf::from("examples/cbioportal_datasets")).expect("Failed to init cache");
 
-        Datasets::index(&path, true).expect("Failed to index example datasets");
-        Datasets::validate(&path).expect("Failed to validate example datasets");
-
-        let datasets = Datasets::load(&path).expect("Failed to load example datasets");
-        let ds = datasets
-            .get("acbc_mskcc_2015")
-            .expect("Missing expected dataset 'acbc_mskcc_2015'");
+        let ds =
+            Datasets::get("acbc_mskcc_2015").expect("Missing expected dataset 'acbc_mskcc_2015'");
 
         let result: DatasetDataResponse = ds
             .search(&None, Some(1), Some(5), None)

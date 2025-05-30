@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Layout, Menu, List, Button, Typography, message, Input, Row, Col, Modal, Tooltip, Tag, Checkbox } from 'antd';
 import { getDatasets } from '@/services/biominer/datasets';
 import './index.less';
-import { BarChartOutlined, DownloadOutlined, FileTextFilled, InfoCircleFilled, PieChartFilled, SortAscendingOutlined, SortDescendingOutlined } from '@ant-design/icons';
+import { BarChartOutlined, FileTextFilled, InfoCircleFilled, PieChartFilled, SortAscendingOutlined, SortDescendingOutlined } from '@ant-design/icons';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useHistory } from 'umi';
@@ -165,14 +165,6 @@ const DatasetList: React.FC = () => {
                                                 setMarkdown(item.description);
                                             }}>
                                             Info
-                                        </Button>
-                                    </Tooltip>,
-                                    <Tooltip title="Coming soon...">
-                                        <Button type="link" icon={<DownloadOutlined />} disabled
-                                            onClick={() => {
-                                                // TODO: Redirect to the data-repo page.
-                                            }}>
-                                            Download
                                         </Button>
                                     </Tooltip>,
                                     <Button type="link" icon={<PieChartFilled />} onClick={() => {

@@ -6,13 +6,32 @@ import { history } from 'umi';
 import ColumnSelector, { getDefaultSelectedKeys } from './ColumnSelector';
 import { filters2string } from './Filter';
 import type { ComposeQueryItem } from './Filter';
-import { BarChartOutlined, CloudDownloadOutlined, DownloadOutlined, FileOutlined, FilterOutlined, MoreOutlined, QuestionCircleOutlined } from '@ant-design/icons';
+import { BarChartOutlined, CloudDownloadOutlined, DownloadOutlined, FileOutlined, FilterOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import QueryBuilder from './QueryBuilder';
 import VisualPanel from './VisualPanel';
 import VirtualTable from './VirtualTable';
+import DataInfo from './DataInfo';
+import DataDownloader from './DataDownloader';
+import Papa from 'papaparse';
 
 import './index.less';
-import DataInfo from './DataInfo';
+
+export const downloadTSV = (data: Record<string, any>[], filename = 'metadata.tsv') => {
+    const tsv = Papa.unparse(data, {
+        delimiter: '\t',
+        quotes: false,
+    });
+
+    const blob = new Blob(['\uFEFF' + tsv], { type: 'text/tab-separated-values;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+};
 
 const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
     const [data, setData] = useState<API.DatasetDataResponse>({
@@ -36,6 +55,7 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
     const [filters, setFilters] = useState<ComposeQueryItem | undefined>(undefined);
     const [visualPanelVisible, setVisualPanelVisible] = useState<boolean>(true);
     const [currentRecord, setCurrentRecord] = useState<Record<string, any> | null>(null);
+    const [datasetDownloadModalVisible, setDatasetDownloadModalVisible] = useState<boolean>(false);
 
     useEffect(() => {
         let datasetKey = key ?? '';
@@ -194,11 +214,11 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
                     <Col span={10} className="datatable-header-lower-right">
                         {!loading ?
                             <>
-                                <Tooltip title="Coming soon...">
+                                <Tooltip title="Download the dataset (each dataset might have at least two files: metadata table and datafile table which contain information about the data)">
                                     <Button
                                         onClick={() => {
-                                            // TODO: Download the dataset
-                                        }} icon={<DownloadOutlined />} disabled type="default">
+                                            setDatasetDownloadModalVisible(true);
+                                        }} icon={<DownloadOutlined />} type="default">
                                         Download Dataset
                                     </Button>
                                 </Tooltip>
@@ -315,6 +335,32 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
                     </Modal>
                     : null
             }
+            <DataDownloader open={datasetDownloadModalVisible} onClose={() => setDatasetDownloadModalVisible(false)}
+                onDownloadMetadataTable={() => {
+                    // TODO: Download the metadata table
+                    message.info('Downloading the metadata table, it will take a while. Please don\'t close or refresh the page.');
+
+                    if (data.records.length === data.total) {
+                        downloadTSV(data.records, 'metadata.tsv')
+                    } else {
+                        // TODO: The cachedDatasetKey must exist?
+                        if (!cachedDatasetKey) return;
+
+                        getDatasetData({
+                            key: cachedDatasetKey,
+                            page: 1,
+                            page_size: data.total,
+                        }).then(d => {
+                            downloadTSV(d.records, 'metadata.tsv')
+                        }).catch(err => {
+                            message.error('Failed to download the metadata table, please try again later.');
+                        });
+                    }
+                }}
+                onDownloadDatafiles={() => {
+                    // TODO: Download the datafiles
+                    message.info('Data files are not available yet. But it will come soon.');
+                }} />
         </Spin >
     );
 };
