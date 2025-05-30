@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { Button, Modal, Typography, Row, Col, message, Tooltip, Spin } from 'antd';
+import { Button, Modal, Typography, Row, Col, message, Tooltip, Spin, Tag } from 'antd';
 import { useEffect } from 'react';
 import { getDatasetData, getDataDictionary, getDatasets } from '@/services/biominer/datasets';
 import { history } from 'umi';
 import ColumnSelector, { getDefaultSelectedKeys } from './ColumnSelector';
 import { filters2string } from './Filter';
 import type { ComposeQueryItem } from './Filter';
-import { BarChartOutlined, DownloadOutlined, FileOutlined, FilterOutlined, MoreOutlined, QuestionCircleOutlined } from '@ant-design/icons';
+import { BarChartOutlined, CloudDownloadOutlined, DownloadOutlined, FileOutlined, FilterOutlined, MoreOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import QueryBuilder from './QueryBuilder';
 import VisualPanel from './VisualPanel';
 import VirtualTable from './VirtualTable';
@@ -161,9 +161,27 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
                             <>
                                 <Typography.Text style={{ fontSize: 16 }} className="sample-count">
                                     ⚠️ Loaded {data.records.length} samples, {data.total} samples in total.
-                                    <Tooltip title="If you want to load all the data, please click the button `Load All ({data.total})`. But it will take a while to load.">
+                                    <Tooltip title={
+                                        <span>
+                                            If you want to load all the data, please click the button <Tag color="gray">Load All ({data.total})</Tag>. But it will take a while to load.
+                                        </span>}
+                                    >
                                         <QuestionCircleOutlined style={{ marginLeft: 8 }} />
                                     </Tooltip>
+                                    <Button
+                                        disabled={data.records.length === data.total}
+                                        onClick={
+                                            () => {
+                                                setPage(1);
+                                                if (data.total > 1000) {
+                                                    message.warning('The dataset is too large, it will take a while to load.');
+                                                }
+                                                setPageSize(data.total);
+                                            }
+                                        }
+                                        icon={<CloudDownloadOutlined />} type="primary" size="small" style={{ marginLeft: 8 }}>
+                                        Load All
+                                    </Button>
                                 </Typography.Text>
                                 {
                                     filters && <Row className="datatable-filters">
@@ -195,7 +213,7 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
                                             setPageSize(data.total);
                                         }
                                     }
-                                    icon={<MoreOutlined />} type="default">
+                                    icon={<CloudDownloadOutlined />} type="default">
                                     Load All ({data.total})
                                 </Button>
                                 <ColumnSelector fields={dataDictionary.fields} selectedKeys={selectedColumns} onChange={setSelectedColumns} />
@@ -214,59 +232,60 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
                     </Col>
                 </Col>
             </Row>
-            {visualPanelVisible ?
-                <VisualPanel fields={dataDictionary.fields} data={data.records}
-                    total={data.total} selectedColumns={selectedColumns}
-                    onClose={(field) => {
-                        setSelectedColumns(selectedColumns.filter(col => col !== field.key));
-                    }} /> :
-                // <VirtualTable
-                //     className='datatable-table'
-                //     dataSource={data.records}
-                //     dataDictionary={columns}
-                //     loading={loading}
-                //     scroll={{ y: window.innerHeight - 270, x: tableWidth }}
-                //     pagination={{
-                //         position: ['bottomRight'],
-                //         pageSize: pageSize,
-                //         current: page,
-                //         total: data.total,
-                //         onChange: (page: number, pageSize: number) => {
-                //             setPage(page);
-                //             setPageSize(pageSize);
-                //         },
-                //         showSizeChanger: true,
-                //         showQuickJumper: true,
-                //         pageSizeOptions: [100, 200, 300, 500, 1000],
-                //     }}
-                //     onCellClick={(record, row, col) => {
-                //         setCurrentRecord(record);
-                //     }}
-                // />
-                <VirtualTable
-                    className='datatable-table'
-                    size="small"
-                    dataSource={data.records}
-                    rowKey={(record: any, idx: any) => idx?.toString() ?? ''}
-                    scroll={{ y: window.innerHeight - 276, x: window.innerWidth - 48 }}
-                    pagination={{
-                        position: ['bottomRight'],
-                        pageSize: pageSize,
-                        current: page,
-                        total: data.total,
-                        onChange: (page: number, pageSize: number) => {
-                            setPage(page);
-                            setPageSize(pageSize);
-                        },
-                        showSizeChanger: true,
-                        showQuickJumper: true,
-                        pageSizeOptions: [100, 200, 300, 500, 1000],
-                    }}
-                    onCellClick={(record, row, col) => {
-                        setCurrentRecord(record);
-                    }}
-                    dataDictionary={columns}
-                />
+            {
+                visualPanelVisible ?
+                    <VisualPanel fields={dataDictionary.fields} data={data.records}
+                        total={data.total} selectedColumns={selectedColumns}
+                        onClose={(field) => {
+                            setSelectedColumns(selectedColumns.filter(col => col !== field.key));
+                        }} /> :
+                    // <VirtualTable
+                    //     className='datatable-table'
+                    //     dataSource={data.records}
+                    //     dataDictionary={columns}
+                    //     loading={loading}
+                    //     scroll={{ y: window.innerHeight - 270, x: tableWidth }}
+                    //     pagination={{
+                    //         position: ['bottomRight'],
+                    //         pageSize: pageSize,
+                    //         current: page,
+                    //         total: data.total,
+                    //         onChange: (page: number, pageSize: number) => {
+                    //             setPage(page);
+                    //             setPageSize(pageSize);
+                    //         },
+                    //         showSizeChanger: true,
+                    //         showQuickJumper: true,
+                    //         pageSizeOptions: [100, 200, 300, 500, 1000],
+                    //     }}
+                    //     onCellClick={(record, row, col) => {
+                    //         setCurrentRecord(record);
+                    //     }}
+                    // />
+                    <VirtualTable
+                        className='datatable-table'
+                        size="small"
+                        dataSource={data.records}
+                        rowKey={(record: any, idx: any) => idx?.toString() ?? ''}
+                        scroll={{ y: window.innerHeight - 276, x: window.innerWidth - 48 }}
+                        pagination={{
+                            position: ['bottomRight'],
+                            pageSize: pageSize,
+                            current: page,
+                            total: data.total,
+                            onChange: (page: number, pageSize: number) => {
+                                setPage(page);
+                                setPageSize(pageSize);
+                            },
+                            showSizeChanger: true,
+                            showQuickJumper: true,
+                            pageSizeOptions: [100, 200, 300, 500, 1000],
+                        }}
+                        onCellClick={(record, row, col) => {
+                            setCurrentRecord(record);
+                        }}
+                        dataDictionary={columns}
+                    />
             }
             <QueryBuilder
                 visible={filterModalVisible}
@@ -296,7 +315,7 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
                     </Modal>
                     : null
             }
-        </Spin>
+        </Spin >
     );
 };
 

@@ -31,8 +31,8 @@ const Footer: React.FC = () => {
           blankTarget: true,
         },
         {
-          key: 'OpenProphetDB',
-          title: 'prophetdb',
+          key: 'prophetdb',
+          title: 'OpenProphetDB',
           href: 'https://www.prophetdb.org',
           blankTarget: true,
         },

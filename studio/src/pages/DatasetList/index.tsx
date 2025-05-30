@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { Layout, Menu, List, Button, Typography, message, Input, Row, Col, Modal, Tooltip } from 'antd';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Layout, Menu, List, Button, Typography, message, Input, Row, Col, Modal, Tooltip, Tag, Checkbox } from 'antd';
 import { getDatasets } from '@/services/biominer/datasets';
 import './index.less';
-import { DownloadOutlined, FileTextFilled, InfoCircleFilled, PieChartFilled, SortAscendingOutlined, SortDescendingOutlined } from '@ant-design/icons';
+import { BarChartOutlined, DownloadOutlined, FileTextFilled, InfoCircleFilled, PieChartFilled, SortAscendingOutlined, SortDescendingOutlined } from '@ant-design/icons';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useHistory } from 'umi';
@@ -23,8 +23,10 @@ const DatasetList: React.FC = () => {
     const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
     const [markdown, setMarkdown] = useState<string>('');
     const [orderField, setOrderField] = useState<string>('num_of_samples');
+    const [orderType, setOrderType] = useState<{ name: string, num_of_samples: string }>({ name: 'desc', num_of_samples: 'desc' });
     const history = useHistory();
     const [loading, setLoading] = useState(false);
+    const [selectedDataset, setSelectedDataset] = useState<API.DatasetMetadata | null>(null);
 
     useEffect(() => {
         setLoading(true);
@@ -66,23 +68,16 @@ const DatasetList: React.FC = () => {
         setIsModalOpen(false);
     };
 
-    const filteredDatasets = (tag: string, searchValue: string, orderField: string) => {
-        if (searchValue === '') {
-            return tagDatasetsMap[tag] && tagDatasetsMap[tag].sort((a: any, b: any) => {
-                if (orderField === 'name') {
-                    return a.name.localeCompare(b.name);
-                } else if (orderField === 'num_of_samples') {
-                    return b.num_of_samples - a.num_of_samples;
-                }
-            });
-        }
-
-        const data = tagDatasetsMap[tag].filter(ds => ds.name.includes(searchValue));
+    const filterDatasets = (
+        tag: string, searchValue: string, oField: string, oType: 'asc' | 'desc'
+    ) => {
+        console.log(tagDatasetsMap[tag], searchValue, oField, oType);
+        const data = tagDatasetsMap[tag]?.filter(ds => searchValue === '' || ds.name.includes(searchValue));
         return data && data.sort((a: any, b: any) => {
-            if (orderField === 'name') {
-                return a.name.localeCompare(b.name);
-            } else if (orderField === 'num_of_samples') {
-                return b.num_of_samples - a.num_of_samples;
+            if (oField === 'name') {
+                return oType === 'asc' ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name);
+            } else if (oField === 'num_of_samples') {
+                return oType === 'asc' ? a.num_of_samples - b.num_of_samples : b.num_of_samples - a.num_of_samples;
             }
         });
     };
@@ -91,12 +86,23 @@ const DatasetList: React.FC = () => {
         <Row className="dataset-container">
             <Col className="dataset-header" span={24}>
                 <div className="dataset-header-title">Select Datasets for Visualization & Analysis:</div>
+                <Tag className="tag-count" color="blue">
+                    {tagDatasetsMap[selectedTag]?.length || 0} Datasets Listed
+                </Tag>
                 <div className="dataset-search">
-                    <Button type="text" icon={<SortAscendingOutlined />} onClick={() => {
+                    <Button type="text" icon={orderType.name === 'asc' ? <SortDescendingOutlined /> : <SortAscendingOutlined />} onClick={() => {
                         setOrderField('name');
+                        setOrderType({
+                            name: orderType.name === 'asc' ? 'desc' : 'asc',
+                            num_of_samples: orderType.num_of_samples,
+                        });
                     }}>Sort by Name</Button>
-                    <Button type="text" icon={<SortAscendingOutlined />} onClick={() => {
+                    <Button type="text" icon={orderType.num_of_samples === 'asc' ? <SortDescendingOutlined /> : <SortAscendingOutlined />} onClick={() => {
                         setOrderField('num_of_samples');
+                        setOrderType({
+                            name: orderType.name,
+                            num_of_samples: orderType.num_of_samples === 'asc' ? 'desc' : 'asc',
+                        });
                     }}>Sort by Sample Count</Button>
                     <Input.Search
                         placeholder="Search by dataset name"
@@ -115,66 +121,108 @@ const DatasetList: React.FC = () => {
                         onClick={e => setSelectedTag(e.key)}
                     >
                         <Menu.Item key="All">
-                            All <span className="count">({datasets.records.length})</span>
+                            <span className="tag-name">All</span>
+                            <Tag className="tag-count">{datasets.records.length}</Tag>
                         </Menu.Item>
                         <Menu.Item key="No tags">
-                            No tags <span className="count">({tagDatasetsMap['No tags']?.length || 0})</span>
+                            <span className="tag-name">No tags</span>
+                            <Tag className="tag-count">{tagDatasetsMap['No tags']?.length || 0}</Tag>
                         </Menu.Item>
                         {allTags.map(tag => (
                             <Menu.Item key={tag}>
-                                {tag} <span className="count">({tagDatasetsMap[tag]?.length || 0})</span>
+                                <span className="tag-name">{tag}</span>
+                                <Tag className="tag-count">{tagDatasetsMap[tag]?.length || 0}</Tag>
                             </Menu.Item>
                         ))}
                     </Menu>
                 </Sider>
 
-                <List
-                    loading={loading}
-                    className="dataset-right-sider"
-                    itemLayout="horizontal"
-                    dataSource={filteredDatasets(selectedTag, searchValue, orderField) || []}
-                    locale={{ emptyText: 'No datasets available' }}
-                    renderItem={item => (
-                        <List.Item
-                            className="dataset-item"
-                            actions={[
-                                <Button type="link" icon={<FileTextFilled />}
-                                    onClick={() => window.open(`https://pubmed.ncbi.nlm.nih.gov/${item.pmid}`, '_blank')}>
-                                    Cite
-                                </Button>,
-                                <Tooltip title="Coming soon...">
-                                    <Button type="link" icon={<InfoCircleFilled />} disabled
-                                        onClick={() => {
-                                            // TODO: Show the markdown content of the dataset in another modal.
-                                            setIsModalOpen(true);
-                                            setMarkdown(item.description);
-                                        }}>
-                                        Info
-                                    </Button>
-                                </Tooltip>,
-                                <Tooltip title="Coming soon...">
-                                    <Button type="link" icon={<DownloadOutlined />} disabled
-                                        onClick={() => {
-                                            // TODO: Redirect to the data-repo page.
-                                        }}>
-                                        Download
-                                    </Button>
-                                </Tooltip>,
-                                <Button type="link" icon={<PieChartFilled />} onClick={() => {
-                                    history.push(`/datatable/${item.key}`);
-                                }}>
-                                    Visualize
-                                </Button>,
-                            ]}
-                        >
-                            <List.Item.Meta
-                                title={<Typography.Text strong>{item.name}</Typography.Text>}
-                                description={<p dangerouslySetInnerHTML={{ __html: item.description }} />}
-                            />
-                            <div className="sample-count">{item.num_of_samples} samples</div>
-                        </List.Item>
-                    )}
-                />
+                <div className="dataset-right-sider-container">
+                    <List
+                        loading={loading}
+                        className="dataset-right-sider"
+                        itemLayout="horizontal"
+                        dataSource={
+                            filterDatasets(selectedTag, searchValue, orderField,
+                                orderType[orderField as keyof typeof orderType] as 'asc' | 'desc'
+                            ) || []
+                        }
+
+                        locale={{ emptyText: 'No datasets available' }}
+                        renderItem={item => (
+                            <List.Item
+                                className="dataset-item"
+                                actions={[
+                                    <Button type="link" icon={<FileTextFilled />}
+                                        onClick={() => window.open(`https://pubmed.ncbi.nlm.nih.gov/${item.pmid}`, '_blank')}>
+                                        Cite
+                                    </Button>,
+                                    <Tooltip title="Coming soon...">
+                                        <Button type="link" icon={<InfoCircleFilled />} disabled
+                                            onClick={() => {
+                                                // TODO: Show the markdown content of the dataset in another modal.
+                                                setIsModalOpen(true);
+                                                setMarkdown(item.description);
+                                            }}>
+                                            Info
+                                        </Button>
+                                    </Tooltip>,
+                                    <Tooltip title="Coming soon...">
+                                        <Button type="link" icon={<DownloadOutlined />} disabled
+                                            onClick={() => {
+                                                // TODO: Redirect to the data-repo page.
+                                            }}>
+                                            Download
+                                        </Button>
+                                    </Tooltip>,
+                                    <Button type="link" icon={<PieChartFilled />} onClick={() => {
+                                        history.push(`/datatable/${item.key}`);
+                                    }}>
+                                        Visualize
+                                    </Button>,
+                                ]}
+                            >
+                                <List.Item.Meta
+                                    title={
+                                        <>
+                                            <Checkbox
+                                                checked={selectedDataset?.key === item.key}
+                                                onChange={(e) => {
+                                                    if (e.target.checked) {
+                                                        setSelectedDataset(item);
+                                                    } else {
+                                                        setSelectedDataset(null);
+                                                    }
+                                                }}
+                                                style={{ marginRight: 8 }}
+                                            />
+                                            <Typography.Text>{item.name}</Typography.Text>
+                                        </>
+                                    }
+                                    description={
+                                        <div className="dataset-description">
+                                            {
+                                                item.groups.length > 0 && <span>
+                                                    {item.groups.map(group => <Tag key={group} style={{ fontSize: 8 }}>{group}</Tag>)}
+                                                </span>
+                                            }
+                                            <p dangerouslySetInnerHTML={{ __html: item.description }} />
+                                        </div>
+                                    }
+                                />
+                                <div className="sample-count">{item.num_of_samples} samples</div>
+                            </List.Item>
+                        )}
+                    />
+
+                    <Row className="dataset-explore-button">
+                        <Button type="primary" size="large" onClick={() => {
+                            history.push(`/datatable/${selectedDataset?.key}`);
+                        }} disabled={selectedDataset === null} icon={<BarChartOutlined />}>
+                            Explore Selected Dataset
+                        </Button>
+                    </Row>
+                </div>
             </Col>
             <Modal
                 width="50%"
