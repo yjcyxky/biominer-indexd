@@ -105,6 +105,12 @@ declare namespace API {
     contain_tag?: boolean;
   };
 
+  type FieldGroupSummary = {
+    value: string;
+    count: number;
+    freq_percent: number;
+  };
+
   type File = {
     guid: string;
     filename: string;
@@ -140,12 +146,26 @@ declare namespace API {
     key: string;
   };
 
+  type getDatafilesParams = {
+    key: string;
+  };
+
   type getDatasetDataParams = {
     key: string;
     query?: string;
     page?: number;
     page_size?: number;
     order_by?: string;
+  };
+
+  type getDatasetGroupStatsParams = {
+    key: string;
+    field_key?: string;
+    query?: string;
+  };
+
+  type getDatasetLicenseParams = {
+    key: string;
   };
 
   type getDatasetsParams = {

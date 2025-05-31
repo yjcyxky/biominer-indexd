@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Layout, Menu, List, Button, Typography, message, Input, Row, Col, Modal, Tooltip, Tag, Checkbox } from 'antd';
-import { getDatasets } from '@/services/biominer/datasets';
+import { getDatasets, getDatasetLicense } from '@/services/biominer/datasets';
 import './index.less';
 import { BarChartOutlined, FileTextFilled, InfoCircleFilled, PieChartFilled, SortAscendingOutlined, SortDescendingOutlined } from '@ant-design/icons';
 import ReactMarkdown from 'react-markdown';
@@ -21,6 +21,7 @@ const DatasetList: React.FC = () => {
     const [tagDatasetsMap, setTagDatasetsMap] = useState<Record<string, API.DatasetMetadata[]>>({});
     const [searchValue, setSearchValue] = useState<string>('');
     const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+    const [markdownTitle, setMarkdownTitle] = useState<React.ReactNode>(null);
     const [markdown, setMarkdown] = useState<string>('');
     const [orderField, setOrderField] = useState<string>('total');
     const [orderType, setOrderType] = useState<{ name: string, total: string }>({ name: 'desc', total: 'desc' });
@@ -162,9 +163,27 @@ const DatasetList: React.FC = () => {
                                             onClick={() => {
                                                 // TODO: Show the markdown content of the dataset in another modal.
                                                 setIsModalOpen(true);
+                                                setMarkdownTitle(<span>Dataset Info for <Tag style={{ fontSize: 16 }}>{item.name}</Tag></span>);
                                                 setMarkdown(item.description);
                                             }}>
                                             Info
+                                        </Button>
+                                    </Tooltip>,
+                                    <Tooltip title="Coming soon...">
+                                        <Button type="link" icon={<FileTextFilled />}
+                                            onClick={() => {
+                                                // TODO: Show the license of the dataset in another modal.
+                                                setIsModalOpen(true);
+                                                setMarkdownTitle(<span>Dataset License for <Tag style={{ fontSize: 16 }}>{item.name}</Tag></span>);
+                                                getDatasetLicense({ key: item.key })
+                                                    .then(res => {
+                                                        setMarkdown(res);
+                                                    })
+                                                    .catch(err => {
+                                                        setMarkdown("No license found.\n\nPlease contact the administrator for more information.");
+                                                    });
+                                            }}>
+                                            License
                                         </Button>
                                     </Tooltip>,
                                     <Button type="link" icon={<PieChartFilled />} onClick={() => {
@@ -219,12 +238,14 @@ const DatasetList: React.FC = () => {
             <Modal
                 width="50%"
                 className='dataset-info-modal'
-                title="Dataset Info"
+                title={markdownTitle}
                 open={isModalOpen}
                 onCancel={handleCancel}
                 footer={null}
             >
-                <ReactMarkdown remarkPlugins={[remarkGfm]} children={markdown}></ReactMarkdown>
+                <Typography.Text style={{ fontSize: 16 }}>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]} children={markdown}></ReactMarkdown>
+                </Typography.Text>
             </Modal>
         </Row>
     );

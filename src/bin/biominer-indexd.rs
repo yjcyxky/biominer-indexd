@@ -3,6 +3,7 @@ extern crate log;
 #[macro_use]
 extern crate lazy_static;
 
+use biominer_indexd::model::dataset::init_cache;
 use biominer_indexd::{api, connect_db, init_logger, model, repo_config::RepoConfig};
 use dotenv::dotenv;
 use log::{error, LevelFilter};
@@ -19,7 +20,7 @@ use poem::{
 use poem_openapi::OpenApiService;
 use rust_embed::RustEmbed;
 use std::env;
-use std::path::Path as OsPath;
+use std::path::{Path as OsPath, PathBuf};
 use std::sync::Arc;
 // use tokio::{self, time::Duration};
 
@@ -177,7 +178,8 @@ async fn main() -> Result<(), std::io::Error> {
     }
     let base_path = OsPath::new("/").join(&base_path[..]);
 
-    env::set_var("BIOMINER_INDEXD_DATA_DIR", args.data_dir);
+    init_cache(&PathBuf::from(&args.data_dir)).expect("Failed to init cache...");
+    env::set_var("BIOMINER_INDEXD_DATA_DIR", &args.data_dir);
 
     println!(
         "\n\t\t*** Launch biominer-indexd on {}:{}{} ***",

@@ -923,6 +923,18 @@ impl Dataset {
         return load_tsv(&datafile_path)
     }
 
+    /// Get the license for a dataset.
+    pub fn get_license(&self) -> Result<String, Error> {
+        let license_path = self.path.join("license.md");
+        let license = match fs::read_to_string(&license_path) {
+            Ok(license) => license,
+            Err(e) => {
+                return Err(anyhow::anyhow!("Failed to read license file: {}", e));
+            }
+        };
+        Ok(license)
+    }
+
     /// Get the datafiles for a dataset.
     ///
     /// This function returns the datafiles for a dataset from the cache.

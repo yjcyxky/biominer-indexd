@@ -285,6 +285,21 @@ enum GetDatasetDatafilesResponse {
     BadRequest(PlainText<String>),
 }
 
+#[derive(ApiResponse)]
+enum GetDatasetLicenseResponse {
+    #[oai(status = 200)]
+    Ok(Json<String>),
+
+    #[oai(status = 404)]
+    NotFound(PlainText<String>),
+
+    #[oai(status = 400)]
+    BadRequest(PlainText<String>),
+
+    #[oai(status = 500)]
+    InternalError(PlainText<String>),
+}
+
 pub struct BioMinerIndexdApi;
 
 #[OpenApi(prefix_path = "/api/v1")]
@@ -875,6 +890,33 @@ impl BioMinerIndexdApi {
         };
 
         GetDatasetDataDictionaryResponse::Ok(Json(data_dictionary))
+    }
+
+    /// Call `/api/v1/datasets/:key/license` to get the dataset license.
+    #[oai(
+        path = "/datasets/:key/license",
+        method = "get",
+        tag = "DatasetApiTags::Datasets",
+        operation_id = "getDatasetLicense"
+    )]
+    async fn get_dataset_license(&self, key: Path<String>) -> GetDatasetLicenseResponse {
+        let dataset = match Datasets::get(&key.0) {
+            Ok(dataset) => dataset,
+            Err(e) => {
+                warn!("Failed to get dataset: {}", e);
+                return GetDatasetLicenseResponse::NotFound(PlainText(e.to_string()));
+            }
+        };
+
+        let license = match dataset.get_license() {
+            Ok(license) => license,
+            Err(e) => {
+                warn!("Failed to get license: {}", e);
+                return GetDatasetLicenseResponse::NotFound(PlainText(e.to_string()));
+            }
+        };
+
+        GetDatasetLicenseResponse::Ok(Json(license))
     }
 
     /// Call `/api/v1/datasets/:key/datafiles` to get the dataset datafiles.

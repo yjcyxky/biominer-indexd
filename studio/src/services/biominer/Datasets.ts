@@ -46,3 +46,47 @@ export async function getDataDictionary(
     ...(options || {}),
   });
 }
+
+/** Call `/api/v1/datasets/:key/datafiles` to get the dataset datafiles. GET /api/v1/datasets/${param0}/datafiles */
+export async function getDatafiles(
+  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
+  params: API.getDatafilesParams,
+  options?: { [key: string]: any },
+) {
+  const { key: param0, ...queryParams } = params;
+  return request<Record<string, any>[]>(`/api/v1/datasets/${param0}/datafiles`, {
+    method: 'GET',
+    params: { ...queryParams },
+    ...(options || {}),
+  });
+}
+
+/** Call `/api/v1/datasets/:key/group-stats` to get the dataset groups. GET /api/v1/datasets/${param0}/group-stats */
+export async function getDatasetGroupStats(
+  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
+  params: API.getDatasetGroupStatsParams,
+  options?: { [key: string]: any },
+) {
+  const { key: param0, ...queryParams } = params;
+  return request<API.FieldGroupSummary[]>(`/api/v1/datasets/${param0}/group-stats`, {
+    method: 'GET',
+    params: {
+      ...queryParams,
+    },
+    ...(options || {}),
+  });
+}
+
+/** Call `/api/v1/datasets/:key/license` to get the dataset license. GET /api/v1/datasets/${param0}/license */
+export async function getDatasetLicense(
+  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
+  params: API.getDatasetLicenseParams,
+  options?: { [key: string]: any },
+) {
+  const { key: param0, ...queryParams } = params;
+  return request<string>(`/api/v1/datasets/${param0}/license`, {
+    method: 'GET',
+    params: { ...queryParams },
+    ...(options || {}),
+  });
+}
