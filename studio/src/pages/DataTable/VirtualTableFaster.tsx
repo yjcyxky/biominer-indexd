@@ -29,6 +29,7 @@ const allCells = [
 interface VirtualTableFasterProps {
     dataSource: API.DatasetDataResponse['records'];
     dataDictionary: API.DataDictionary['fields'];
+    isFileBased: boolean;
     loading: boolean;
     className?: string;
     scroll?: {
@@ -49,7 +50,7 @@ interface VirtualTableFasterProps {
 }
 
 const VirtualTableFaster: React.FC<VirtualTableFasterProps> = ({
-    dataSource, dataDictionary, loading, className, scroll, pagination, onCellClick
+    dataSource, dataDictionary, isFileBased, loading, className, scroll, pagination, onCellClick
 }) => {
     const [columns, setColumns] = useState<GridColumn[]>([]);
     const visibleRows = useMemo(() => {
@@ -268,7 +269,9 @@ const VirtualTableFaster: React.FC<VirtualTableFasterProps> = ({
 
                         {
                             popover.iconIndex === 1 && (
-                                <ChartCard className='chart-card-popover' field={dataDictionary.find(col => col.key === columns[popover.col].id)} data={dataSource} total={dataSource.length} />
+                                <ChartCard className='chart-card-popover'
+                                    field={dataDictionary.find(col => col.key === columns[popover.col].id) ?? dataDictionary[0]} data={dataSource}
+                                    isFileBased={isFileBased} total={dataSource.length} />
                             )
                         }
 

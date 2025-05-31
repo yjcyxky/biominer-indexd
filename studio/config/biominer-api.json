@@ -1178,7 +1178,8 @@
           "pmid",
           "groups",
           "tags",
-          "num_of_samples"
+          "total",
+          "is_filebased"
         ],
         "properties": {
           "key": {
@@ -1208,9 +1209,12 @@
               "type": "string"
             }
           },
-          "num_of_samples": {
+          "total": {
             "type": "integer",
             "format": "uint64"
+          },
+          "is_filebased": {
+            "type": "boolean"
           }
         }
       },

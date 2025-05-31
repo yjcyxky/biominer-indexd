@@ -9,5 +9,6 @@
     "ACYC"
   ],
   "tags": [],
-  "num_of_samples": 12
+  "is_filebased": false, 
+  "total": 12
 }

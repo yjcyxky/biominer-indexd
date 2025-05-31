@@ -29,7 +29,8 @@ def parse_meta_study(meta_path):
         "pmid": metadata.get("pmid", ""),
         "groups": metadata.get("groups", "").split(";"),
         "tags": [],
-        "num_of_samples": 0,
+        "total": 0,
+        "is_filebased": False,
     }
 
 
@@ -185,7 +186,8 @@ def convert_cbioportal_study(study_dir, output_dir):
         except Exception as e:
             print(f"⚠️ Failed to convert column '{col}' to {dtype}: {e}")
 
-    dataset_meta["num_of_samples"] = len(combined_df)
+    dataset_meta["total"] = len(combined_df)
+    dataset_meta["is_filebased"] = False
 
     # Save Parquet
     combined_df.to_parquet(output_dir / "data.parquet", index=False)

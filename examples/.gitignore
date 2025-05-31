@@ -1,7 +1,4 @@
-cbioportal_datasets/*
-!cbioportal_datasets/acbc_mskcc_2015
-!cbioportal_datasets/acc_2019
-!cbioportal_datasets/index.json
-
-custom_datasets/*
 datasets/*
+!datasets/acbc_mskcc_2015
+!datasets/acc_2019
+!datasets/index.json

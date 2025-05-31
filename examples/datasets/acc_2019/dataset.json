@@ -9,5 +9,6 @@
     "PUBLIC"
   ],
   "tags": [],
-  "num_of_samples": 1049
+  "is_filebased": false, 
+  "total": 1049
 }

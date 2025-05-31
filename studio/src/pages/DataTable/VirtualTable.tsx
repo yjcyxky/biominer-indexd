@@ -12,6 +12,7 @@ interface VirtualTableProps extends TableProps<any> {
     dataSource: API.DatasetDataResponse['records'];
     onCellClick?: (record: API.DatasetDataResponse['records'][number], row: number, col: API.DataDictionaryField) => void;
     dataDictionary: API.DataDictionaryField[];
+    isFileBased: boolean;
 }
 
 const VirtualTable: React.FC<VirtualTableProps> = ({
@@ -22,6 +23,7 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
     pagination,
     dataDictionary,
     onCellClick,
+    isFileBased,
     ...rest
 }) => {
     const totalHeight = (scroll?.y as number) ?? 500;
@@ -41,7 +43,7 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
                             <Button size="small" icon={<InfoCircleOutlined />} />
                         </Tooltip>
                         <Popover content={<ChartCard className='chart-card-popover'
-                            field={col} data={dataSource} total={dataSource.length} />}
+                            field={col} data={dataSource} isFileBased={isFileBased} total={dataSource.length} />}
                             trigger="click" destroyTooltipOnHide>
                             <Button size="small" icon={<BarChartOutlined />} type="primary" />
                         </Popover>

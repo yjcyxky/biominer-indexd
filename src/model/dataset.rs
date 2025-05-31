@@ -7,7 +7,7 @@
 //
 // ## Structure
 // - `index.json`: A JSON array of datasets with fields: id, name, description, citation,
-//   pmid, groups, tags, num_of_samples
+//   pmid, groups, tags, total, is_filebased
 // - Each dataset folder contains:
 //   - `data_dictionary.json`: defines schema for the dataset
 //   - `data.parquet`: tabular file for metadata, column names correspond to keys in dictionary
@@ -125,7 +125,8 @@ pub struct DatasetMetadata {
     pub pmid: String,
     pub groups: Vec<String>,
     pub tags: Vec<String>,
-    pub num_of_samples: usize,
+    pub total: usize,
+    pub is_filebased: bool,
 }
 
 impl DatasetMetadata {
@@ -148,7 +149,8 @@ impl DatasetMetadata {
                 .iter()
                 .map(|v| v.as_str().unwrap().to_string())
                 .collect(),
-            num_of_samples: value["num_of_samples"].as_u64().unwrap() as usize,
+            total: value["total"].as_u64().unwrap() as usize,
+            is_filebased: value["is_filebased"].as_bool().unwrap(),
         }
     }
 }
@@ -386,7 +388,7 @@ impl Datasets {
     /// * `query` - An optional query (`ComposeQuery`) to filter datasets. If `None`, all datasets are returned.
     /// * `page` - An optional page number (1-based). Defaults to 1 if not provided.
     /// * `page_size` - An optional page size. Defaults to 10 if not provided.
-    /// * `order_by` - An optional SQL `ORDER BY` clause (e.g., `"name ASC"`, `"num_of_samples DESC"`).
+    /// * `order_by` - An optional SQL `ORDER BY` clause (e.g., `"name ASC"`, `"total DESC"`).
     ///
     /// # Returns
     ///
@@ -472,7 +474,7 @@ impl Datasets {
         };
 
         let sql = format!(
-            "SELECT key, name, description, citation, pmid, json(groups) AS groups, json(tags) AS tags, num_of_samples FROM datasets WHERE {} {} {}",
+            "SELECT key, name, description, citation, pmid, json(groups) AS groups, json(tags) AS tags, total, is_filebased FROM datasets WHERE {} {} {}",
             query_str, order_by_str, pagination_str
         );
 
@@ -488,7 +490,8 @@ impl Datasets {
                     "pmid".to_string(),
                     "groups".to_string(),
                     "tags".to_string(),
-                    "num_of_samples".to_string(),
+                    "total".to_string(),
+                    "is_filebased".to_string(),
                 ],
             );
 
@@ -1023,7 +1026,7 @@ mod tests {
 
     #[test]
     fn test_validate_example_dataset() {
-        let path = PathBuf::from("examples/cbioportal_datasets");
+        let path = PathBuf::from("examples/datasets");
 
         Datasets::index(&path, true).expect("Failed to index example datasets");
         Datasets::validate(&path).expect("Failed to validate example datasets");
@@ -1033,7 +1036,7 @@ mod tests {
 
     #[test]
     fn test_get_data_dictionary() {
-        init_cache(&PathBuf::from("examples/cbioportal_datasets")).expect("Failed to init cache");
+        init_cache(&PathBuf::from("examples/datasets")).expect("Failed to init cache");
 
         let ds =
             Datasets::get("acbc_mskcc_2015").expect("Missing expected dataset 'acbc_mskcc_2015'");
@@ -1045,14 +1048,14 @@ mod tests {
 
     #[test]
     fn test_search_datasets() {
-        let path = PathBuf::from("examples/cbioportal_datasets");
+        let path = PathBuf::from("examples/datasets");
         let result = Datasets::search(&path, &None, None, None, None).expect("Search failed");
         assert!(result.total > 0);
     }
 
     #[test]
     fn test_search_example_dataset() {
-        init_cache(&PathBuf::from("examples/cbioportal_datasets")).expect("Failed to init cache");
+        init_cache(&PathBuf::from("examples/datasets")).expect("Failed to init cache");
 
         let ds =
             Datasets::get("acbc_mskcc_2015").expect("Missing expected dataset 'acbc_mskcc_2015'");

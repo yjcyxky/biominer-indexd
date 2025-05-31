@@ -66,6 +66,7 @@ const computeKaplanMeier = (data: API.DatasetDataResponse['records'], timeKey: s
 interface ChartCardProps {
     field: API.DataDictionaryField;
     data: API.DatasetDataResponse['records'];
+    isFileBased: boolean;
     selectedColumns?: string[];
     onClose?: () => void;
     className?: string;
@@ -210,7 +211,7 @@ export const getRecommendedChartType = (field: API.DataDictionaryField, length: 
     return 'unsupported';
 };
 
-const ChartCard: React.FC<ChartCardProps> = ({ field, data, total, onClose, className, resize, selectedColumns }) => {
+const ChartCard: React.FC<ChartCardProps> = ({ field, data, isFileBased, total, onClose, className, resize, selectedColumns }) => {
     const chartType = getRecommendedChartType(field, data.length, total, selectedColumns);
     const headerOffset = 64; // Card header height
 
@@ -418,7 +419,7 @@ const ChartCard: React.FC<ChartCardProps> = ({ field, data, total, onClose, clas
             const percentageStr = percentage > 0 ? percentage.toFixed(2) : '0.00';
 
             return (
-                <Statistic title="Loaded Samples [Total]" valueRender={() => (
+                <Statistic title={`Loaded ${isFileBased ? 'Files' : 'Samples'} [Total]`} valueRender={() => (
                     <span style={{ color: '#1890ff' }}>{loadedCount} / {total} ({percentageStr}%)</span>
                 )} />
             );

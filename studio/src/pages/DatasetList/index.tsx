@@ -22,8 +22,8 @@ const DatasetList: React.FC = () => {
     const [searchValue, setSearchValue] = useState<string>('');
     const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
     const [markdown, setMarkdown] = useState<string>('');
-    const [orderField, setOrderField] = useState<string>('num_of_samples');
-    const [orderType, setOrderType] = useState<{ name: string, num_of_samples: string }>({ name: 'desc', num_of_samples: 'desc' });
+    const [orderField, setOrderField] = useState<string>('total');
+    const [orderType, setOrderType] = useState<{ name: string, total: string }>({ name: 'desc', total: 'desc' });
     const history = useHistory();
     const [loading, setLoading] = useState(false);
     const [selectedDataset, setSelectedDataset] = useState<API.DatasetMetadata | null>(null);
@@ -76,8 +76,8 @@ const DatasetList: React.FC = () => {
         return data && data.sort((a: any, b: any) => {
             if (oField === 'name') {
                 return oType === 'asc' ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name);
-            } else if (oField === 'num_of_samples') {
-                return oType === 'asc' ? a.num_of_samples - b.num_of_samples : b.num_of_samples - a.num_of_samples;
+            } else if (oField === 'total') {
+                return oType === 'asc' ? a.total - b.total : b.total - a.total;
             }
         });
     };
@@ -94,16 +94,16 @@ const DatasetList: React.FC = () => {
                         setOrderField('name');
                         setOrderType({
                             name: orderType.name === 'asc' ? 'desc' : 'asc',
-                            num_of_samples: orderType.num_of_samples,
+                            total: orderType.total,
                         });
                     }}>Sort by Name</Button>
-                    <Button type="text" icon={orderType.num_of_samples === 'asc' ? <SortDescendingOutlined /> : <SortAscendingOutlined />} onClick={() => {
-                        setOrderField('num_of_samples');
+                    <Button type="text" icon={orderType.total === 'asc' ? <SortDescendingOutlined /> : <SortAscendingOutlined />} onClick={() => {
+                        setOrderField('total');
                         setOrderType({
                             name: orderType.name,
-                            num_of_samples: orderType.num_of_samples === 'asc' ? 'desc' : 'asc',
+                            total: orderType.total === 'asc' ? 'desc' : 'asc',
                         });
-                    }}>Sort by Sample Count</Button>
+                    }}>Sort by Count</Button>
                     <Input.Search
                         placeholder="Search by dataset name"
                         enterButton="Search"
@@ -202,7 +202,7 @@ const DatasetList: React.FC = () => {
                                         </div>
                                     }
                                 />
-                                <div className="sample-count">{item.num_of_samples} samples</div>
+                                <div className="sample-file-count">{item.total} {item.is_filebased ? 'files' : 'samples'}</div>
                             </List.Item>
                         )}
                     />

@@ -72,7 +72,8 @@ declare namespace API {
     pmid: string;
     groups: string[];
     tags: string[];
-    num_of_samples: number;
+    total: number;
+    is_filebased: boolean;
   };
 
   type DatasetsResponse = {

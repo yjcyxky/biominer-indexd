@@ -23,12 +23,13 @@ const chartMap: Record<string, { w: number; h: number }> = {
 interface VisualPanelProps {
     fields: API.DataDictionaryField[];
     data: API.DatasetDataResponse['records'];
+    isFileBased: boolean;
     total: number;
     selectedColumns: string[];
     onClose?: (field: API.DataDictionaryField) => void;
 }
 
-const VisualPanel: React.FC<VisualPanelProps> = ({ fields, data, total, selectedColumns, onClose }) => {
+const VisualPanel: React.FC<VisualPanelProps> = ({ fields, data, isFileBased, total, selectedColumns, onClose }) => {
     const gridRef = useRef<HTMLDivElement>(null);
     const muuriRef = useRef<Muuri | null>(null);
 
@@ -43,7 +44,7 @@ const VisualPanel: React.FC<VisualPanelProps> = ({ fields, data, total, selected
         allowed_values: [],
         notes: '',
         order: 0,
-        description: 'Total number of samples in the dataset and loaded samples',
+        description: `Total number of ${isFileBased ? 'files' : 'samples'} in the dataset and loaded ${isFileBased ? 'files' : 'samples'}`,
     }
 
     const getInitialSize = (fieldKey: string, chartType: string) => {
@@ -135,7 +136,7 @@ const VisualPanel: React.FC<VisualPanelProps> = ({ fields, data, total, selected
                                 >
                                     <div className="resizable-container">
                                         {resizing && <div className="resize-indicator" />}
-                                        <ChartCard field={field} data={data} total={total}
+                                        <ChartCard field={field} data={data} isFileBased={isFileBased} total={total}
                                             onClose={() => {
                                                 onClose?.(field);
                                             }} resize={() => {

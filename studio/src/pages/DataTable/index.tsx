@@ -179,8 +179,8 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
                     <Col span={14} className="datatable-header-lower-left">
                         {!loading ?
                             <>
-                                <Typography.Text style={{ fontSize: 16 }} className="sample-count">
-                                    ⚠️ Loaded {data.records.length} samples, {data.total} samples in total.
+                                <Typography.Text style={{ fontSize: 16 }} className="sample-file-count">
+                                    ⚠️ Loaded {data.records.length} {datasetMetadata?.is_filebased ? 'files' : 'samples'}, {data.total} {datasetMetadata?.is_filebased ? 'files' : 'samples'} in total.
                                     <Tooltip title={
                                         <span>
                                             If you want to load all the data, please click the button <Tag color="gray">Load All ({data.total})</Tag>. But it will take a while to load.
@@ -254,7 +254,7 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
             </Row>
             {
                 visualPanelVisible ?
-                    <VisualPanel fields={dataDictionary.fields} data={data.records}
+                    <VisualPanel fields={dataDictionary.fields} data={data.records} isFileBased={datasetMetadata?.is_filebased ?? false}
                         total={data.total} selectedColumns={selectedColumns}
                         onClose={(field) => {
                             setSelectedColumns(selectedColumns.filter(col => col !== field.key));
@@ -281,6 +281,7 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
                     //     onCellClick={(record, row, col) => {
                     //         setCurrentRecord(record);
                     //     }}
+                    //    isFileBased={datasetMetadata?.is_filebased ?? false}
                     // />
                     <VirtualTable
                         className='datatable-table'
@@ -305,6 +306,7 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
                             setCurrentRecord(record);
                         }}
                         dataDictionary={columns}
+                        isFileBased={datasetMetadata?.is_filebased ?? false}
                     />
             }
             <QueryBuilder
