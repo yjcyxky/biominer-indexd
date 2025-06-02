@@ -47,8 +47,9 @@ use lazy_static::lazy_static;
 use log::{info, warn};
 use poem_openapi::Object;
 use regex::Regex;
+use polars::prelude::LazyFrame;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Mutex;
 use std::{fs, path::Path, path::PathBuf};
 
@@ -256,6 +257,30 @@ impl Datasets {
         })
     }
 
+    pub fn validate_fields_against_parquet(
+        dict: &DataDictionary,
+        parquet_path: &str,
+    ) -> Result<()> {
+        // 读取 parquet 文件的列名
+        let df = LazyFrame::scan_parquet(parquet_path, Default::default())?.collect()?; // 触发读取
+        let parquet_columns: HashSet<String> = df
+            .get_column_names()
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+
+        for field in &dict.fields {
+            if !parquet_columns.contains(&field.key) {
+                warn!(
+                    "Field key '{}' defined in dictionary but missing in data.parquet.",
+                    field.key
+                );
+            }
+        }
+
+        Ok(())
+    }
+
     /// Validates the dataset directory structure and contents at the specified base path.
     ///
     /// This function performs validation on a dataset collection rooted at `base_path`. It expects:
@@ -358,6 +383,9 @@ impl Datasets {
                 warn!("Missing data.parquet in {:?}", dataset.path);
                 continue;
             }
+
+            // Check whether the dict.fields.key is the same as the data.parquet.columns
+            validate_fields_against_parquet(&dict, &parquet_path)?;
 
             let datafile_path = dataset.path.join("datafile.tsv");
             if !datafile_path.exists() {
@@ -879,13 +907,20 @@ impl Dataset {
         let data_dictionary = match fs::read_to_string(&data_dictionary_path) {
             Ok(data_dictionary) => data_dictionary,
             Err(e) => {
-                return Err(anyhow::anyhow!("Failed to read data dictionary file: {}", e));
+                return Err(anyhow::anyhow!(
+                    "Failed to read data dictionary file: {}",
+                    e
+                ));
             }
         };
-        let data_dictionary: Vec<DataDictionaryField> = match serde_json::from_str(&data_dictionary) {
+        let data_dictionary: Vec<DataDictionaryField> = match serde_json::from_str(&data_dictionary)
+        {
             Ok(data_dictionary) => data_dictionary,
             Err(e) => {
-                return Err(anyhow::anyhow!("Failed to parse data dictionary file: {}", e));
+                return Err(anyhow::anyhow!(
+                    "Failed to parse data dictionary file: {}",
+                    e
+                ));
             }
         };
 
@@ -920,7 +955,7 @@ impl Dataset {
     /// ```
     pub fn load_datafiles(&self) -> Result<Vec<File>, Error> {
         let datafile_path = self.path.join("datafile.tsv");
-        return load_tsv(&datafile_path)
+        return load_tsv(&datafile_path);
     }
 
     /// Get the license for a dataset.

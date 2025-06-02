@@ -8,7 +8,11 @@
     "PUBLIC",
     "ACYC"
   ],
-  "tags": [],
-  "is_filebased": false, 
-  "total": 12
+  "tags": [
+    "disease:Adenoid Cystic Breast Cancer",
+    "organ:Breast",
+    "org:Unassigned"
+  ],
+  "total": 12,
+  "is_filebased": false
 }

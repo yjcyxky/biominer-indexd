@@ -4,6 +4,34 @@ import pandas as pd
 from pathlib import Path
 import click
 import numpy as np
+import requests
+import shutil
+import re
+
+oncotree_url = "https://oncotree.mskcc.org/api/tumorTypes/tree/?&version=oncotree_latest_stable"
+code_to_disease_mapping = {}
+code_to_organ_mapping = {}
+
+def build_mappings():
+    def recurse(node):
+        code = node.get("code")
+        name = node.get("name")
+        tissue = node.get("tissue")
+
+        # 跳过根节点或中间节点（如 TISSUE 本身），只添加有组织归属的具体癌症类型
+        if code and name and tissue:
+            code_to_disease_mapping[code] = name
+            code_to_organ_mapping[code] = tissue
+
+        children = node.get("children", {})
+        for child in children.values():
+            recurse(child)
+
+    response = requests.get(oncotree_url)
+    data = response.json()
+    # 从 TISSUE 根节点开始递归
+    recurse(data["TISSUE"])
+
 
 def parse_meta_study(meta_path):
     """
@@ -21,6 +49,18 @@ def parse_meta_study(meta_path):
             if ":" in line:
                 key, val = line.strip().split(":", 1)
                 metadata[key.strip()] = val.strip()
+
+    tags = []
+    disease = code_to_disease_mapping[metadata.get('type_of_cancer').upper()]
+    if disease:
+        tags.append(f"disease:{disease}")
+
+    organ = code_to_organ_mapping[metadata.get('type_of_cancer').upper()]
+    if organ:
+        tags.append(f"organ:{organ}")
+
+    tags.append("org:Unassigned")
+
     return {
         "key": metadata.get("cancer_study_identifier", "unknown"),
         "name": metadata.get("name", "Unnamed Study"),
@@ -28,11 +68,10 @@ def parse_meta_study(meta_path):
         "citation": metadata.get("citation", ""),
         "pmid": metadata.get("pmid", ""),
         "groups": metadata.get("groups", "").split(";"),
-        "tags": [],
+        "tags": tags,
         "total": 0,
         "is_filebased": False,
     }
-
 
 def build_data_dictionary_from_header(df, header_lines):
     """
@@ -52,14 +91,13 @@ def build_data_dictionary_from_header(df, header_lines):
     except:
         pass
 
-    for idx, key in enumerate(df.columns):
-        col_key = key.strip().lower().replace(" ", "_")
+    for idx, col_key in enumerate(df.columns):
         data_type = type_row[col_key].strip().upper() if col_key in type_row else "STRING"
         data_type = (
             data_type if data_type in ("STRING", "NUMBER", "BOOLEAN") else "STRING"
         )
 
-        allowed_values = df[key].dropna().unique().tolist()
+        allowed_values = df[col_key].dropna().unique().tolist()
         # if len(allowed_values) > 100:
         #     allowed_values = []
 
@@ -75,6 +113,15 @@ def build_data_dictionary_from_header(df, header_lines):
             }
         )
     return fields
+
+
+def normalize_column_name(col):
+    # 替换所有非字母数字下划线的字符为下划线
+    col = re.sub(r"\W", "_", col.strip())
+    # 如果首字符不是字母或下划线，加前缀 "_"
+    if not re.match(r"^[A-Za-z_]", col):
+        col = "_" + col
+    return col.lower()
 
 
 def read_clinical_file(path):
@@ -96,17 +143,14 @@ def read_clinical_file(path):
             elif line.strip():
                 data_lines.append(line.strip().split("\t"))
 
-    df = (
-        pd.DataFrame(data_lines[1:], columns=data_lines[0])
-        if data_lines
-        else pd.DataFrame()
-    )
+    if data_lines:
+        original_columns = data_lines[0]
+        normalized_columns = [normalize_column_name(col) for col in original_columns]
+        df = pd.DataFrame(data_lines[1:], columns=normalized_columns)
+    else:
+        df = pd.DataFrame()
     return df, header_lines
 
-
-def format_column_name(df):
-    df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
-    return df
 
 def convert_cbioportal_study(study_dir, output_dir):
     """
@@ -145,7 +189,6 @@ def convert_cbioportal_study(study_dir, output_dir):
         fpath = study_dir / fname
         if fpath.exists():
             df, header = read_clinical_file(fpath)
-            df = format_column_name(df)
 
             dtype_dict.update(dict(zip(df.columns, header[2])))
             names.update(dict(zip(df.columns, header[0])))
@@ -214,7 +257,38 @@ def cli(study_dir, output_dir):
     STUDY_DIR is the path to a cBioPortal-format study folder.
     OUTPUT_DIR is the output directory to save data.parquet, data_dictionary.json, dataset.json.
     """
-    convert_cbioportal_study(study_dir, output_dir)
+    build_mappings()
+    
+    try:
+        convert_cbioportal_study(study_dir, output_dir)
+    except Exception as e:
+        print(f"⚠️ Failed to convert the dataset: {e}\n")
+    
+    # Check if the dataset is valid
+    dataset_dir = Path(output_dir)
+    if not dataset_dir.exists():
+        print(f"⚠️ The dataset is invalid: {dataset_dir}")
+        return
+    
+    if not (dataset_dir / "data.parquet").exists():
+        # Delete the dataset directory
+        shutil.rmtree(dataset_dir)
+        print(f"⚠️ The dataset is invalid: {dataset_dir}")
+        return
+    
+    if not (dataset_dir / "data_dictionary.json").exists():
+        # Delete the dataset directory
+        shutil.rmtree(dataset_dir)
+        print(f"⚠️ The dataset is invalid: {dataset_dir}")
+        return
+    
+    if not (dataset_dir / "dataset.json").exists():
+        # Delete the dataset directory
+        shutil.rmtree(dataset_dir)
+        print(f"⚠️ The dataset is invalid: {dataset_dir}")
+        return
+    
+    print(f"✅ The dataset is valid: {dataset_dir}\n")
 
 
 if __name__ == "__main__":

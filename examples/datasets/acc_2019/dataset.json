@@ -8,7 +8,11 @@
     "ACYC",
     "PUBLIC"
   ],
-  "tags": [],
-  "is_filebased": false, 
-  "total": 1049
+  "tags": [
+    "disease:Adenoid Cystic Carcinoma",
+    "organ:Head and Neck",
+    "org:Unassigned"
+  ],
+  "total": 1049,
+  "is_filebased": false
 }

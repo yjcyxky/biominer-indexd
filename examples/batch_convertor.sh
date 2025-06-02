@@ -18,8 +18,8 @@ if [ -z "$output_dir" ]; then
     exit 1
 fi
 
-if [ -d "$output_dir" ]; then
-    echo "Output directory $output_dir already exists"
+if [ ! -d "$output_dir" ]; then
+    echo "Output directory $output_dir does not exist"
     exit 1
 fi
 
@@ -31,10 +31,6 @@ for dataset in $data_dir/*; do
         dataset_dir=$output_dir/$(basename $dataset)
         echo "Processing $dataset -> $dataset_dir"
 
-        if [ -d "$dataset_dir" ]; then
-            echo "Dataset directory already exists"
-        else
-            python examples/cbioportal2dataset.py $dataset $dataset_dir
-        fi
+        python examples/cbioportal2dataset.py $dataset $dataset_dir
     fi
 done

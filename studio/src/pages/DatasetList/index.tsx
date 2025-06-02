@@ -1,13 +1,32 @@
 import React, { useState, useEffect } from 'react';
-import { Layout, Menu, List, Button, Typography, message, Input, Row, Col, Modal, Tooltip, Tag, Checkbox } from 'antd';
+import { Layout, Menu, List, Button, Typography, message, Input, Row, Col, Modal, Tooltip, Tag, Checkbox, MenuProps } from 'antd';
 import { getDatasets, getDatasetLicense } from '@/services/biominer/datasets';
-import './index.less';
-import { BarChartOutlined, FileTextFilled, InfoCircleFilled, PieChartFilled, SortAscendingOutlined, SortDescendingOutlined } from '@ant-design/icons';
+import { AimOutlined, BarChartOutlined, ClusterOutlined, FileTextFilled, InfoCircleFilled, PieChartFilled, SortAscendingOutlined, SortDescendingOutlined, UserAddOutlined } from '@ant-design/icons';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useHistory } from 'umi';
 
+import './index.less';
+
 const { Sider } = Layout;
+
+type MenuItem = Required<MenuProps>['items'][number];
+
+const getItem = (
+    label: React.ReactNode,
+    key: React.Key,
+    icon?: React.ReactNode,
+    children?: MenuItem[],
+    type?: 'group',
+): MenuItem => {
+    return {
+        key,
+        icon,
+        children,
+        label,
+        type,
+    } as MenuItem;
+}
 
 const DatasetList: React.FC = () => {
     const [datasets, setDatasets] = useState<API.DatasetsResponse>({
@@ -16,7 +35,11 @@ const DatasetList: React.FC = () => {
         page: 1,
         page_size: 10,
     });
-    const [allTags, setAllTags] = useState<string[]>([]);
+    const [allTags, setAllTags] = useState<Record<'organization' | 'disease' | 'organ', string[]>>({
+        organization: [],
+        disease: [],
+        organ: [],
+    });
     const [selectedTag, setSelectedTag] = useState<string>('All');
     const [tagDatasetsMap, setTagDatasetsMap] = useState<Record<string, API.DatasetMetadata[]>>({});
     const [searchValue, setSearchValue] = useState<string>('');
@@ -44,7 +67,11 @@ const DatasetList: React.FC = () => {
 
     useEffect(() => {
         const tags = [...new Set(datasets.records.flatMap(ds => ds.tags))].sort();
-        setAllTags(tags);
+        setAllTags({
+            organization: tags.filter(tag => tag.startsWith('org:')).concat(tags.filter(tag => !tag.startsWith('org:') && !tag.startsWith('disease:') && !tag.startsWith('organ:'))),
+            disease: tags.filter(tag => tag.startsWith('disease:')),
+            organ: tags.filter(tag => tag.startsWith('organ:')),
+        });
 
         const tagMap: Record<string, API.DatasetMetadata[]> = {};
         datasets.records.forEach(ds => {
@@ -115,11 +142,12 @@ const DatasetList: React.FC = () => {
                 </div>
             </Col>
             <Col className="dataset-content" span={24}>
-                <Sider width={220} className="dataset-left-sider">
+                <Sider width={280} className="dataset-left-sider">
                     <Menu
                         mode="inline"
                         selectedKeys={[selectedTag]}
                         onClick={e => setSelectedTag(e.key)}
+                        defaultOpenKeys={['organization', 'disease', 'organ']}
                     >
                         <Menu.Item key="All">
                             <span className="tag-name">All</span>
@@ -129,12 +157,33 @@ const DatasetList: React.FC = () => {
                             <span className="tag-name">No tags</span>
                             <Tag className="tag-count">{tagDatasetsMap['No tags']?.length || 0}</Tag>
                         </Menu.Item>
-                        {allTags.map(tag => (
-                            <Menu.Item key={tag}>
-                                <span className="tag-name">{tag}</span>
-                                <Tag className="tag-count">{tagDatasetsMap[tag]?.length || 0}</Tag>
-                            </Menu.Item>
-                        ))}
+                        {/* Organization Menu */}
+                        <Menu.SubMenu key="organization" title="Organization" icon={<ClusterOutlined />}>
+                            {allTags.organization.map(tag => (
+                                <Menu.Item key={tag} icon={<ClusterOutlined />}>
+                                    <span className="tag-name">{tag}</span>
+                                    <Tag className="tag-count">{tagDatasetsMap[tag]?.length || 0}</Tag>
+                                </Menu.Item>
+                            ))}
+                        </Menu.SubMenu>
+                        {/* Disease Menu */}
+                        <Menu.SubMenu key="disease" title="Disease" icon={<UserAddOutlined />}>
+                            {allTags.disease.map(tag => (
+                                <Menu.Item key={tag} icon={<UserAddOutlined />}>
+                                    <span className="tag-name">{tag}</span>
+                                    <Tag className="tag-count">{tagDatasetsMap[tag]?.length || 0}</Tag>
+                                </Menu.Item>
+                            ))}
+                        </Menu.SubMenu>
+                        {/* Organ Menu */}
+                        <Menu.SubMenu key="organ" title="Organ" icon={<AimOutlined />}>
+                            {allTags.organ.map(tag => (
+                                <Menu.Item key={tag} icon={<AimOutlined />}>
+                                    <span className="tag-name">{tag}</span>
+                                    <Tag className="tag-count">{tagDatasetsMap[tag]?.length || 0}</Tag>
+                                </Menu.Item>
+                            ))}
+                        </Menu.SubMenu>
                     </Menu>
                 </Sider>
 

@@ -2,3 +2,5 @@ datasets/*
 !datasets/acbc_mskcc_2015
 !datasets/acc_2019
 !datasets/index.json
+
+custom_datasets/*
