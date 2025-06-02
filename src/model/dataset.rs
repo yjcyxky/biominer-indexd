@@ -386,7 +386,7 @@ impl Datasets {
             }
 
             // Check whether the dict.fields.key is the same as the data.parquet.columns
-            validate_fields_against_parquet(&dict, &parquet_path)?;
+            Datasets::validate_fields_against_parquet(&dict, &parquet_path)?;
 
             let datafile_path = dataset.path.join("datafile.tsv");
             if !datafile_path.exists() {
