@@ -260,7 +260,7 @@ impl Datasets {
 
     pub fn validate_fields_against_parquet(
         dict: &DataDictionary,
-        parquet_path: &str,
+        parquet_path: &PathBuf,
     ) -> Result<()> {
         // 读取 parquet 文件的列名
         let df = LazyFrame::scan_parquet(parquet_path, Default::default())?.collect()?; // 触发读取
