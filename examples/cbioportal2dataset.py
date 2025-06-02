@@ -13,6 +13,17 @@ code_to_disease_mapping = {}
 code_to_organ_mapping = {}
 
 def build_mappings():
+    if os.path.exists("code_to_disease_mapping.json") and os.path.exists(
+        "code_to_organ_mapping.json"
+    ):
+        with open("code_to_disease_mapping.json", "r") as f:
+            code_to_disease_mapping = json.load(f)
+        with open("code_to_organ_mapping.json", "r") as f:
+            code_to_organ_mapping = json.load(f)
+        return
+
+    print("Building mappings...")
+
     def recurse(node):
         code = node.get("code")
         name = node.get("name")

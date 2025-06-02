@@ -161,7 +161,7 @@ const DatasetList: React.FC = () => {
                         <Menu.SubMenu key="organization" title="Organization" icon={<ClusterOutlined />}>
                             {allTags.organization.map(tag => (
                                 <Menu.Item key={tag} icon={<ClusterOutlined />}>
-                                    <span className="tag-name">{tag}</span>
+                                    <span className="tag-name">{tag.replace('org:', '')}</span>
                                     <Tag className="tag-count">{tagDatasetsMap[tag]?.length || 0}</Tag>
                                 </Menu.Item>
                             ))}
@@ -170,7 +170,7 @@ const DatasetList: React.FC = () => {
                         <Menu.SubMenu key="disease" title="Disease" icon={<UserAddOutlined />}>
                             {allTags.disease.map(tag => (
                                 <Menu.Item key={tag} icon={<UserAddOutlined />}>
-                                    <span className="tag-name">{tag}</span>
+                                    <span className="tag-name">{tag.replace('disease:', '')}</span>
                                     <Tag className="tag-count">{tagDatasetsMap[tag]?.length || 0}</Tag>
                                 </Menu.Item>
                             ))}
@@ -179,7 +179,7 @@ const DatasetList: React.FC = () => {
                         <Menu.SubMenu key="organ" title="Organ" icon={<AimOutlined />}>
                             {allTags.organ.map(tag => (
                                 <Menu.Item key={tag} icon={<AimOutlined />}>
-                                    <span className="tag-name">{tag}</span>
+                                    <span className="tag-name">{tag.replace('organ:', '')}</span>
                                     <Tag className="tag-count">{tagDatasetsMap[tag]?.length || 0}</Tag>
                                 </Menu.Item>
                             ))}
