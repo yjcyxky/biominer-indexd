@@ -161,7 +161,9 @@ const DatasetList: React.FC = () => {
                         <Menu.SubMenu key="organization" title="Organization" icon={<ClusterOutlined />}>
                             {allTags.organization.map(tag => (
                                 <Menu.Item key={tag} icon={<ClusterOutlined />}>
-                                    <span className="tag-name">{tag.replace('org:', '')}</span>
+                                    <Tooltip title={tag.replace('org:', '')}>
+                                        <span className="tag-name">{tag.replace('org:', '')}</span>
+                                    </Tooltip>
                                     <Tag className="tag-count">{tagDatasetsMap[tag]?.length || 0}</Tag>
                                 </Menu.Item>
                             ))}
@@ -170,7 +172,9 @@ const DatasetList: React.FC = () => {
                         <Menu.SubMenu key="disease" title="Disease" icon={<UserAddOutlined />}>
                             {allTags.disease.map(tag => (
                                 <Menu.Item key={tag} icon={<UserAddOutlined />}>
-                                    <span className="tag-name">{tag.replace('disease:', '')}</span>
+                                    <Tooltip title={tag.replace('disease:', '')}>
+                                        <span className="tag-name">{tag.replace('disease:', '')}</span>
+                                    </Tooltip>
                                     <Tag className="tag-count">{tagDatasetsMap[tag]?.length || 0}</Tag>
                                 </Menu.Item>
                             ))}
@@ -179,7 +183,9 @@ const DatasetList: React.FC = () => {
                         <Menu.SubMenu key="organ" title="Organ" icon={<AimOutlined />}>
                             {allTags.organ.map(tag => (
                                 <Menu.Item key={tag} icon={<AimOutlined />}>
-                                    <span className="tag-name">{tag.replace('organ:', '')}</span>
+                                    <Tooltip title={tag.replace('organ:', '')}>
+                                        <span className="tag-name">{tag.replace('organ:', '')}</span>
+                                    </Tooltip>
                                     <Tag className="tag-count">{tagDatasetsMap[tag]?.length || 0}</Tag>
                                 </Menu.Item>
                             ))}
