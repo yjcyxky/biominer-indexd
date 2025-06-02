@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Button, Modal, Typography, Row, Col, message, Tooltip, Spin, Tag } from 'antd';
 import { useEffect } from 'react';
-import { getDatasetData, getDataDictionary, getDatasets } from '@/services/biominer/datasets';
+import { getDatasetData, getDataDictionary, getDatasets, getDatafiles } from '@/services/biominer/datasets';
 import { history } from 'umi';
 import ColumnSelector, { getDefaultSelectedKeys } from './ColumnSelector';
 import { filters2string } from './Filter';
@@ -360,8 +360,14 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
                     }
                 }}
                 onDownloadDatafiles={() => {
-                    // TODO: Download the datafiles
-                    message.info('Data files are not available yet. But it will come soon.');
+                    message.info('Downloading the datafiles, it will take a while. Please don\'t close or refresh the page.');
+                    getDatafiles({
+                        key: cachedDatasetKey,
+                    }).then((d: any) => {
+                        downloadTSV(d, 'datafiles.tsv')
+                    }).catch((err: any) => {
+                        message.error('Failed to download the datafiles, please try again later.');
+                    });
                 }} />
         </Spin >
     );

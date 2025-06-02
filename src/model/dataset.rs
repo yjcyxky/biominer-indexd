@@ -93,11 +93,11 @@ pub fn init_cache(base_path: &PathBuf) -> Result<(), Error> {
             .insert(dataset.metadata.key.clone(), dataset.clone());
 
         // TODO: cache datafiles
-        // let datafiles = dataset.load_datafiles()?;
-        // DATAFILE_CACHE
-        //     .lock()
-        //     .unwrap()
-        //     .insert(dataset.metadata.key.clone(), datafiles);
+        let datafiles = dataset.load_datafiles()?;
+        DATAFILE_CACHE
+            .lock()
+            .unwrap()
+            .insert(dataset.metadata.key.clone(), datafiles);
     }
     Ok(())
 }
