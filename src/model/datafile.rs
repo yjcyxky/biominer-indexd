@@ -756,8 +756,8 @@ pub struct File {
     pub size: i64,
     pub created_at: i64,
     pub updated_at: i64,
-    pub status: String,
-    pub baseid: String,
+    pub status: String,  // "pending" | "processing" | "validated" | "failed"
+    pub baseid: String,  // The file with multiple versions will have the same baseid
     pub rev: String,
     pub version: i32,
     pub uploader: String,

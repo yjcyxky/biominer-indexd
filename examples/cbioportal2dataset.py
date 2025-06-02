@@ -7,22 +7,32 @@ import numpy as np
 import requests
 import shutil
 import re
+import tarfile
+import uuid
+import hashlib
+from dataclasses import dataclass
+from typing import Optional
 
-oncotree_url = "https://oncotree.mskcc.org/api/tumorTypes/tree/?&version=oncotree_latest_stable"
+namespace_prefix = "biominer.fudan-pgx"
+oncotree_url = (
+    "https://oncotree.mskcc.org/api/tumorTypes/tree/?&version=oncotree_latest_stable"
+)
 code_to_disease_mapping = {}
 code_to_organ_mapping = {}
 
+
 def build_mappings():
-    if os.path.exists("code_to_disease_mapping.json") and os.path.exists(
-        "code_to_organ_mapping.json"
+    global code_to_disease_mapping, code_to_organ_mapping
+    print("Building mappings...")
+    filepath = Path(__file__).parent
+    if os.path.exists(filepath / "code_to_disease_mapping.json") and os.path.exists(
+        filepath / "code_to_organ_mapping.json"
     ):
-        with open("code_to_disease_mapping.json", "r") as f:
+        with open(filepath / "code_to_disease_mapping.json", "r") as f:
             code_to_disease_mapping = json.load(f)
-        with open("code_to_organ_mapping.json", "r") as f:
+        with open(filepath / "code_to_organ_mapping.json", "r") as f:
             code_to_organ_mapping = json.load(f)
         return
-
-    print("Building mappings...")
 
     def recurse(node):
         code = node.get("code")
@@ -44,6 +54,209 @@ def build_mappings():
     recurse(data["TISSUE"])
 
 
+@dataclass
+class URL:
+    url: str
+    created_at: int
+    status: str  # "pending" | "processing" | "validated" | "failed"
+    uploader: str
+    file: Optional[str]
+
+
+@dataclass
+class Hash:
+    hash_type: str  # "md5" | "sha1" | "sha256" | "sha512" | "crc32" | "crc64" | "etag"
+    hash: str
+    file: Optional[str]
+
+
+@dataclass
+class Alias:
+    name: str
+    file: Optional[str]
+
+
+@dataclass
+class Tag:
+    field_name: str
+    field_value: str
+    file: Optional[str]
+
+
+@dataclass
+class DataFile:
+    guid: str
+    filename: str
+    size: int
+    created_at: int
+    updated_at: int
+    status: str  # "pending" | "processing" | "validated" | "failed"
+    baseid: str
+    rev: str
+    version: int
+    uploader: str
+    access: str  # public or private
+    acl: Optional[str]
+    urls: Optional[list[URL]]
+    hashes: Optional[list[Hash]]
+    aliases: Optional[list[Alias]]
+    tags: Optional[list[Tag]]
+
+
+# Step 1: 读取文件内容并计算哈希
+def get_file_hash(path, hash_type: str = "sha1") -> str:
+    with open(path, "rb") as f:
+        file_data = f.read()
+    if hash_type == "sha1":
+        return hashlib.sha1(file_data).hexdigest()
+    elif hash_type == "sha256":
+        return hashlib.sha256(file_data).hexdigest()
+    elif hash_type == "sha512":
+        return hashlib.sha512(file_data).hexdigest()
+    elif hash_type == "md5":
+        return hashlib.md5(file_data).hexdigest()
+    else:
+        raise ValueError(f"Invalid hash type: {hash_type}")
+
+
+# Step 2: 用 UUIDv5 生成 GUID
+def generate_deterministic_guid(file_path) -> str:
+    file_hash = get_file_hash(file_path, "sha1")
+    namespace = uuid.NAMESPACE_URL
+    return f"{namespace_prefix}/{uuid.uuid5(namespace, file_hash)}"
+
+
+def md5sum_to_baseid(md5sum: str) -> str:
+    """
+    将 MD5 值转换为 UUIDv5 格式，用作 baseid。
+    返回值为字符串，如：'c7c7d092-32b0-486c-aff2-7282416419ff'
+    """
+    namespace = uuid.NAMESPACE_URL  # 可选其他命名空间，例如 NAMESPACE_DNS
+    return str(uuid.uuid5(namespace, md5sum))
+
+
+def make_tarball(study_dir, tarball_path):
+    """
+    Make a tarball of the dataset.
+    """
+    study_dir = Path(study_dir)
+    tarball_path.parent.mkdir(parents=True, exist_ok=True)
+
+    with tarfile.open(tarball_path, "w:gz") as tar:
+        tar.add(study_dir, arcname=os.path.basename(study_dir))
+
+
+def make_datafile(tarball_path, dataset_meta: dict) -> DataFile:
+    """
+    Make a datafile.tsv file for the dataset.
+    """
+    md5sum = get_file_hash(tarball_path, "md5")
+    print(f"✅ MD5 sum: {md5sum}")
+    filename = dataset_meta.get("key") + ".tar.gz"
+    guid = generate_deterministic_guid(tarball_path)
+    print(f"✅ GUID: {guid}")
+    size = tarball_path.stat().st_size
+    created_at = int(tarball_path.stat().st_mtime)
+    updated_at = created_at
+    status = "pending"
+    baseid = md5sum_to_baseid(md5sum)
+    print(f"✅ BaseID: {baseid}")
+    rev = guid[:8]
+    version = 1
+    uploader = "Jingcheng Yang"
+    access = "public"
+    acl = None
+    # TODO: The upper case of the filename might cause issues
+    urls = [
+        URL(
+            url=f"minio://processed-data/OmicsDatasets/{filename}",
+            created_at=created_at,
+            status="pending",
+            uploader=uploader,
+            file=filename,
+        )
+    ]
+    hashes = [
+        Hash(hash_type="md5", hash=md5sum, file=filename)
+    ]
+    aliases = []
+    tags = []
+
+    return DataFile(
+        guid=guid,
+        filename=filename,
+        size=size,
+        created_at=created_at,
+        updated_at=updated_at,
+        status=status,
+        baseid=baseid,
+        rev=rev,
+        version=version,
+        uploader=uploader,
+        access=access,
+        acl=acl,
+        urls=urls,
+        hashes=hashes,
+        aliases=aliases,
+        tags=tags,
+    )
+
+
+def make_datafile_tsv(datafile: DataFile, output_dir: Path) -> Path:
+    """
+    Make a datafile.tsv file for the dataset.
+    """
+    datafile_path = output_dir / "datafile.tsv"
+
+    flat = {
+        "guid": datafile.guid,
+        "filename": datafile.filename,
+        "size": str(datafile.size),
+        "created_at": str(datafile.created_at),
+        "updated_at": str(datafile.updated_at),
+        "status": datafile.status,
+        "baseid": datafile.baseid,
+        "rev": datafile.rev,
+        "version": str(datafile.version),
+        "uploader": datafile.uploader,
+        "access": datafile.access or "",
+        "acl": datafile.acl or "",
+    }
+
+    # 扁平化 URL 列表
+    if datafile.urls:
+        for i, url in enumerate(datafile.urls):
+            flat[f"url_{i}_url"] = url.url
+            flat[f"url_{i}_created_at"] = str(url.created_at)
+            flat[f"url_{i}_status"] = url.status
+            flat[f"url_{i}_uploader"] = url.uploader
+            flat[f"url_{i}_file"] = url.file
+
+    # 扁平化 Hash 列表
+    if datafile.hashes:
+        for i, h in enumerate(datafile.hashes):
+            flat[f"hash_{i}_type"] = h.hash_type
+            flat[f"hash_{i}_value"] = h.hash
+            flat[f"hash_{i}_file"] = h.file
+
+    # 扁平化 Alias 列表
+    if datafile.aliases:
+        for i, a in enumerate(datafile.aliases):
+            flat[f"alias_{i}_name"] = a.name
+            flat[f"alias_{i}_file"] = a.file
+
+    # 扁平化 Tag 列表
+    if datafile.tags:
+        for i, t in enumerate(datafile.tags):
+            flat[f"tag_{i}_field_name"] = t.field_name
+            flat[f"tag_{i}_field_value"] = t.field_value
+            flat[f"tag_{i}_file"] = t.file
+
+    df = pd.DataFrame([flat])
+    df.to_csv(datafile_path, index=False, sep="\t")
+    return datafile_path
+
+
 def parse_meta_study(meta_path):
     """
     Parse the cBioPortal `meta_study.txt` metadata file into a structured dictionary.
@@ -62,11 +275,11 @@ def parse_meta_study(meta_path):
                 metadata[key.strip()] = val.strip()
 
     tags = []
-    disease = code_to_disease_mapping[metadata.get('type_of_cancer').upper()]
+    disease = code_to_disease_mapping.get(metadata.get("type_of_cancer").upper())
     if disease:
         tags.append(f"disease:{disease}")
 
-    organ = code_to_organ_mapping[metadata.get('type_of_cancer').upper()]
+    organ = code_to_organ_mapping.get(metadata.get("type_of_cancer").upper())
     if organ:
         tags.append(f"organ:{organ}")
 
@@ -83,6 +296,7 @@ def parse_meta_study(meta_path):
         "total": 0,
         "is_filebased": False,
     }
+
 
 def build_data_dictionary_from_header(df, header_lines):
     """
@@ -103,7 +317,9 @@ def build_data_dictionary_from_header(df, header_lines):
         pass
 
     for idx, col_key in enumerate(df.columns):
-        data_type = type_row[col_key].strip().upper() if col_key in type_row else "STRING"
+        data_type = (
+            type_row[col_key].strip().upper() if col_key in type_row else "STRING"
+        )
         data_type = (
             data_type if data_type in ("STRING", "NUMBER", "BOOLEAN") else "STRING"
         )
@@ -188,7 +404,12 @@ def convert_cbioportal_study(study_dir, output_dir):
     dataset_meta = parse_meta_study(meta_path)
 
     # Load and merge clinical sample and patient data
-    clinical_files = ["data_clinical_sample.txt", "data_clinical_patient.txt", "data_clinical_patient.tsv", "data_clinical_sample.tsv"]
+    clinical_files = [
+        "data_clinical_sample.txt",
+        "data_clinical_patient.txt",
+        "data_clinical_patient.tsv",
+        "data_clinical_sample.tsv",
+    ]
     dfs = []
     headers = []
     names = {}
@@ -245,15 +466,29 @@ def convert_cbioportal_study(study_dir, output_dir):
 
     # Save Parquet
     combined_df.to_parquet(output_dir / "data.parquet", index=False)
+    print(f"✅ Data saved to {output_dir / 'data.parquet'}")
 
     # Save data_dictionary.json using header info if available
     dictionary = build_data_dictionary_from_header(combined_df, headers)
     with open(output_dir / "data_dictionary.json", "w") as f:
         json.dump(dictionary, f, indent=2)
 
+    print(f"✅ Data dictionary saved to {output_dir / 'data_dictionary.json'}")
+
     # Save dataset metadata
     with open(output_dir / "dataset.json", "w") as f:
         json.dump(dataset_meta, f, indent=2)
+
+    print(f"✅ Dataset metadata saved to {output_dir / 'dataset.json'}")
+
+    tarball_path = study_dir.parent / "datasets" / f'{dataset_meta.get("key")}.tar.gz'
+    if not tarball_path.exists():
+        make_tarball(study_dir, tarball_path)
+        print(f"✅ Tarball saved to {tarball_path}")
+
+    datafile = make_datafile(tarball_path, dataset_meta)
+    datafile_path = make_datafile_tsv(datafile, output_dir)
+    print(f"✅ Datafile saved to {datafile_path}")
 
     print(f"✅ Converted study saved to {output_dir}")
 
@@ -269,36 +504,36 @@ def cli(study_dir, output_dir):
     OUTPUT_DIR is the output directory to save data.parquet, data_dictionary.json, dataset.json.
     """
     build_mappings()
-    
+
     try:
         convert_cbioportal_study(study_dir, output_dir)
     except Exception as e:
         print(f"⚠️ Failed to convert the dataset: {e}\n")
-    
+
     # Check if the dataset is valid
     dataset_dir = Path(output_dir)
     if not dataset_dir.exists():
         print(f"⚠️ The dataset is invalid: {dataset_dir}")
         return
-    
+
     if not (dataset_dir / "data.parquet").exists():
         # Delete the dataset directory
         shutil.rmtree(dataset_dir)
         print(f"⚠️ The dataset is invalid: {dataset_dir}")
         return
-    
+
     if not (dataset_dir / "data_dictionary.json").exists():
         # Delete the dataset directory
         shutil.rmtree(dataset_dir)
         print(f"⚠️ The dataset is invalid: {dataset_dir}")
         return
-    
+
     if not (dataset_dir / "dataset.json").exists():
         # Delete the dataset directory
         shutil.rmtree(dataset_dir)
         print(f"⚠️ The dataset is invalid: {dataset_dir}")
         return
-    
+
     print(f"✅ The dataset is valid: {dataset_dir}\n")
 
 

@@ -12,7 +12,8 @@
 //   - `data_dictionary.json`: defines schema for the dataset
 //   - `data.parquet`: tabular file for metadata, column names correspond to keys in dictionary
 //   - `dataset.json`: study metadata
-//   - `datafile.tsv`: datafile metadata which contains the file path, file size, etc.
+//   - `datafile.tsv`: datafiles' metadata which contains the file path, file size, etc.
+//   - `dataset.tar.gz`: [Optional, only for cBioPortal dataset] a tarball of the dataset, which contains all data and metadata files.
 //
 // ## Features
 // - Loads and validates dataset metadata and structure

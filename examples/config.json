@@ -1,22 +1,54 @@
 {
-  "node": [{
-    "download_url": "https://www.biosino.org/download/downloadByMember",
-    "account_name": "yjcyxky@163.com",
-    "member_id": "P34MVSHVGBDSLOQ6BGSAL4SFEN",
-    "project_id": "OEP003176"
-  }, {
-    "download_url": "https://www.biosino.org/download/downloadByMember",
-    "account_name": "shangjunv@163.com",
-    "member_id": "JGM6OT3HFZFXJDN7XJABFF2EFD",
-    "project_id": "OEP003178"
-  }],
-  "s3": [],
-  "oss": [],
-  "minio": [],
-  "gsa": [{
-    "download_url": "https://share.cncb.ac.cn/",
-    "account_name": "yjcyxky@163.com",
-    "shared_id": "vsOyAX3A",
-    "project_id": "HRA0001"
-  }]
+  "node": [
+    {
+      "download_url": "https://www.biosino.org/download/downloadByMember",
+      "account_name": "yjcyxky@163.com",
+      "member_id": "P34MVSHVGBDSLOQ6BGSAL4SFEN",
+      "project_id": "OEP003176"
+    },
+    {
+      "download_url": "https://www.biosino.org/download/downloadByMember",
+      "account_name": "shangjunv@163.com",
+      "member_id": "JGM6OT3HFZFXJDN7XJABFF2EFD",
+      "project_id": "OEP003178"
+    }
+  ],
+  "s3": [
+    {
+      "access_key": "s3admin",
+      "access_secret": "s3admin",
+      "endpoint": "http://192.168.1.100:9000",
+      "bucket": "test"
+    }
+  ],
+  "oss": [
+    {
+      "access_key": "ossadmin",
+      "access_secret": "ossadmin",
+      "endpoint": "http://192.168.1.100:9000",
+      "bucket": "test"
+    }
+  ],
+  "minio": [
+    {
+      "access_key": "minioadmin",
+      "access_secret": "minioadmin",
+      "endpoint": "http://192.168.1.100:9000",
+      "bucket": "test"
+    },
+    {
+      "access_key": "minioadmin",
+      "access_secret": "minioadmin",
+      "endpoint": "http://192.168.1.101:9000",
+      "bucket": "test2"
+    }
+  ],
+  "gsa": [
+    {
+      "download_url": "https://share.cncb.ac.cn/",
+      "account_name": "yjcyxky@163.com",
+      "shared_id": "vsOyAX3A",
+      "project_id": "HRA0001"
+    }
+  ]
 }
