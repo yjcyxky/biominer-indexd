@@ -62,26 +62,21 @@ class URL:
     uploader: str
     file: Optional[str]
 
-
 @dataclass
 class Hash:
     hash_type: str  # "md5" | "sha1" | "sha256" | "sha512" | "crc32" | "crc64" | "etag"
     hash: str
     file: Optional[str]
-
-
 @dataclass
 class Alias:
     name: str
     file: Optional[str]
-
 
 @dataclass
 class Tag:
     field_name: str
     field_value: str
     file: Optional[str]
-
 
 @dataclass
 class DataFile:
@@ -173,11 +168,11 @@ def make_datafile(tarball_path, dataset_meta: dict) -> DataFile:
             created_at=created_at,
             status="pending",
             uploader=uploader,
-            file=filename,
+            file=guid,
         )
     ]
     hashes = [
-        Hash(hash_type="md5", hash=md5sum, file=filename)
+        Hash(hash_type="md5", hash=md5sum, file=guid)
     ]
     aliases = []
     tags = []
@@ -230,34 +225,30 @@ def make_datafile_tsv(datafile: DataFile, output_dir: Path) -> Path:
             flat[f"url_{i}_created_at"] = str(url.created_at)
             flat[f"url_{i}_status"] = url.status
             flat[f"url_{i}_uploader"] = url.uploader
-            flat[f"url_{i}_file"] = url.file
 
     # 扁平化 Hash 列表
     if datafile.hashes:
         for i, h in enumerate(datafile.hashes):
-            flat[f"hash_{i}_type"] = h.hash_type
-            flat[f"hash_{i}_value"] = h.hash
-            flat[f"hash_{i}_file"] = h.file
+            flat[f"hash_{i}_hash_type"] = h.hash_type
+            flat[f"hash_{i}_hash"] = h.hash
 
     # 扁平化 Alias 列表
     if datafile.aliases:
         for i, a in enumerate(datafile.aliases):
             flat[f"alias_{i}_name"] = a.name
-            flat[f"alias_{i}_file"] = a.file
 
     # 扁平化 Tag 列表
     if datafile.tags:
         for i, t in enumerate(datafile.tags):
             flat[f"tag_{i}_field_name"] = t.field_name
             flat[f"tag_{i}_field_value"] = t.field_value
-            flat[f"tag_{i}_file"] = t.file
 
     df = pd.DataFrame([flat])
     df.to_csv(datafile_path, index=False, sep="\t")
     return datafile_path
 
 
-def parse_meta_study(meta_path):
+def parse_meta_study(meta_path, organization=None):
     """
     Parse the cBioPortal `meta_study.txt` metadata file into a structured dictionary.
 
@@ -283,7 +274,10 @@ def parse_meta_study(meta_path):
     if organ:
         tags.append(f"organ:{organ}")
 
-    tags.append("org:Unassigned")
+    if organization:
+        tags.append(f"org:{organization}")
+    else:
+        tags.append("org:Unassigned")
 
     return {
         "key": metadata.get("cancer_study_identifier", "unknown"),
@@ -379,7 +373,7 @@ def read_clinical_file(path):
     return df, header_lines
 
 
-def convert_cbioportal_study(study_dir, output_dir):
+def convert_cbioportal_study(study_dir, output_dir, organization):
     """
     Convert a cBioPortal-formatted dataset folder into a normalized dataset format.
 
@@ -401,7 +395,13 @@ def convert_cbioportal_study(study_dir, output_dir):
     if not meta_path.exists():
         raise FileNotFoundError("meta_study.txt not found")
 
-    dataset_meta = parse_meta_study(meta_path)
+    dataset_meta = parse_meta_study(meta_path, organization)
+    
+    key = dataset_meta.get("key")
+    dirname = study_dir.name
+    
+    if key != dirname:
+        raise ValueError(f"The key in meta_study.txt ({key}) does not match the directory name ({dirname})")
 
     # Load and merge clinical sample and patient data
     clinical_files = [
@@ -496,7 +496,8 @@ def convert_cbioportal_study(study_dir, output_dir):
 @click.command()
 @click.argument("study_dir", type=click.Path(exists=True, file_okay=False))
 @click.argument("output_dir", type=click.Path())
-def cli(study_dir, output_dir):
+@click.option("--organization", type=str, default="Unassigned")
+def cli(study_dir, output_dir, organization):
     """
     CLI entry point to convert a cBioPortal dataset.
 
@@ -506,7 +507,7 @@ def cli(study_dir, output_dir):
     build_mappings()
 
     try:
-        convert_cbioportal_study(study_dir, output_dir)
+        convert_cbioportal_study(study_dir, output_dir, organization)
     except Exception as e:
         print(f"⚠️ Failed to convert the dataset: {e}\n")
 
