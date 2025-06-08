@@ -39,7 +39,7 @@ def check_url_uploaded(url: str) -> bool:
             endpoint=endpoint,
             access_key=access_key,
             secret_key=secret_key,
-            secure=False,
+            secure=True,
         )
 
         parsed = urlparse(url)
@@ -47,7 +47,10 @@ def check_url_uploaded(url: str) -> bool:
         object_path = parsed.path.lstrip("/")
 
         try:
-            minio_client.stat_object(bucket, object_path)
+            print(f"🔍 Checking {bucket} {object_path}")
+            stat = minio_client.stat_object(bucket, object_path)
+            etag = stat.etag.lower().strip('"')
+            print(f"✅ {bucket} {object_path} exists, etag: {etag}")
             return True
         except S3Error as e:
             if e.code == "NoSuchKey" or e.code == "NoSuchObject":
