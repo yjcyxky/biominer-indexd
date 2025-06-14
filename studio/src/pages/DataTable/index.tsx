@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { Button, Modal, Typography, Row, Col, message, Tooltip, Spin, Tag } from 'antd';
+import { Button, Modal, Typography, Row, Col, message, Tooltip, Spin, Tag, Tabs } from 'antd';
 import { useEffect } from 'react';
 import { getDatasetData, getDataDictionary, getDatasets, getDatafiles } from '@/services/biominer/datasets';
 import { history } from 'umi';
 import ColumnSelector, { getDefaultSelectedKeys } from './ColumnSelector';
 import { filters2string } from './Filter';
 import type { ComposeQueryItem } from './Filter';
-import { BarChartOutlined, CloudDownloadOutlined, DownloadOutlined, FileOutlined, FilterOutlined, QuestionCircleOutlined } from '@ant-design/icons';
+import { CloudDownloadOutlined, DownloadOutlined, FileOutlined, FilterOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import QueryBuilder from './QueryBuilder';
 import VisualPanel from './VisualPanel';
 import VirtualTable from './VirtualTable';
@@ -53,9 +53,9 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
     const [loading, setLoading] = useState<boolean>(false);
     const [cachedDatasetKey, setCachedDatasetKey] = useState<string | undefined>(undefined);
     const [filters, setFilters] = useState<ComposeQueryItem | undefined>(undefined);
-    const [visualPanelVisible, setVisualPanelVisible] = useState<boolean>(true);
     const [currentRecord, setCurrentRecord] = useState<Record<string, any> | null>(null);
     const [datasetDownloadModalVisible, setDatasetDownloadModalVisible] = useState<boolean>(false);
+    const [activeTab, setActiveTab] = useState<string>('plots');
 
     useEffect(() => {
         let datasetKey = key ?? '';
@@ -159,34 +159,69 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
     return (
         <Spin spinning={loading}>
             <Row className="datatable-header">
-                <Col span={24} className="datatable-header-upper">
-                    <Typography.Title level={4} style={{ height: 28 }}>
-                        {datasetMetadata?.name}
-                        {!loading ?
-                            <Tooltip title="Cite the dataset">
-                                <Button onClick={() => {
-                                    window.open(`https://www.ncbi.nlm.nih.gov/pubmed/${datasetMetadata?.pmid}`, '_blank');
-                                }} icon={<FileOutlined />} style={{ marginLeft: 8 }} type="default" size="small">
-                                    Cite Dataset
-                                </Button>
-                            </Tooltip>
-                            : null}
-                    </Typography.Title>
-                    <p style={{ width: '100%', overflow: 'hidden', margin: 0, textOverflow: 'ellipsis', maxHeight: 45 }}
-                        dangerouslySetInnerHTML={{ __html: datasetMetadata?.description ?? '' }} />
-                </Col>
-                <Col span={24} className="datatable-header-lower">
-                    <Col span={14} className="datatable-header-lower-left">
-                        {!loading ?
-                            <>
-                                <Typography.Text style={{ fontSize: 16 }} className="sample-file-count">
-                                    ⚠️ Loaded {data.records.length} {datasetMetadata?.is_filebased ? 'files' : 'samples'}, {data.total} {datasetMetadata?.is_filebased ? 'files' : 'samples'} in total.
-                                    <Tooltip title={
-                                        <span>
-                                            If you want to load all the data, please click the button <Tag color="gray">Load All ({data.total})</Tag>. But it will take a while to load.
-                                        </span>}
-                                    >
-                                        <QuestionCircleOutlined style={{ marginLeft: 8 }} />
+                <Typography.Title level={4} style={{ height: 28 }}>
+                    {datasetMetadata?.name}
+                    {!loading ?
+                        <Tooltip title="Cite the dataset">
+                            <Button onClick={() => {
+                                window.open(`https://www.ncbi.nlm.nih.gov/pubmed/${datasetMetadata?.pmid}`, '_blank');
+                            }} icon={<FileOutlined />} style={{ marginLeft: 8 }} type="default" size="small">
+                                Cite Dataset
+                            </Button>
+                        </Tooltip>
+                        : null}
+                </Typography.Title>
+                <p style={{ width: '100%', overflow: 'hidden', margin: 0, textOverflow: 'ellipsis', maxHeight: 45 }}
+                    dangerouslySetInnerHTML={{ __html: datasetMetadata?.description ?? '' }} />
+            </Row>
+            <Tabs defaultActiveKey="plots" activeKey={activeTab} onChange={(key) => { setActiveTab(key) }}
+                className='datatable-tabs' tabBarExtraContent={
+                    <Row className='datatable-tabs-extra-content'>
+                        <Col className="datatable-tabs-extra-content-left">
+                            {!loading ?
+                                <>
+                                    {
+                                        filters && <Row className="datatable-filters">
+                                            {filters2string(filters, 0, dataDictionary.fields)}
+                                        </Row>
+                                    }
+                                    <Typography.Text style={{ fontSize: 16 }} className="sample-file-count">
+                                        ⚠️ Loaded {data.records.length} {datasetMetadata?.is_filebased ? 'files' : 'samples'}, {data.total} {datasetMetadata?.is_filebased ? 'files' : 'samples'} in total.
+                                        <Tooltip title={
+                                            <span>
+                                                If you want to load all the data, please click the button <Tag color="gray">Load All ({data.total})</Tag>. But it will take a while to load.
+                                            </span>}
+                                        >
+                                            <QuestionCircleOutlined style={{ marginLeft: 8 }} />
+                                        </Tooltip>
+                                        <Button
+                                            disabled={data.records.length === data.total}
+                                            onClick={
+                                                () => {
+                                                    setPage(1);
+                                                    if (data.total > 1000) {
+                                                        message.warning('The dataset is too large, it will take a while to load.');
+                                                    }
+                                                    setPageSize(data.total);
+                                                }
+                                            }
+                                            icon={<CloudDownloadOutlined />} type="primary" size="small" style={{ marginLeft: 8 }}>
+                                            Load All
+                                        </Button>
+                                    </Typography.Text>
+                                </>
+                                : null}
+                        </Col>
+                        <Col className="datatable-tabs-extra-content-right">
+                            {!loading ?
+                                <>
+                                    <Tooltip title="Download the dataset (each dataset might have at least two files: metadata table and datafile table which contain information about the data)">
+                                        <Button
+                                            onClick={() => {
+                                                setDatasetDownloadModalVisible(true);
+                                            }} icon={<DownloadOutlined />} type="default">
+                                            Download Dataset
+                                        </Button>
                                     </Tooltip>
                                     <Button
                                         disabled={data.records.length === data.total}
@@ -199,90 +234,52 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
                                                 setPageSize(data.total);
                                             }
                                         }
-                                        icon={<CloudDownloadOutlined />} type="primary" size="small" style={{ marginLeft: 8 }}>
-                                        Load All
+                                        icon={<CloudDownloadOutlined />} type="default">
+                                        Load All ({data.total})
                                     </Button>
-                                </Typography.Text>
-                                {
-                                    filters && <Row className="datatable-filters">
-                                        {filters2string(filters)}
-                                    </Row>
-                                }
-                            </>
-                            : null}
-                    </Col>
-                    <Col span={10} className="datatable-header-lower-right">
-                        {!loading ?
-                            <>
-                                <Tooltip title="Download the dataset (each dataset might have at least two files: metadata table and datafile table which contain information about the data)">
-                                    <Button
-                                        onClick={() => {
-                                            setDatasetDownloadModalVisible(true);
-                                        }} icon={<DownloadOutlined />} type="default">
-                                        Download Dataset
+                                    <ColumnSelector fields={dataDictionary.fields} selectedKeys={selectedColumns} onChange={setSelectedColumns} />
+                                    <Button type="primary" onClick={() => {
+                                        setFilterModalVisible(true);
+                                    }} icon={<FilterOutlined />}>
+                                        Filter
                                     </Button>
-                                </Tooltip>
-                                <Button
-                                    disabled={data.records.length === data.total}
-                                    onClick={
-                                        () => {
-                                            setPage(1);
-                                            if (data.total > 1000) {
-                                                message.warning('The dataset is too large, it will take a while to load.');
-                                            }
-                                            setPageSize(data.total);
-                                        }
-                                    }
-                                    icon={<CloudDownloadOutlined />} type="default">
-                                    Load All ({data.total})
-                                </Button>
-                                <ColumnSelector fields={dataDictionary.fields} selectedKeys={selectedColumns} onChange={setSelectedColumns} />
-                                <Button type="primary" onClick={() => {
-                                    setFilterModalVisible(true);
-                                }} icon={<FilterOutlined />}>
-                                    Filter
-                                </Button>
-                                <Button type="primary" onClick={() => {
-                                    setVisualPanelVisible(!visualPanelVisible);
-                                }} icon={<BarChartOutlined />}>
-                                    {visualPanelVisible ? 'Show Table' : 'Show Plots'}
-                                </Button>
-                            </>
-                            : null}
-                    </Col>
-                </Col>
-            </Row>
-            {
-                visualPanelVisible ?
+                                </>
+                                : null}
+                        </Col>
+                    </Row>
+                }>
+                <Tabs.TabPane tab="Summary" key="plots">
                     <VisualPanel fields={dataDictionary.fields} data={data.records} isFileBased={datasetMetadata?.is_filebased ?? false}
                         total={data.total} selectedColumns={selectedColumns}
                         onClose={(field) => {
                             setSelectedColumns(selectedColumns.filter(col => col !== field.key));
-                        }} /> :
-                    // <VirtualTable
-                    //     className='datatable-table'
-                    //     dataSource={data.records}
-                    //     dataDictionary={columns}
-                    //     loading={loading}
-                    //     scroll={{ y: window.innerHeight - 270, x: tableWidth }}
-                    //     pagination={{
-                    //         position: ['bottomRight'],
-                    //         pageSize: pageSize,
-                    //         current: page,
-                    //         total: data.total,
-                    //         onChange: (page: number, pageSize: number) => {
-                    //             setPage(page);
-                    //             setPageSize(pageSize);
-                    //         },
-                    //         showSizeChanger: true,
-                    //         showQuickJumper: true,
-                    //         pageSizeOptions: [100, 200, 300, 500, 1000],
-                    //     }}
-                    //     onCellClick={(record, row, col) => {
-                    //         setCurrentRecord(record);
-                    //     }}
-                    //    isFileBased={datasetMetadata?.is_filebased ?? false}
-                    // />
+                        }} />
+                </Tabs.TabPane>
+                <Tabs.TabPane tab="Clinical Data" key="table">
+                    {/* // <VirtualTable
+                        //     className='datatable-table'
+                        //     dataSource={data.records}
+                        //     dataDictionary={columns}
+                        //     loading={loading}
+                        //     scroll={{ y: window.innerHeight - 270, x: tableWidth }}
+                        //     pagination={{
+                        //         position: ['bottomRight'],
+                        //         pageSize: pageSize,
+                        //         current: page,
+                        //         total: data.total,
+                        //         onChange: (page: number, pageSize: number) => {
+                        //             setPage(page);
+                        //             setPageSize(pageSize);
+                        //         },
+                        //         showSizeChanger: true,
+                        //         showQuickJumper: true,
+                        //         pageSizeOptions: [100, 200, 300, 500, 1000],
+                        //     }}
+                        //     onCellClick={(record, row, col) => {
+                        //         setCurrentRecord(record);
+                        //     }}
+                        //    isFileBased={datasetMetadata?.is_filebased ?? false}
+                        // /> */}
                     <VirtualTable
                         className='datatable-table'
                         size="small"
@@ -308,7 +305,8 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
                         dataDictionary={columns}
                         isFileBased={datasetMetadata?.is_filebased ?? false}
                     />
-            }
+                </Tabs.TabPane>
+            </Tabs >
             <QueryBuilder
                 visible={filterModalVisible}
                 onCancel={() => setFilterModalVisible(false)}
@@ -361,8 +359,13 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
                 }}
                 onDownloadDatafiles={() => {
                     message.info('Downloading the datafiles, it will take a while. Please don\'t close or refresh the page.');
+                    if (!cachedDatasetKey) {
+                        message.error('Failed to download the datafiles, please try again later.');
+                        return;
+                    }
+
                     getDatafiles({
-                        key: cachedDatasetKey,
+                        key: cachedDatasetKey
                     }).then((d: any) => {
                         downloadTSV(d, 'datafiles.tsv')
                     }).catch((err: any) => {

@@ -90,6 +90,10 @@
   ```bash
   # It will build a testing database with docker and run the `cargo test`.
   make test
+
+  # It will run the `cargo test` and generate the coverage report.
+  cargo install cargo-tarpaulin
+  cargo tarpaulin --all-features --workspace --out Html
   ```
 
 5. Build & Run

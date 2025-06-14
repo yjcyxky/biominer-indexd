@@ -19,22 +19,24 @@ const isQueryItem = (item: any): item is QueryItem =>
     typeof item === 'object' && 'field' in item && 'value' in item;
 
 // 将一个 QueryItem 转成标签组件
-const renderQueryItem = (item: QueryItem, color: string, key: number) => {
+const renderQueryItem = (item: QueryItem, color: string, key: number, dataDictionary: API.DataDictionary["fields"]) => {
     let valueStr = '';
     if (Array.isArray(item.value)) {
         valueStr = item.value.join(', ');
     } else {
         valueStr = `${item.value}`;
     }
+
+    const fieldName = dataDictionary.find(field => field.key === item.field)?.name;
     return (
         <Tag key={key} color={color} style={{ marginBottom: 0, marginRight: 0, borderRadius: 5 }}>
-            <strong>{item.field}</strong> {item.operator} <strong>{valueStr}</strong>
+            <strong>{fieldName}</strong> {item.operator} <strong>{valueStr}</strong>
         </Tag>
     );
 };
 
 // 递归渲染 ComposeQueryItem
-export const filters2string = (filter: ComposeQueryItem, level = 0): React.ReactNode => {
+export const filters2string = (filter: ComposeQueryItem, level = 0, dataDictionary: API.DataDictionary["fields"]): React.ReactNode => {
     const color = colorPalette[level % colorPalette.length];
 
     return (
@@ -50,8 +52,8 @@ export const filters2string = (filter: ComposeQueryItem, level = 0): React.React
             {filter.items && filter.items.length > 0 && filter.items.map((item, idx) => (
                 <React.Fragment key={idx}>
                     {isQueryItem(item)
-                        ? renderQueryItem(item, color, idx)
-                        : filters2string(item as ComposeQueryItem, level + 1)}
+                        ? renderQueryItem(item, color, idx, dataDictionary)
+                        : filters2string(item as ComposeQueryItem, level + 1, dataDictionary)}
                     {idx !== filter.items.length - 1 && (
                         <span
                             style={{

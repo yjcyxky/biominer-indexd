@@ -1,11 +1,10 @@
+use crate::model::data_dictionary::DataDictionary;
 use crate::model::datafile::{
     Config, File, FileStatResponse, FileTagsResponse, Hash, QueryFilter, RecordResponse, URL,
 };
-use crate::model::dataset::{
-    DataDictionary, DatasetDataResponse, Datasets, DatasetsResponse, FieldGroupSummary,
-};
+use crate::model::dataset::{DatasetDataResponse, Datasets, DatasetsResponse};
 use crate::model::util::to_hashmap;
-use crate::query_builder::sql_builder::ComposeQuery;
+use crate::query_builder::where_builder::ComposeQuery;
 use crate::repo_config::{RepoConfig, SignData};
 use crate::util;
 use log::{debug, info, warn};
@@ -244,21 +243,6 @@ enum GetDatasetDataDictionaryResponse {
 enum GetDatasetDataResponse {
     #[oai(status = 200)]
     Ok(Json<DatasetDataResponse>),
-
-    #[oai(status = 404)]
-    NotFound(PlainText<String>),
-
-    #[oai(status = 500)]
-    InternalError(PlainText<String>),
-
-    #[oai(status = 400)]
-    BadRequest(PlainText<String>),
-}
-
-#[derive(ApiResponse)]
-enum GetDatasetGroupStatsResponse {
-    #[oai(status = 200)]
-    Ok(Json<Vec<FieldGroupSummary>>),
 
     #[oai(status = 404)]
     NotFound(PlainText<String>),
@@ -950,75 +934,6 @@ impl BioMinerIndexdApi {
                 return GetDatasetDatafilesResponse::InternalError(PlainText(e.to_string()));
             }
         };
-    }
-
-    /// Call `/api/v1/datasets/:key/group-stats` to get the dataset groups.
-    #[oai(
-        path = "/datasets/:key/group-stats",
-        method = "get",
-        tag = "DatasetApiTags::Datasets",
-        operation_id = "getDatasetGroupStats"
-    )]
-    async fn get_dataset_group_stats(
-        &self,
-        key: Path<String>,
-        field_key: Query<Option<String>>,
-        query: Query<Option<String>>,
-    ) -> GetDatasetGroupStatsResponse {
-        // TODO: Whether we should check the field is in the data dictionary?
-        if field_key.0.is_none() {
-            warn!("Field is required");
-            return GetDatasetGroupStatsResponse::BadRequest(PlainText(
-                "Field is required".to_string(),
-            ));
-        }
-
-        let field_key = match field_key.0 {
-            Some(field_key) => {
-                if field_key.is_empty() {
-                    warn!("Field is required");
-                    return GetDatasetGroupStatsResponse::BadRequest(PlainText(
-                        "Field is required".to_string(),
-                    ));
-                }
-                field_key
-            }
-            None => {
-                warn!("Field is required");
-                return GetDatasetGroupStatsResponse::BadRequest(PlainText(
-                    "Field is required".to_string(),
-                ));
-            }
-        };
-
-        let query = match query.0 {
-            Some(query) => match ComposeQuery::from_str(&query) {
-                Ok(query) => query,
-                Err(e) => {
-                    warn!("Failed to parse query string: {}", e);
-                    return GetDatasetGroupStatsResponse::BadRequest(PlainText(e.to_string()));
-                }
-            },
-            None => None,
-        };
-
-        let dataset = match Datasets::get(&key.0) {
-            Ok(dataset) => dataset,
-            Err(e) => {
-                warn!("Failed to get dataset: {}", e);
-                return GetDatasetGroupStatsResponse::NotFound(PlainText(e.to_string()));
-            }
-        };
-
-        let groups = match dataset.group_by(&field_key, &query) {
-            Ok(groups) => groups,
-            Err(e) => {
-                warn!("Failed to group dataset: {}", e);
-                return GetDatasetGroupStatsResponse::InternalError(PlainText(e.to_string()));
-            }
-        };
-
-        GetDatasetGroupStatsResponse::Ok(Json(groups))
     }
 
     /// Call `/api/v1/datasets/:key/data` to get the dataset data.

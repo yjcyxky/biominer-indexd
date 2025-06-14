@@ -28,7 +28,7 @@ impl QueryItem {
     pub fn new(field: String, value: Value, operator: String) -> Self {
         let allowed_operators = vec![
             "=", "!=", "like", "not like", "ilike", "in", "not in", "<>", "<", ">", "<=", ">=",
-            "is", "is not", "%"
+            "is", "is not", "%",
         ];
         if !allowed_operators.contains(&operator.as_str()) {
             panic!("Invalid operator: {}", operator);
@@ -46,7 +46,8 @@ impl QueryItem {
                 }
             }
             Value::String(_) => {
-                if !vec!["=", "!=", "like", "not like", "ilike", "<>", "%"].contains(&operator.as_str())
+                if !vec!["=", "!=", "like", "not like", "ilike", "<>", "%"]
+                    .contains(&operator.as_str())
                 {
                     panic!("Invalid operator: {}", operator);
                 }
@@ -147,6 +148,84 @@ impl QueryItem {
             }
         }
     }
+
+    /// Build a parameterised SQL fragment for this `QueryItem`.
+    /// Returns the fragment together with collected parameters.
+    pub fn to_sql_with_params(&self) -> (String, Vec<Value>) {
+        // Helper that yields a single placeholder string like "$n" where n is 1-based.
+        let mut params: Vec<Value> = Vec::new();
+
+        // How many placeholders we will generate for this value?
+        let (fragment, generated_params): (String, Vec<Value>) = match &self.value {
+            // ---------- Scalar values ----------
+            Value::Int(_) | Value::Float(_) | Value::String(_) | Value::Bool(_) => {
+                let placeholder = format!("?");
+                (
+                    format!("{} {} {}", self.field, self.operator, placeholder),
+                    vec![self.value.clone()],
+                )
+            }
+            // Null is embedded literally – there is no value to bind.
+            Value::Null => (format!("{} {} NULL", self.field, self.operator), vec![]),
+
+            // ---------- Array values (IN / NOT IN) ----------
+            Value::ArrayString(arr) => {
+                let placeholders: Vec<String> =
+                    arr.iter().enumerate().map(|(i, _)| format!("?")).collect();
+                (
+                    format!(
+                        "{} {} ({})",
+                        self.field,
+                        self.operator,
+                        placeholders.join(", ")
+                    ),
+                    arr.iter().cloned().map(Value::String).collect(),
+                )
+            }
+            Value::ArrayInt(arr) => {
+                let placeholders: Vec<String> =
+                    arr.iter().enumerate().map(|(i, _)| format!("?")).collect();
+                (
+                    format!(
+                        "{} {} ({})",
+                        self.field,
+                        self.operator,
+                        placeholders.join(", ")
+                    ),
+                    arr.iter().cloned().map(Value::Int).collect(),
+                )
+            }
+            Value::ArrayFloat(arr) => {
+                let placeholders: Vec<String> =
+                    arr.iter().enumerate().map(|(i, _)| format!("?")).collect();
+                (
+                    format!(
+                        "{} {} ({})",
+                        self.field,
+                        self.operator,
+                        placeholders.join(", ")
+                    ),
+                    arr.iter().cloned().map(Value::Float).collect(),
+                )
+            }
+            Value::ArrayBool(arr) => {
+                let placeholders: Vec<String> =
+                    arr.iter().enumerate().map(|(i, _)| format!("?")).collect();
+                (
+                    format!(
+                        "{} {} ({})",
+                        self.field,
+                        self.operator,
+                        placeholders.join(", ")
+                    ),
+                    arr.iter().cloned().map(Value::Bool).collect(),
+                )
+            }
+        };
+
+        params.extend(generated_params);
+        (fragment, params)
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -182,6 +261,37 @@ impl ComposeQuery {
         };
 
         Ok(query)
+    }
+
+    pub fn format(&self) -> String {
+        match self {
+            ComposeQuery::QueryItem(item) => item.format(),
+            ComposeQuery::ComposeQueryItem(item) => item.format(),
+        }
+    }
+
+    /// Recursively build WHERE clause from a `ComposeQuery`, assigning parameter placeholders
+    /// and returning the fragment together with collected parameters.
+    pub fn to_sql_with_params(&self) -> (String, Vec<Value>) {
+        match self {
+            ComposeQuery::QueryItem(item) => item.to_sql_with_params(),
+            ComposeQuery::ComposeQueryItem(comp) => {
+                let mut sql_parts: Vec<String> = Vec::new();
+                let mut params: Vec<Value> = Vec::new();
+
+                for (idx, sub) in comp.items.iter().enumerate() {
+                    let (frag, mut p) = sub.to_sql_with_params();
+
+                    if idx > 0 {
+                        sql_parts.push(format!(" {} ", comp.operator.to_uppercase()));
+                    }
+                    sql_parts.push(frag);
+                    params.append(&mut p);
+                }
+
+                (format!("({})", sql_parts.join("")), params)
+            }
+        }
     }
 }
 
@@ -391,5 +501,239 @@ mod tests {
         query.get_field_value_pairs(&mut pairs);
         debug!("pairs: {:?}", pairs);
         assert_eq!(2, pairs.len());
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid operator")]
+    fn test_invalid_operator() {
+        let _ = QueryItem::new("age".to_string(), Value::Int(30), "like".to_string());
+    }
+
+    #[test]
+    fn test_format_various_values() {
+        let int_item = QueryItem::new("age".to_string(), Value::Int(25), ">".to_string());
+        assert_eq!(int_item.format(), "age > 25");
+
+        let str_item = QueryItem::new(
+            "name".to_string(),
+            Value::String("Alice".into()),
+            "like".into(),
+        );
+        assert_eq!(str_item.format(), "name like 'Alice'");
+
+        let bool_item = QueryItem::new("active".into(), Value::Bool(true), "=".into());
+        assert_eq!(bool_item.format(), "active = true");
+
+        let null_item = QueryItem::new("deleted".into(), Value::Null, "is".into());
+        assert_eq!(null_item.format(), "deleted is NULL");
+
+        let arr_str = QueryItem::new(
+            "tags".into(),
+            Value::ArrayString(vec!["x".into(), "y".into()]),
+            "in".into(),
+        );
+        assert_eq!(arr_str.format(), "tags in ('x','y')");
+    }
+
+    #[test]
+    fn test_to_sql_with_params_scalar() {
+        let item = QueryItem::new("score".into(), Value::Float(88.5), ">".into());
+        let (sql, params) = item.to_sql_with_params();
+        assert_eq!(sql, "score > ?");
+        assert_eq!(params, vec![Value::Float(88.5)]);
+    }
+
+    #[test]
+    fn test_to_sql_with_params_array() {
+        let item = QueryItem::new("ids".into(), Value::ArrayInt(vec![1, 2, 3]), "in".into());
+        let (sql, params) = item.to_sql_with_params();
+        assert_eq!(sql, "ids in (?, ?, ?)");
+        assert_eq!(params, vec![Value::Int(1), Value::Int(2), Value::Int(3)]);
+    }
+
+    #[test]
+    fn test_compose_query_nested_and_or() {
+        let inner = ComposeQueryItem::new("or")
+            .add_item(ComposeQuery::QueryItem(QueryItem::new(
+                "a".into(),
+                Value::Int(1),
+                "=".into(),
+            )))
+            .add_item(ComposeQuery::QueryItem(QueryItem::new(
+                "b".into(),
+                Value::Int(2),
+                "=".into(),
+            )))
+            .clone();
+
+        let mut outer = ComposeQueryItem::new("and");
+        outer
+            .add_item(ComposeQuery::QueryItem(QueryItem::new(
+                "c".into(),
+                Value::Int(3),
+                ">".into(),
+            )))
+            .add_item(ComposeQuery::ComposeQueryItem(inner));
+
+        assert_eq!(outer.format(), "c > 3 and (a = 1 or b = 2)");
+    }
+
+    #[test]
+    fn test_get_all_fields_and_pairs() {
+        let q = ComposeQueryItem::new("and")
+            .add_item(ComposeQuery::QueryItem(QueryItem::new(
+                "x".into(),
+                Value::String("a".into()),
+                "=".into(),
+            )))
+            .add_item(ComposeQuery::QueryItem(QueryItem::new(
+                "y".into(),
+                Value::Int(2),
+                ">".into(),
+            )))
+            .clone();
+
+        let cq = ComposeQuery::ComposeQueryItem(q);
+
+        let fields = get_all_fields(&cq);
+        assert!(fields.contains(&"x".into()));
+        assert!(fields.contains(&"y".into()));
+
+        let pairs = get_all_field_pairs(&cq);
+        assert_eq!(pairs, vec![("x".into(), "a".into())]);
+    }
+
+    #[test]
+    fn test_order_clause_builders() {
+        let fields = vec!["name".into(), "score".into()];
+        assert_eq!(make_order_clause(fields), "name, score");
+
+        let pairs = vec![
+            ("name".into(), " alice ".into()),
+            ("summary".into(), "~good~".into()),
+        ];
+        assert_eq!(
+            make_order_clause_by_pairs(pairs.clone(), 2),
+            "similarity(name, 'alice') DESC, similarity(summary, 'good') DESC"
+        );
+    }
+
+    #[test]
+    fn test_queryitem_default_and_getters() {
+        let q = QueryItem::default();
+        assert_eq!(q.get_field(), "1");
+
+        let v = QueryItem::new("k".into(), Value::String("v".into()), "=".into());
+        assert_eq!(v.get_field_value_pair(), Some(("k".into(), "v".into())));
+    }
+
+    #[test]
+    fn test_from_str_example1() {
+        let json = r#"
+    {
+      "operator": "AND",
+      "items": [
+        {
+          "operator": "OR",
+          "items": [
+            {
+              "operator": "ilike",
+              "field": "name",
+              "value": "%CFS%"
+            },
+            {
+              "operator": "ilike",
+              "field": "id",
+              "value": "%CFS%"
+            },
+            {
+              "operator": "ilike",
+              "field": "synonyms",
+              "value": "%CFS%"
+            },
+            {
+              "operator": "ilike",
+              "field": "xrefs",
+              "value": "%CFS%"
+            }
+          ]
+        },
+        {
+          "operator": "=",
+          "field": "label",
+          "value": "Disease"
+        }
+      ]
+    }"#;
+
+        let result = ComposeQuery::from_str(json).unwrap();
+        assert!(result.is_some());
+
+        if let Some(ComposeQuery::ComposeQueryItem(item)) = result {
+            assert_eq!(item.operator.to_lowercase(), "and");
+            assert_eq!(item.items.len(), 2);
+
+            // Check first item is also ComposeQueryItem with 4 QueryItem children
+            if let ComposeQuery::ComposeQueryItem(inner) = &item.items[0] {
+                assert_eq!(inner.operator.to_lowercase(), "or");
+                assert_eq!(inner.items.len(), 4);
+            } else {
+                panic!("Expected nested ComposeQueryItem");
+            }
+        } else {
+            panic!("Expected ComposeQueryItem");
+        }
+    }
+
+    #[test]
+    fn test_from_str_example2() {
+        let json = r#"
+    {
+      "operator": "or",
+      "items": [
+        {
+          "operator": "ilike",
+          "field": "name",
+          "value": "%CFS%"
+        },
+        {
+          "operator": "ilike",
+          "field": "id",
+          "value": "%CFS%"
+        }
+      ]
+    }"#;
+
+        let result = ComposeQuery::from_str(json).unwrap();
+        assert!(result.is_some());
+
+        if let Some(ComposeQuery::ComposeQueryItem(item)) = result {
+            assert_eq!(item.operator.to_lowercase(), "or");
+            assert_eq!(item.items.len(), 2);
+
+            for sub in &item.items {
+                if let ComposeQuery::QueryItem(qi) = sub {
+                    assert_eq!(qi.operator.to_lowercase(), "ilike");
+                    assert_eq!(qi.value, Value::String("%CFS%".into()));
+                } else {
+                    panic!("Expected QueryItem");
+                }
+            }
+        } else {
+            panic!("Expected ComposeQueryItem");
+        }
+    }
+
+    #[test]
+    fn test_from_str_empty() {
+        let result = ComposeQuery::from_str("").unwrap();
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_from_str_invalid_json() {
+        let json = r#"{ "operator": "and", "items": [ { "bad": "key" } ] }"#;
+        let result = ComposeQuery::from_str(json);
+        assert!(result.is_err()); // should fail due to missing required keys like `field` and `value`
     }
 }

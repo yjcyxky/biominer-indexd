@@ -2,93 +2,107 @@
 @global-header-height: 48px;
 
 .datatable-header,
-.datatable-table {
+.datatable-tabs {
     margin: 0 16px;
 }
 
+.datatable-tabs {
+    .ant-tabs-extra-content {
+        margin-bottom: 8px;
+    }
+
+    .ant-tabs-nav {
+        margin-bottom: 5px;
+    }
+
+    .ant-tabs-tab {
+        padding: 0;
+    }
+
+    .ant-tabs-tab-btn {
+        font-size: 16px;
+        font-weight: 500;
+    }
+}
+
 .datatable-header {
-    height: @header-height;
     margin-bottom: 8px;
 
-    .datatable-header-upper {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: flex-start;
+
+    .ant-typography {
+        margin-bottom: 0;
+    }
+}
+
+.datatable-tabs-extra-content {
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+    
+    .datatable-tabs-extra-content-left {
         display: flex;
-        flex-direction: column;
+        flex-direction: row;
         justify-content: flex-start;
         align-items: flex-start;
 
-        .ant-typography {
-            margin-bottom: 0;
+        .datatable-filters {
+            // max-width: 500px;
+            height: 37px;
+            margin-bottom: 0px;
+            margin-right: 8px;
+            border: 1px solid #fefefe;
+            padding: 0 8px;
+            border-radius: 5px;
+            background-color: #fff;
+            flex-wrap: nowrap;
+
+            .ant-space {
+                width: 100%;
+            }
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.4);
+            }
+
+            70% {
+                box-shadow: 0 0 0 10px rgba(255, 193, 7, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(255, 193, 7, 0);
+            }
+        }
+
+        .sample-file-count {
+            width: fit-content;
+            background-color: #fff3cd;
+            /* 柔和黄色 */
+            color: #856404;
+            /* 深黄色文字 */
+            font-weight: bold;
+            padding: 6px 16px;
+            border-left: 4px solid #ffc107;
+            border-radius: 4px;
+            margin: 0;
+            animation: pulse 2s infinite;
         }
     }
 
-    .datatable-header-lower {
+    .datatable-tabs-extra-content-right {
         display: flex;
         flex-direction: row;
-        justify-content: space-between;
+        justify-content: flex-end;
         align-items: flex-end;
-        width: 100%;
 
-        .datatable-header-lower-left {
-            display: flex;
-            flex-direction: row;
-            justify-content: flex-start;
-            align-items: flex-start;
-
-            .datatable-filters {
-                width: 100%;
-                height: 37px;
-                margin-bottom: 0px;
-                margin-left: 8px;
-                border: 1px solid #fefefe;
-                padding: 0 8px;
-                border-radius: 5px;
-                background-color: #fff;
-
-                .ant-space {
-                    width: 100%;
-                }
-            }
-
-            @keyframes pulse {
-                0% {
-                    box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.4);
-                }
-
-                70% {
-                    box-shadow: 0 0 0 10px rgba(255, 193, 7, 0);
-                }
-
-                100% {
-                    box-shadow: 0 0 0 0 rgba(255, 193, 7, 0);
-                }
-            }
-
-            .sample-file-count {
-                min-width: 480px;
-                width: max-content;
-                background-color: #fff3cd;
-                /* 柔和黄色 */
-                color: #856404;
-                /* 深黄色文字 */
-                font-weight: bold;
-                padding: 6px 16px;
-                border-left: 4px solid #ffc107;
-                border-radius: 4px;
-                margin: 0;
-                animation: pulse 2s infinite;
-            }
-        }
-
-        .datatable-header-lower-right {
-            display: flex;
-            flex-direction: row;
-            justify-content: flex-end;
-            align-items: flex-end;
-
-            .ant-btn {
-                margin-left: 8px;
-                height: 37px;
-            }
+        .ant-btn {
+            margin-left: 8px;
+            height: 37px;
         }
     }
 }
@@ -101,7 +115,8 @@
         padding: 0;
     }
 
-    .data-info-modal-content, .modal-markdown-content {
+    .data-info-modal-content,
+    .modal-markdown-content {
         width: 100%;
         height: 100%;
         max-height: 500px;
@@ -126,15 +141,14 @@
     }
 }
 
-@media (max-width: 1400px) {
-    .sample-file-count {
-        display: none !important;
+@media (max-width: 2400px) {
+    .datatable-filters {
+        visibility: hidden;
     }
 }
 
-// 隐藏左侧头部组件，在中小屏下
-@media (max-width: 1024px) {
-    .datatable-header-lower-left {
-        visibility: hidden;
+@media (max-width: 1500px) {
+    .sample-file-count {
+        display: none !important;
     }
 }

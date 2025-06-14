@@ -1,6 +1,7 @@
-use crate::query_builder::sql_builder::ComposeQuery;
+use crate::model::util::load_tsv;
+use crate::query_builder::where_builder::ComposeQuery;
 use crate::util::{self, get_delimiter, parse_csv_error, ValidationError};
-use anyhow::Ok as AnyOk;
+use anyhow::{Error as AnyError, Ok as AnyOk};
 use chrono::{self, Utc};
 use csv;
 use log::{debug, info, warn};
@@ -9,7 +10,8 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 use sqlx;
 use sqlx::Row;
-use std::{error::Error, option::Option, path::PathBuf};
+use std::error::Error;
+use std::{option::Option, path::PathBuf};
 use uuid;
 use validator::Validate;
 
@@ -756,8 +758,8 @@ pub struct File {
     pub size: i64,
     pub created_at: i64,
     pub updated_at: i64,
-    pub status: String,  // "pending" | "processing" | "validated" | "failed"
-    pub baseid: String,  // The file with multiple versions will have the same baseid
+    pub status: String, // "pending" | "processing" | "validated" | "failed"
+    pub baseid: String, // The file with multiple versions will have the same baseid
     pub rev: String,
     pub version: i32,
     pub uploader: String,
@@ -797,6 +799,34 @@ impl File {
         }
     }
 
+    /// Loads the datafiles from a file.
+    ///
+    /// This function loads the datafiles from a file.
+    ///
+    /// # Arguments
+    ///
+    /// * `datafile_path` - The path to the datafile.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(Vec<File>)` if the datafiles are loaded successfully, or an `Err(Error)` if the datafile cannot be loaded.
+    ///
+    /// # Errors
+    ///
+    /// This function returns an error if:
+    /// - The `datafile.tsv` file does not exist.
+    /// - The `datafile.tsv` file cannot be read.
+    /// - The `datafile.tsv` file cannot be parsed.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// let datafiles = File::from_file(&datafile_path)?;
+    /// ```
+    pub fn from_file(datafile_path: &PathBuf) -> Result<Vec<Self>, AnyError> {
+        return load_tsv(datafile_path);
+    }
+
     pub async fn query_file(
         pool: &sqlx::PgPool,
         field_name: &str,
@@ -809,10 +839,10 @@ impl File {
         }
 
         let id = if field_name == "guid" {
-            let uid = match field_value.contains(format!("{}.{}", "biominer", Config::get_registry_id()).as_str()) {
-                true => {
-                    field_value.to_string()
-                }
+            let uid = match field_value
+                .contains(format!("{}.{}", "biominer", Config::get_registry_id()).as_str())
+            {
+                true => field_value.to_string(),
                 false => {
                     return Err(anyhow::anyhow!("Invalid guid: {}", field_value));
                 }

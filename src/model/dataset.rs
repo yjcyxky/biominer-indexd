@@ -41,14 +41,17 @@
 
 use super::util::load_tsv;
 use super::{datafile::File, duckdb_util::row_to_json};
-use crate::query_builder::sql_builder::ComposeQuery;
+use crate::model::data_dictionary::DataDictionary;
+use crate::model::data_table::{DataFileTable, MAFTable, MetadataTable, MRNAExprTable, DATA_FILE_TABLES};
+use crate::model::dataset_metadata::DatasetMetadata;
+use crate::query_builder::where_builder::ComposeQuery;
 use anyhow::{bail, Error, Result};
 use duckdb::{params, Connection};
 use lazy_static::lazy_static;
 use log::{info, warn};
 use poem_openapi::Object;
-use regex::Regex;
 use polars::prelude::LazyFrame;
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::sync::Mutex;
@@ -81,7 +84,7 @@ lazy_static! {
 pub fn init_cache(base_path: &PathBuf) -> Result<(), Error> {
     let datasets = Datasets::load(base_path)?;
     for dataset in datasets.records {
-        let data_dictionary = dataset.load_data_dictionary()?;
+        let data_dictionary = DataDictionary::load_metadata_dictionary(&dataset.path)?;
         DATA_DICTIONARY_CACHE
             .lock()
             .unwrap()
@@ -93,7 +96,7 @@ pub fn init_cache(base_path: &PathBuf) -> Result<(), Error> {
             .insert(dataset.metadata.key.clone(), dataset.clone());
 
         // TODO: cache datafiles
-        let datafiles = dataset.load_datafiles()?;
+        let datafiles = File::from_file(&dataset.path.join("datafile.tsv"))?;
         DATAFILE_CACHE
             .lock()
             .unwrap()
@@ -102,64 +105,11 @@ pub fn init_cache(base_path: &PathBuf) -> Result<(), Error> {
     Ok(())
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone, Object)]
-pub struct DataDictionaryField {
-    pub key: String,
-    pub name: String,
-    pub data_type: String,
-    pub description: String,
-    pub notes: String,
-    pub allowed_values: serde_json::Value, // It might be a list of strings, numbers, or booleans
-    pub order: usize,
-}
-
-#[derive(Debug, Clone, Object)]
-pub struct DataDictionary {
-    pub fields: Vec<DataDictionaryField>,
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone, Object)]
-pub struct DatasetMetadata {
-    pub key: String,
-    pub name: String,
-    pub description: String,
-    pub citation: String,
-    pub pmid: String,
-    pub groups: Vec<String>,
-    pub tags: Vec<String>,
-    pub total: usize,
-    pub is_filebased: bool,
-}
-
-impl DatasetMetadata {
-    pub fn from_value(value: serde_json::Value) -> Self {
-        Self {
-            key: value["key"].as_str().unwrap().to_string(),
-            name: value["name"].as_str().unwrap().to_string(),
-            description: value["description"].as_str().unwrap().to_string(),
-            citation: value["citation"].as_str().unwrap().to_string(),
-            pmid: value["pmid"].as_str().unwrap().to_string(),
-            groups: value["groups"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .map(|v| v.as_str().unwrap().to_string())
-                .collect(),
-            tags: value["tags"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .map(|v| v.as_str().unwrap().to_string())
-                .collect(),
-            total: value["total"].as_u64().unwrap() as usize,
-            is_filebased: value["is_filebased"].as_bool().unwrap(),
-        }
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct Dataset {
     pub metadata: DatasetMetadata,
+    pub metadata_table: MetadataTable,
+    pub datafile_tables: HashMap<String, DataFileTable>,
     pub path: PathBuf,
 }
 
@@ -183,13 +133,6 @@ pub struct DatasetDataResponse {
     pub total: usize,
     pub page: usize,
     pub page_size: usize,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone, Object)]
-pub struct FieldGroupSummary {
-    pub value: String,     // 分组字段值
-    pub count: usize,      // 出现次数
-    pub freq_percent: f64, // 占总数百分比
 }
 
 impl Datasets {
@@ -245,10 +188,7 @@ impl Datasets {
             .into_iter()
             .map(|entry| {
                 let path = base_path.join(&entry.key);
-                Dataset {
-                    metadata: entry,
-                    path,
-                }
+                Dataset::load(&path).expect("Failed to load dataset")
             })
             .collect();
 
@@ -344,7 +284,6 @@ impl Datasets {
         };
 
         let mut records = Vec::new();
-
         for entry in index_entries {
             let dataset = Dataset::load(&base_path.join(&entry.key))?;
             records.push(dataset);
@@ -358,7 +297,7 @@ impl Datasets {
                 continue;
             }
 
-            let dict = dataset.load_data_dictionary()?;
+            let dict = DataDictionary::load_metadata_dictionary(&dataset.path)?;
             for field in &dict.fields {
                 if !key_re.is_match(&field.key) {
                     warn!(
@@ -686,23 +625,26 @@ impl Dataset {
     /// ```rust
     /// let dataset = Dataset::load(Path::new("/path/to/dataset"))?;
     /// ```
-    pub fn load(dataset_path: &Path) -> Result<Self, Error> {
-        let metadata_path = dataset_path.join("dataset.json");
-        let content = match fs::read_to_string(&metadata_path) {
-            Ok(content) => content,
-            Err(e) => {
-                return Err(anyhow::anyhow!(
-                    "Failed to read dataset.json at {:?}: {}",
-                    metadata_path,
-                    e
-                ));
-            }
-        };
+    pub fn load(dataset_path: &PathBuf) -> Result<Self, Error> {
+        let metadata = DatasetMetadata::from_file(&dataset_path)?;
+        let metadata_table = MetadataTable::new(&dataset_path)?;
 
-        let metadata: DatasetMetadata = serde_json::from_str(&content)?;
+        let mut datafile_tables = HashMap::new();
+        for table_name in DATA_FILE_TABLES.lock().unwrap().iter() {
+            if table_name.to_string() == "maf" {
+                let datafile_table = DataFileTable::MAF(MAFTable::new(&dataset_path)?);
+                datafile_tables.insert(table_name.to_string(), datafile_table);
+            } else if table_name.to_string() == "mrna_expr" {
+                let datafile_table = DataFileTable::MRNAExpr(MRNAExprTable::new(&dataset_path)?);
+                datafile_tables.insert(table_name.to_string(), datafile_table);
+            }
+        }
+
         Ok(Self {
             metadata,
             path: dataset_path.to_path_buf(),
+            metadata_table,
+            datafile_tables,
         })
     }
 
@@ -885,80 +827,6 @@ impl Dataset {
         Ok(data_dictionary.unwrap().clone())
     }
 
-    /// Load the data dictionary for this dataset.
-    ///
-    /// This function loads the data dictionary for a dataset from the cache.
-    ///
-    /// # Returns
-    ///
-    /// Returns `Ok(DataDictionary)` if the data dictionary is found in the cache, or an `Err(Error)` if the data dictionary is not found in the cache.
-    ///
-    /// # Errors
-    ///
-    /// This function returns an error if:
-    /// - The data dictionary is not found in the cache.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// let dictionary = dataset.load_data_dictionary()?;
-    /// ```
-    pub fn load_data_dictionary(&self) -> Result<DataDictionary, Error> {
-        let data_dictionary_path = self.path.join("data_dictionary.json");
-        let data_dictionary = match fs::read_to_string(&data_dictionary_path) {
-            Ok(data_dictionary) => data_dictionary,
-            Err(e) => {
-                return Err(anyhow::anyhow!(
-                    "Failed to read data dictionary file: {}",
-                    e
-                ));
-            }
-        };
-        let data_dictionary: Vec<DataDictionaryField> = match serde_json::from_str(&data_dictionary)
-        {
-            Ok(data_dictionary) => data_dictionary,
-            Err(e) => {
-                return Err(anyhow::anyhow!(
-                    "Failed to parse data dictionary file: {}",
-                    e
-                ));
-            }
-        };
-
-        Ok(DataDictionary {
-            fields: data_dictionary,
-        })
-    }
-
-    /// Loads the datafiles for a dataset.
-    ///
-    /// This function loads the datafiles for a dataset from the specified path.
-    ///
-    /// # Arguments
-    ///
-    /// * `dataset_path` - The path to the dataset directory.
-    ///
-    /// # Returns
-    ///
-    /// Returns `Ok(Vec<File>)` if the datafiles are loaded successfully, or an `Err(Error)` if the datafiles cannot be loaded.
-    ///
-    /// # Errors
-    ///
-    /// This function returns an error if:
-    /// - The `datafile.tsv` file does not exist.
-    /// - The `datafile.tsv` file cannot be read.
-    /// - The `datafile.tsv` file cannot be parsed.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// let datafiles = dataset.load_datafiles()?;
-    /// ```
-    pub fn load_datafiles(&self) -> Result<Vec<File>, Error> {
-        let datafile_path = self.path.join("datafile.tsv");
-        return load_tsv(&datafile_path);
-    }
-
     /// Get the license for a dataset.
     pub fn get_license(&self) -> Result<String, Error> {
         let license_path = self.path.join("license.md");
@@ -1000,71 +868,6 @@ impl Dataset {
         }
 
         Ok(datafiles.unwrap().clone())
-    }
-
-    /// Group the dataset by a field.
-    pub fn group_by(
-        self: &Self,
-        field: &str,
-        query: &Option<ComposeQuery>,
-    ) -> Result<Vec<FieldGroupSummary>, Error> {
-        let parquet_path = self.path.join("data.parquet");
-        if !parquet_path.exists() {
-            return Err(anyhow::anyhow!(
-                "Dataset parquet file not found at {:?}",
-                parquet_path
-            ));
-        }
-
-        let conn = Connection::open_in_memory()?;
-        conn.execute(
-            "CREATE TABLE metadata AS SELECT * FROM read_parquet(?)",
-            params![parquet_path.to_str().unwrap()],
-        )?;
-
-        let mut query_str = match query {
-            Some(ComposeQuery::QueryItem(item)) => item.format(),
-            Some(ComposeQuery::ComposeQueryItem(item)) => item.format(),
-            None => "".to_string(),
-        };
-
-        if query_str.is_empty() {
-            query_str = "1=1".to_string();
-        }
-
-        // Group-by 查询：value、count、频率
-        let sql = format!(
-            r#"
-                SELECT
-                    COALESCE(CAST({field} AS TEXT), 'NA') AS value,
-                    COUNT(*) AS count,
-                    ROUND(100.0 * COUNT(*) / SUM(COUNT(*)) OVER (), 1) AS freq_percent
-                FROM metadata
-                WHERE {query_str}
-                GROUP BY {field}
-                ORDER BY count DESC
-        "#,
-            field = field,
-            query_str = query_str
-        );
-
-        info!("GroupBy SQL: {}", sql);
-
-        let mut stmt = conn.prepare(&sql)?;
-        let rows = stmt.query_map([], |row| {
-            Ok(FieldGroupSummary {
-                value: row.get::<_, String>(0)?,
-                count: row.get::<_, i64>(1)? as usize,
-                freq_percent: row.get::<_, f64>(2)?,
-            })
-        })?;
-
-        let mut results = Vec::new();
-        for row in rows {
-            results.push(row?);
-        }
-
-        Ok(results)
     }
 }
 
