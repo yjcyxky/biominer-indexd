@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-<img alt="GitHub Workflow Status" src="https://img.shields.io/github/workflow/status/yjcyxky/biominer-indexd/release?label=Build Status">
+<img alt="GitHub Workflow Status" src="https://img.shields.io/github/actions/workflow/status/yjcyxky/biominer-indexd/release.yaml?label=Build Status">
 <img src="https://img.shields.io/github/license/yjcyxky/biominer-indexd.svg?label=License" alt="License"> 
 <a href="https://github.com/yjcyxky/biominer-indexd/releases"><img alt="Latest Release" src="https://img.shields.io/github/release/yjcyxky/biominer-indexd.svg?label=Latest%20Release"/></a>
 </p>

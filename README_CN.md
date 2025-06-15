@@ -2,7 +2,7 @@
 <p align="center">BioMiner Indexd 是一个基于哈希的数据索引、追踪与发现服务，提供全局唯一标识符。<br/>类似于 [Indexd](https://github.com/uc-cdis/indexd)，但功能更加强大。</p>
 
 <p align="center">
-<img alt="GitHub Workflow Status" src="https://img.shields.io/github/workflow/status/yjcyxky/biominer-indexd/release?label=Build Status">
+<img alt="GitHub Workflow Status" src="https://img.shields.io/github/actions/workflow/status/yjcyxky/biominer-indexd/release.yaml?label=Build Status">
 <img src="https://img.shields.io/github/license/yjcyxky/biominer-indexd.svg?label=License" alt="License"> 
 <a href="https://github.com/yjcyxky/biominer-indexd/releases"><img alt="Latest Release" src="https://img.shields.io/github/release/yjcyxky/biominer-indexd.svg?label=Latest%20Release"/></a>
 </p>
