@@ -60,3 +60,4 @@ jobs:
             target/release/biominer-indexd-v*
       - name: Output
         run: echo "${{steps.pre_release.outputs.automatic_releases_tag}}"
+      - uses: kevincobain2000/action-camo-purge@v1
