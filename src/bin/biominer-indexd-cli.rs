@@ -1,11 +1,13 @@
 extern crate log;
 
+use biominer_indexd::init_logger;
+use biominer_indexd::model::dataset::Datasets;
+use biominer_indexd::run_migrations;
+use biominer_indexd::{get_free_port, get_local_postgres_url, setup_local_postgres};
 use log::*;
+use postgresql_embedded::PostgreSQL;
 use std::{collections::HashMap, path::PathBuf};
 use structopt::StructOpt;
-use biominer_indexd::init_logger;
-use biominer_indexd::run_migrations;
-use biominer_indexd::model::dataset::Datasets;
 /// NOTE: In the first time, you need to follow the order to run the commands: initdb -> importdb.
 ///
 #[derive(StructOpt, Debug)]
@@ -38,6 +40,10 @@ pub struct InitDbArguments {
     /// Database url, such as postgres://postgres:postgres@localhost:5432/biominer-indexd, if not set, use the value of environment variable DATABASE_URL.
     #[structopt(name = "database_url", short = "d", long = "database-url")]
     database_url: Option<String>,
+
+    /// Activate local postgres mode
+    #[structopt(name = "local-postgres", short = "l", long = "local-postgres")]
+    local_postgres: bool,
 }
 
 /// Clean the database, if you want to clean any table in the database, you can use this command.
@@ -47,6 +53,10 @@ pub struct CleanDBArguments {
     /// Database url, such as postgres://postgres:postgres@localhost:5432/biominer-indexd. if not set, use the value of environment variable DATABASE_URL or NEO4J_URL.
     #[structopt(name = "database_url", short = "d", long = "database-url")]
     database_url: Option<String>,
+
+    /// [Optional] Activate local postgres mode
+    #[structopt(name = "local-postgres", short = "l", long = "local-postgres")]
+    local_postgres: bool,
 
     /// [Required] The table name to clean. e.g We will empty all entity-related tables if you use the entity table name. such as entity, entity_metadata, entity2d.
     #[structopt(name = "table", short = "t", long = "table", possible_values = &["entity", "relation", "embedding", "subgraph", "curation", "score", "message", "metadata"], multiple = true)]
@@ -60,6 +70,10 @@ pub struct ImportDBArguments {
     /// [Required] Database url, such as postgres://postgres:postgres@localhost:5432/biominer-indexd, if not set, use the value of environment variable DATABASE_URL.
     #[structopt(name = "database_url", short = "d", long = "database-url")]
     database_url: Option<String>,
+
+    /// [Optional] Activate local postgres mode
+    #[structopt(name = "local-postgres", short = "l", long = "local-postgres")]
+    local_postgres: bool,
 
     /// [Required] The file path of the data file to import. It may be a file or a directory. If you have multiple files to import, you can use the --filepath option with a directory path. We will import all files in the directory. But you need to disable the --drop option, otherwise, only the last file will be imported successfully.
     #[structopt(name = "filepath", short = "f", long = "filepath")]
@@ -87,6 +101,7 @@ pub struct ImportDBArguments {
     batch_size: usize,
 }
 
+/// Index the datasets, you can use this command to index the datasets in the directory.
 #[derive(StructOpt, PartialEq, Debug)]
 #[structopt(setting=structopt::clap::AppSettings::ColoredHelp, name="BiominerIndexd - index-datasets", author="Jingcheng Yang <yjcyxky@163.com>")]
 pub struct IndexDatasetsArguments {
@@ -123,17 +138,57 @@ async fn main() {
                 match std::env::var("DATABASE_URL") {
                     Ok(v) => v,
                     Err(_) => {
-                        error!("{}", "DATABASE_URL is not set.");
-                        std::process::exit(1);
+                        if arguments.local_postgres {
+                            info!("DATABASE_URL is not set, using local postgres.");
+                            "".to_string()
+                        } else {
+                            error!("{}", "DATABASE_URL is not set.");
+                            std::process::exit(1);
+                        }
                     }
                 }
             } else {
                 database_url.unwrap()
             };
 
+            let postgres: Option<PostgreSQL> = if arguments.local_postgres {
+                let port = get_free_port().unwrap();
+                match setup_local_postgres(port).await {
+                    Ok(v) => {
+                        info!("Using local postgres with port: {}", port);
+                        Some(v)
+                    }
+                    Err(e) => {
+                        error!("Failed to setup local postgres: {}", e);
+                        std::process::exit(1);
+                    }
+                }
+            } else {
+                None
+            };
+
+            let database_url = if let Some(ref pg) = postgres {
+                get_local_postgres_url(pg, "biominer_indexd")
+            } else {
+                database_url
+            };
+            debug!(
+                "Using database url (local postgres: {}): {}",
+                postgres.is_some(),
+                database_url
+            );
+
             match run_migrations(&database_url).await {
                 Ok(_) => info!("Init database successfully."),
                 Err(e) => error!("Init database failed: {}", e),
+            }
+
+            if let Some(ref pg) = postgres {
+                info!("Stopping local postgres...");
+                match pg.stop().await {
+                    Ok(_) => info!("Stop local postgres successfully."),
+                    Err(e) => error!("Stop local postgres failed: {}", e),
+                }
             }
         }
         SubCommands::ImportDB(arguments) => {
@@ -156,13 +211,45 @@ async fn main() {
                 match std::env::var("DATABASE_URL") {
                     Ok(v) => v,
                     Err(_) => {
-                        error!("{}", "DATABASE_URL is not set.");
-                        std::process::exit(1);
+                        if arguments.local_postgres {
+                            info!("DATABASE_URL is not set, using local postgres.");
+                            "".to_string()
+                        } else {
+                            error!("{}", "DATABASE_URL is not set.");
+                            std::process::exit(1);
+                        }
                     }
                 }
             } else {
                 arguments.database_url.unwrap()
             };
+
+            let postgres: Option<PostgreSQL> = if arguments.local_postgres {
+                let port = get_free_port().unwrap();
+                match setup_local_postgres(port).await {
+                    Ok(v) => {
+                        info!("Using local postgres with port: {}", port);
+                        Some(v)
+                    }
+                    Err(e) => {
+                        error!("Failed to setup local postgres: {}", e);
+                        std::process::exit(1);
+                    }
+                }
+            } else {
+                None
+            };
+
+            let database_url = if let Some(ref pg) = postgres {
+                get_local_postgres_url(pg, "biominer_indexd")
+            } else {
+                database_url
+            };
+            debug!(
+                "Using database url (local postgres: {}): {}",
+                postgres.is_some(),
+                database_url
+            );
 
             let pool = match sqlx::PgPool::connect(&database_url).await {
                 Ok(v) => v,
@@ -174,7 +261,16 @@ async fn main() {
 
             let mut table_names_map = HashMap::<&str, Vec<&str>>::new();
             let pairs = vec![
-                ("file", vec!["biominer_indexd_url", "biominer_indexd_hash", "biominer_indexd_alias", "biominer_indexd_tag", "biominer_indexd_file"]),
+                (
+                    "file",
+                    vec![
+                        "biominer_indexd_url",
+                        "biominer_indexd_hash",
+                        "biominer_indexd_alias",
+                        "biominer_indexd_tag",
+                        "biominer_indexd_file",
+                    ],
+                ),
                 ("tag", vec!["biominer_indexd_tag"]),
                 ("hash", vec!["biominer_indexd_hash"]),
                 ("alias", vec!["biominer_indexd_alias"]),
@@ -184,7 +280,6 @@ async fn main() {
             for pair in pairs {
                 table_names_map.insert(pair.0, pair.1);
             }
-
 
             let tables = arguments.table;
             for table in tables {
@@ -203,7 +298,6 @@ async fn main() {
                     }
                 }
             }
-            
         }
         SubCommands::IndexDatasets(arguments) => {
             let datasets_dir = arguments.datasets_dir;

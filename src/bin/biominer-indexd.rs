@@ -4,7 +4,10 @@ extern crate log;
 extern crate lazy_static;
 
 use biominer_indexd::model::dataset::init_cache;
-use biominer_indexd::{api, connect_db, init_logger, model, repo_config::RepoConfig};
+use biominer_indexd::{
+    api, connect_db, get_free_port, get_local_postgres_url, init_logger, model, parse_db_url,
+    repo_config::RepoConfig, setup_local_postgres,
+};
 use dotenv::dotenv;
 use log::{error, LevelFilter};
 use poem::middleware::AddData;
@@ -18,11 +21,12 @@ use poem::{
     Endpoint, Request, Response, Result, Route, Server,
 };
 use poem_openapi::OpenApiService;
+use postgresql_embedded::PostgreSQL;
 use rust_embed::RustEmbed;
 use std::env;
 use std::path::{Path as OsPath, PathBuf};
 use std::sync::Arc;
-// use tokio::{self, time::Duration};
+use tokio::{self, time::Duration};
 
 use structopt::StructOpt;
 
@@ -64,6 +68,10 @@ struct Opt {
     /// You can also set it with env var: DATABASE_URL.
     #[structopt(name = "database-url", short = "d", long = "database-url")]
     database_url: Option<String>,
+
+    /// Activate local postgres mode
+    #[structopt(name = "local-postgres", short = "l", long = "local-postgres")]
+    local_postgres: bool,
 
     /// The path of the repo config file.
     #[structopt(
@@ -195,15 +203,51 @@ async fn main() -> Result<(), std::io::Error> {
         match std::env::var("DATABASE_URL") {
             Ok(v) => v,
             Err(_) => {
-                error!("{}", "DATABASE_URL is not set.");
-                std::process::exit(1);
+                if args.local_postgres {
+                    info!("{}", "DATABASE_URL is not set, using local postgres.");
+                    "".to_string()
+                } else {
+                    error!("{}", "DATABASE_URL is not set.");
+                    std::process::exit(1);
+                }
             }
         }
     } else {
         database_url.unwrap()
     };
+
+    let postgres: Option<PostgreSQL> = if args.local_postgres {
+        let port = get_free_port().unwrap();
+        match setup_local_postgres(port).await {
+            Ok(v) => {
+                info!("Local postgres is running on port {}", v.settings().port);
+                Some(v)
+            }
+            Err(e) => {
+                error!("Failed to setup local postgres: {}", e);
+                std::process::exit(1);
+            }
+        }
+    } else {
+        None
+    };
+
     let pool_size = args.pool_size.unwrap_or(10);
-    let pool = connect_db(&database_url, pool_size).await;
+    let pool = if let Some(ref pg) = postgres {
+        let database_url = get_local_postgres_url(pg, "biominer_indexd");
+        debug!(
+            "Connecting to local postgres ({:?}): {}",
+            pg.status(),
+            database_url
+        );
+        connect_db(&database_url, pool_size).await
+    } else {
+        connect_db(&database_url, pool_size).await
+    };
+
+    let postgres_instance: Arc<tokio::sync::Mutex<Option<PostgreSQL>>> =
+        Arc::new(tokio::sync::Mutex::new(postgres));
+    let shared_postgres_instance = AddData::new(postgres_instance.clone());
     let arc_pool = Arc::new(pool);
     let shared_rb = AddData::new(arc_pool.clone());
 
@@ -262,12 +306,36 @@ async fn main() -> Result<(), std::io::Error> {
 
     let route = route
         .with(Cors::new())
+        // For avoiding the postgres variable is dropped when the postgres is not used.
+        .with(shared_postgres_instance)
         .with(shared_rb)
         .with(shared_config)
         .with(shared_repo_config);
 
     Server::new(TcpListener::bind(format!("{}:{}", host, port)))
-        .run(route)
+        .run_with_graceful_shutdown(
+            route,
+            {
+                let postgres = postgres_instance.clone();
+                async move {
+                    let _ = tokio::signal::ctrl_c().await;
+                    info!("Ctrl+C received, shutting down...");
+
+                    let mut locked = postgres.lock().await;
+                    if let Some(ref mut pg) = *locked {
+                        info!("Stopping local PostgreSQL...");
+                        if let Err(e) = pg.stop().await {
+                            error!("Failed to stop PostgreSQL: {}", e);
+                        } else {
+                            info!("Local PostgreSQL stopped.");
+                        }
+                    } else {
+                        info!("Local PostgreSQL is not running.");
+                    }
+                }
+            },
+            Some(Duration::from_secs(5)),
+        )
         .await
     // Server::new(TcpListener::bind(format!("{}:{}", host, port)))
     //   .run_with_graceful_shutdown(

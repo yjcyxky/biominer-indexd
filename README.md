@@ -2,6 +2,10 @@
 <p align="center">BioMiner Indexd is a hash-based data indexing and tracking service providing globally unique identifiers. <br/>Similar to [Indexd](https://github.com/uc-cdis/indexd), but with a more.</p>
 
 <p align="center">
+[English](README.md) | [中文](README_CN.md)
+</p>
+
+<p align="center">
 <img alt="GitHub Workflow Status" src="https://img.shields.io/github/workflow/status/yjcyxky/biominer-indexd/release?label=Build Status">
 <img src="https://img.shields.io/github/license/yjcyxky/biominer-indexd.svg?label=License" alt="License"> 
 <a href="https://github.com/yjcyxky/biominer-indexd/releases"><img alt="Latest Release" src="https://img.shields.io/github/release/yjcyxky/biominer-indexd.svg?label=Latest%20Release"/></a>
@@ -23,17 +27,35 @@
 - [ ] More features...
 
 ## Quick Start
+
+BioMiner Indexd supports two database modes:
+1. Remote PostgreSQL mode (recommended for production)
+2. Local PostgreSQL mode (recommended for development, testing and production with small data size)
+
+### Remote PostgreSQL Mode
+
 - Get BioMiner Indexd ([Download Latest Version](https://github.com/yjcyxky/biominer-indexd/releases))
 - Install PostgreSQL (Recommended version: 10.x)
 - Set Environment Variables
 
   ```bash
-  export DATABASE_URL=postgres:://user:password@localhost:5432/biominer_indexd
-  # NOTE: BIOMIER_REGISTRY_ID only allow to set one time. If you want to change it, you need to rebuild the database.
+  export DATABASE_URL=postgres:://user:password@remote-host:5432/biominer_indexd
+  # NOTE: BIOMIER_REGISTRY_ID only allows to be set once. If you want to change it, you need to rebuild the database.
   export BIOMIER_REGISTRY_ID=fudan-pgx
   ```
 
-- Start BioMiner Indexd
+### Local PostgreSQL Mode
+
+- Get BioMiner Indexd ([Download Latest Version](https://github.com/yjcyxky/biominer-indexd/releases))
+- Set Environment Variables
+
+  ```bash
+  # Using local PostgreSQL database, data will be stored in your local PostgreSQL instance
+  # NOTE: BIOMIER_REGISTRY_ID only allows to be set once. If you want to change it, you need to rebuild the database.
+  export BIOMIER_REGISTRY_ID=fudan-pgx
+  ```
+
+### Start Service
 
   ```bash
   $ biominer-indexd --help
@@ -50,16 +72,16 @@
         -V, --version    Prints version information
 
     OPTIONS:
-        -d, --database-url <database-url>    Database url, such as postgres:://user:pass@host:port/dbname. You can also set
-                                            it with env var: DATABASE_URL
-        -H, --host <host>                    127.0.0.1 or 0.0.0.0 [default: 127.0.0.1]  [possible values: 127.0.0.1,
-                                            0.0.0.0]
+        -d, --database-url <database-url>    Database url, such as postgres:://user:pass@host:port/dbname. You can also set it with env var: DATABASE_URL
+        -l, --local-postgres                  Activate local postgres mode
+        -H, --host <host>                    127.0.0.1 or 0.0.0.0 [default: 127.0.0.1]  [possible values: 127.0.0.1, 0.0.0.0]
         -p, --port <port>                    Which port [default: 3000]
+        -c, --config <config>                The path of the repo config file. [default: /etc/indexd.json]
   ```
 
 ## For Developers
 
-1. Install PostgreSQL Client
+1. Install Development Dependencies
 
   ```bash
   # Ubuntu
@@ -75,23 +97,14 @@
   cargo install sqlx-cli
   ```
 
-3. Install docker
+1. Testing
 
   ```bash
-  # Ubuntu
-  sudo apt-get install docker.io
-
-  # MacOS
-  brew install docker
-  ```
-
-4. Test
-
-  ```bash
-  # It will build a testing database with docker and run the `cargo test`.
+  # Test with PostgreSQL
+  # This will build a testing database with docker and run `cargo test`
   make test
 
-  # It will run the `cargo test` and generate the coverage report.
+  # Generate test coverage report
   cargo install cargo-tarpaulin
   cargo tarpaulin --all-features --workspace --out Html
   ```
@@ -99,8 +112,12 @@
 5. Build & Run
 
   ```bash
-  export DATABASE_URL=postgres://postgres:password@localhost:5432/test_biominer_indexd 
+  # Remote PostgreSQL mode
+  export DATABASE_URL=postgres://user:password@remote-host:5432/biominer_indexd
   cargo run -- --help
+
+  # Local PostgreSQL mode
+  cargo run -- --local-postgres --help
   ```
 
 ## Build

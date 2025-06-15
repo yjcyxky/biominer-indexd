@@ -12,12 +12,12 @@ use log4rs;
 use log4rs::append::console::ConsoleAppender;
 use log4rs::config::{Appender, Config, Logger, Root};
 use log4rs::encode::pattern::PatternEncoder;
+use postgresql_embedded::{PostgreSQL, Settings, Status, VersionReq};
 use regex::Regex;
-use sqlx::postgres::PgPoolOptions;
 use sqlx::migrate::Migrator;
-use std::fs::File;
-use std::io::Write;
-use std::path::Path;
+use sqlx::postgres::PgPoolOptions;
+use std::net::TcpListener;
+use std::{env, fs::File, io::Write, path::Path, path::PathBuf, time::Duration};
 use tempfile::tempdir;
 
 const MIGRATIONS: include_dir::Dir = include_dir::include_dir!("migrations");
@@ -141,4 +141,72 @@ pub async fn connect_db(database_url: &str, max_connections: u32) -> sqlx::PgPoo
             std::process::exit(1);
         }
     }
+}
+
+pub fn get_free_port() -> Option<u16> {
+    match TcpListener::bind("127.0.0.1:0") {
+        Ok(listener) => {
+            let port = listener.local_addr().ok()?.port();
+            info!("Found free port: {}", port);
+            Some(port)
+        }
+        Err(e) => {
+            eprintln!("Failed to get free port: {}", e);
+            None
+        }
+    }
+}
+
+pub async fn setup_local_postgres(port: u16) -> Result<PostgreSQL, anyhow::Error> {
+    let mut settings = Settings::default();
+    settings.version = VersionReq::parse("17.5.0").unwrap();
+    // TODO: Use a directory which is specified by the user for postgres data
+    settings.installation_dir = PathBuf::from(
+        env::home_dir()
+            .unwrap()
+            .join(".biominer-indexd")
+            .join("postgres"),
+    );
+    if !settings.installation_dir.exists() {
+        std::fs::create_dir_all(&settings.installation_dir).unwrap();
+    }
+    // Use a random port for local postgres
+    settings.port = port;
+    settings.username = "postgres".to_string();
+    settings.password = "password".to_string();
+    settings.data_dir = settings.installation_dir.join("data");
+    if !settings.data_dir.exists() {
+        std::fs::create_dir_all(&settings.data_dir).unwrap();
+    }
+    settings.temporary = false;
+    settings.timeout = Some(Duration::from_secs(30));
+
+    info!("Running local postgres with settings: {:?}", settings);
+    let mut postgres = PostgreSQL::new(settings);
+    let database = "biominer_indexd";
+
+    info!("Checking if database {} exists", database);
+    if postgres.status() != Status::Started {
+        postgres.setup().await.expect("Failed to setup PostgreSQL");
+        postgres.start().await.expect("Failed to start PostgreSQL");
+
+        if !postgres.database_exists(&database).await.unwrap() {
+            postgres
+                .create_database(&database)
+                .await
+                .expect("Failed to create database");
+        } else {
+            info!("Database {} already exists", database);
+        }
+    }
+
+    Ok(postgres)
+}
+
+pub fn get_local_postgres_url(postgres: &PostgreSQL, database_name: &str) -> String {
+    let url = postgres
+        .settings()
+        .url(database_name)
+        .replace("postgresql://", "postgres://");
+    url
 }

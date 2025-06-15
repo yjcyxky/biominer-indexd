@@ -1420,26 +1420,94 @@ impl File {
     }
 }
 
-// TODO: How to set test env?
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{connect_db, run_migrations};
+    use crate::connect_db;
+    use crate::init_logger;
+    use crate::run_migrations;
+    use log::LevelFilter;
+    use postgresql_embedded::{PostgreSQL, Settings, Status, VersionReq};
+    use std::env;
+    use std::time::Duration;
 
-    async fn init() -> sqlx::PgPool {
-        let database_url = match std::env::var("DATABASE_URL") {
-            Ok(v) => v,
-            Err(msg) => {
-                "postgres://postgres:password@localhost:5432/test_biominer_indexd".to_string()
-            }
-        };
+    async fn init() -> (PostgreSQL, sqlx::PgPool) {
+        let _ = init_logger("test", LevelFilter::Debug);
+        let mut settings = Settings::default();
+        settings.version = VersionReq::parse("17.5.0").unwrap();
+        settings.installation_dir = PathBuf::from(
+            env::home_dir()
+                .unwrap()
+                .join(".biominer-indexd")
+                .join("postgres"),
+        );
+        if !settings.installation_dir.exists() {
+            std::fs::create_dir_all(&settings.installation_dir).unwrap();
+        }
+        settings.data_dir = settings.installation_dir.join("data");
+        if !settings.data_dir.exists() {
+            std::fs::create_dir_all(&settings.data_dir).unwrap();
+        }
+        settings.temporary = false;
+        settings.port = 5433; // Use a different port to avoid conflicts
+        settings.username = "postgres".to_string();
+        settings.password = "password".to_string();
+        settings.timeout = Some(Duration::from_secs(30));
 
-        return connect_db(&database_url, 1).await;
+        let mut postgres = PostgreSQL::new(settings);
+
+        // Start PostgreSQL if not already running
+        if postgres.status() != Status::Started {
+            postgres.setup().await.expect("Failed to setup PostgreSQL");
+            postgres.start().await.expect("Failed to start PostgreSQL");
+        }
+
+        // Create database if it doesn't exist
+        if !postgres
+            .database_exists("test_biominer_indexd")
+            .await
+            .unwrap()
+        {
+            postgres
+                .create_database("test_biominer_indexd")
+                .await
+                .expect("Failed to create database");
+        }
+
+        // Get connection URL
+        let database_url = postgres
+            .settings()
+            .url("test_biominer_indexd")
+            .replace("postgresql://", "postgres://");
+
+        // Run migrations
+        println!("Running migrations: {}", database_url);
+        run_migrations(&database_url)
+            .await
+            .expect("Failed to run migrations");
+
+        // Create connection pool
+        let pool = connect_db(&database_url, 1).await;
+
+        // Insert test data
+        let mut test_file = File::new("test.txt", 1024, "test_user", "fudan-pgx");
+        test_file
+            .add(
+                &pool,
+                "d41d8cd98f00b204e9800998ecf8427e",
+                Some("http://example.com/test.txt"),
+                Some("test_alias"),
+            )
+            .await
+            .expect("Failed to insert test data");
+
+        (postgres.clone(), pool)
     }
 
     #[tokio::test]
     async fn test_query_files() {
-        let pool = init().await;
+        let (_postgres, pool) = init().await;
+
         let files = RecordResponse::<File>::query_files(
             &pool,
             QueryFilter::new("", "", "", "", "", "", "", "", "", ""),
@@ -1453,19 +1521,108 @@ mod tests {
         .unwrap();
 
         assert!(files.total > 0);
+        assert_eq!(files.records.len(), 1);
+        assert_eq!(files.records[0].filename, "test.txt");
     }
 
     #[tokio::test]
     async fn test_query_file() {
-        let pool = init().await;
-        let file = File::query_file(
+        let (_postgres, pool) = init().await;
+
+        // First get the guid from the test file we inserted
+        let files = RecordResponse::<File>::query_files(
             &pool,
-            "guid",
-            "biominer.fudan-pgx/3ec4d151-061b-4bcb-ad3a-425c712bfc88",
+            QueryFilter::new("", "", "", "", "", "", "", "", "", ""),
+            1,
+            1,
+            true,
+            true,
+            true,
         )
         .await
         .unwrap();
 
-        assert!(file.guid == "biominer.fudan-pgx/3ec4d151-061b-4bcb-ad3a-425c712bfc88");
+        let test_guid = &files.records[0].guid;
+
+        let file = File::query_file(&pool, "guid", test_guid).await.unwrap();
+
+        assert_eq!(file.guid, *test_guid);
+        assert_eq!(file.filename, "test.txt");
+        assert_eq!(file.size, 1024);
+        assert_eq!(file.uploader, "test_user");
+    }
+
+    #[tokio::test]
+    async fn test_file_operations() {
+        let (_postgres, pool) = init().await;
+
+        // Create a new file
+        let mut file = File::new("test2.txt", 2048, "test_user", "fudan-pgx");
+
+        // Add file with hash, url and alias
+        file.add(
+            &pool,
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", // sha256 hash
+            Some("http://example.com/test2.txt"),
+            Some("test_alias2"),
+        )
+        .await
+        .unwrap();
+
+        // Test adding URL
+        File::add_url(
+            &pool,
+            &uuid::Uuid::parse_str(&file.guid.split("/").last().unwrap()).unwrap(),
+            "http://example.com/test2_alt.txt",
+            "test_user",
+            "validated",
+        )
+        .await
+        .unwrap();
+
+        // Test adding alias
+        File::add_alias(
+            &pool,
+            &uuid::Uuid::parse_str(&file.guid.split("/").last().unwrap()).unwrap(),
+            "test_alias3",
+        )
+        .await
+        .unwrap();
+
+        // Test adding tag
+        File::add_tag(
+            &pool,
+            &uuid::Uuid::parse_str(&file.guid.split("/").last().unwrap()).unwrap(),
+            "test_tag",
+            "test_value",
+        )
+        .await
+        .unwrap();
+
+        // Verify the file was created with all properties
+        let queried_file = File::query_file(&pool, "guid", &file.guid).await.unwrap();
+
+        assert_eq!(queried_file.filename, "test2.txt");
+        assert_eq!(queried_file.size, 2048);
+
+        // Verify URLs
+        let urls: Vec<URL> = serde_json::from_value(queried_file.urls.unwrap()).unwrap();
+        assert_eq!(urls.len(), 2);
+        assert!(urls.iter().any(|u| u.url == "http://example.com/test2.txt"));
+        assert!(urls
+            .iter()
+            .any(|u| u.url == "http://example.com/test2_alt.txt"));
+
+        // Verify aliases
+        let aliases: Vec<Alias> = serde_json::from_value(queried_file.aliases.unwrap()).unwrap();
+        assert_eq!(aliases.len(), 2);
+        assert!(aliases.iter().any(|a| a.name == "test_alias2"));
+        assert!(aliases.iter().any(|a| a.name == "test_alias3"));
+
+        // Verify tags
+        let tags: Vec<Tag> = serde_json::from_value(queried_file.tags.unwrap()).unwrap();
+        assert_eq!(tags.len(), 1);
+        assert_eq!(tags[0].field_name, "test_tag");
+        assert_eq!(tags[0].field_value, "test_value");
     }
 }
