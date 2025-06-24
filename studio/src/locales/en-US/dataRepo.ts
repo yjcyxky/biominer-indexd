@@ -79,6 +79,7 @@ export default {
   'data-repo.custom-page-header.hideQuery': 'Hide Query',
   'data-repo.custom-page-header.batchImport': 'Batch Import',
   'data-repo.custom-page-header.share': 'Share',
+  'data-repo.custom-page-header.resolve': 'Resolve GUID',
 
   // Data Statistics Card
   'data-repo.data-statistics-card.version': 'Version',

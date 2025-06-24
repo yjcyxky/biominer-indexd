@@ -8,8 +8,8 @@
 
 | 层级/模块         | 主要职责                                                                                                               |
 | ----------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `Dataset`         | 表示一个“数据集集合单元”，包含一个或多个数据表及其结构/文件路径等；注册多个表，维护字段映射关系与表关系、绑定到 DuckDB |
-| `DatasetMetadata` | 表示“研究级别描述信息”，如来源、标签、文献信息等                                                                       |
+| `Dataset`         | 表示一个"数据集集合单元"，包含一个或多个数据表及其结构/文件路径等；注册多个表，维护字段映射关系与表关系、绑定到 DuckDB |
+| `DatasetMetadata` | 表示"研究级别描述信息"，如来源、标签、文献信息等                                                                       |
 | `MetadataTable`       | 表示数据文件关联的元数据表，在多组学数据场景下，本质上是 Clinical/Phenotype 表                                         |
 | `DataFileTable`   | 单个 Parquet 表的 schema 抽象和文件路径描述                                                                            |
 | `QueryPlan`       | 用户查询意图的结构化表达，支持字段校验、SQL 构建等                                                                     |
@@ -25,6 +25,8 @@
 
 ### 每个数据集子目录（`data_dir/{key}/`）
 
+* `README.md`：数据集的 README 文件，包含数据集的描述、使用方法、注意事项等。
+* `LICENSE.md`：数据集的 LICENSE 文件，包含数据集的版权信息。[可选，只有当用户指定定义 LICENSE 时，才需要]
 * `dataset.json`：数据集元信息（结构同 index.json）
 * `metadata_dictionary.json`：字段结构定义（DataDictionary）
 * `metadata_table.parquet`：结构化元数据表（MetadataTable，例如临床/表型数据）
@@ -50,14 +52,16 @@ pub struct DatasetMetadata {
     pub tags: Vec<String>,
     pub total: usize,
     pub is_filebased: bool,
+    pub version: String,  // The version of the dataset, like "v1.0.0"
+    pub license: Option<String>, // The license of the dataset, like "CC-BY-4.0"
 }
 
 #[derive(Debug, Clone)]
 pub struct Dataset {
     pub metadata: DatasetMetadata,
     pub path: PathBuf,
-    pub metadata_table: Box<dyn DataFileTable>,
-    pub data_file_tables: Option<Vec<Box<dyn DataFileTable>>>,
+    pub metadata_table: MetadataTable,
+    pub datafile_tables: HashMap<String, DataFileTable>,
 }
 ```
 
@@ -81,42 +85,94 @@ pub struct DataDictionary {
 }
 ```
 
-### 🔹 `DataFileTable` Trait
+### 🔹 `DataFileTable` 实现
 
 ```rust
-trait DataFileTable {
-    fn get_table_name(&self) -> &str;
-    fn get_data_dictionary(&self) -> &DataDictionary;
-    fn get_path(&self) -> PathBuf;
+#[derive(Debug, Clone)]
+pub enum DataFileTable {
+    MAF(MAFTable),
+    MRNAExpr(MRNAExprTable),
+}
+
+#[derive(Debug, Clone)]
+pub struct MetadataTable {
+    pub table_name: &'static str,
+    pub data_dictionary: DataDictionary,
+    pub path: PathBuf,
+}
+
+#[derive(Debug, Clone)]
+pub struct MAFTable {
+    pub table_name: &'static str,
+    pub data_dictionary: DataDictionary,
+    pub path: PathBuf,
+}
+
+#[derive(Debug, Clone)]
+pub struct MRNAExprTable {
+    pub table_name: &'static str,
+    pub data_dictionary: DataDictionary,
+    pub path: PathBuf,
 }
 ```
 
 * 表示**单个 Parquet 表**的结构化描述，不负责执行查询
-* 字段结构源于 `metadata_dictionary.json`
+* 字段结构源于对应的 `*_dictionary.json` 文件
+* 支持的表类型：
+  - `MetadataTable`: 元数据表（临床/表型数据）
+  - `MAFTable`: 突变注释文件表
+  - `MRNAExprTable`: 基因表达量表
 
-### 🔹 `Dataset`：数据集抽象
+### 🔹 `File`：数据文件抽象
 
 ```rust
-pub struct Dataset {
-    pub metadata: DatasetMetadata,
-    pub meta_table: Box<dyn DataFileTable>,         // data.parquet
-    pub datafile_table: Option<Box<dyn DataFileTable>>, // datafile.tsv
-}
-
-impl Dataset {
-    pub fn execute_query(&self, query: &QueryPlan) -> Result<DataFrame, Error> {
-    }
+pub struct File {
+    pub guid: String,
+    pub filename: String,
+    pub size: i64,
+    pub created_at: i64,
+    pub updated_at: i64,
+    pub status: String, // "pending" | "processing" | "validated" | "failed"
+    pub baseid: String, // The file with multiple versions will have the same baseid
+    pub rev: String,
+    pub version: i32,
+    pub uploader: String,
+    pub access: String, // public or private
+    pub acl: Option<String>,
+    pub urls: Option<serde_json::Value>,
+    pub hashes: Option<serde_json::Value>,
+    pub aliases: Option<serde_json::Value>,
+    pub tags: Option<serde_json::Value>,
 }
 ```
 
-* 表示一个数据集集合单元，包括：研究元信息 + 多个结构化表资源
+* 表示单个数据文件的元信息
+* 支持文件版本管理（通过 `baseid` 和 `version`）
+* 支持文件访问控制（通过 `access` 和 `acl`）
+* 支持文件关联信息（URLs、哈希值、别名、标签）
 
-#### 功能：
+### 🔹 `Dataset` 功能说明
 
-* 注册多个 datafile_tables 和 meta_table 到 DuckDB
-* 提供字段表名映射、字段类型信息
-* 构建 DuckDB 临时视图用于跨表 JOIN 查询
-* 支持：`execute_query(plan: &QueryPlan)`
+* 数据集加载与缓存
+  - `Dataset::load()`: 加载数据集包，包括元数据、数据字典和数据表
+  - `init_cache()`: 缓存字段定义、数据集元信息和文件索引信息
+  - 使用 `lazy_static` 实现全局缓存
+
+* 数据集校验（validate）
+  - 校验字段命名是否合法（`^[a-z][a-z0-9_]*$`）
+  - 校验字段类型（STRING / NUMBER / BOOLEAN）
+  - 校验字典字段是否出现在 parquet 表中
+  - 校验必要文件是否存在（dataset.json, metadata_table.parquet, datafile.tsv）
+
+* 查询能力
+  - `Datasets::search()`: 基于 DuckDB 查询 `index.json`
+  - `Dataset::search()`: 查询 metadata_table、maf、mrna_expr 等表，支持多表联合查询（通过 DuckDB 临时视图）
+  - 支持分页、排序、条件过滤
+
+* 数据文件管理
+  - `File::from_file()`: 从 TSV 文件加载数据文件信息
+  - `File::query_file()`: 查询单个文件信息
+  - 支持文件元数据管理（URLs、哈希值、别名、标签）
 
 ---
 
@@ -133,7 +189,7 @@ impl Dataset {
 
 ## 🧠 QueryPlan 查询计划构建器
 
-详见另附模块说明，支持：
+支持：
 
 * 字段选择（含聚合函数与自动别名）
 * 条件过滤（WHERE）
@@ -143,44 +199,6 @@ impl Dataset {
 * SQL 构建与参数化查询（防注入）
 * EXPLAIN 模式支持
 * 字段类型与表名校验
-
----
-
-## ⚙️ 支持的功能列表
-
-### ✅ 数据集加载与缓存
-
-* `Dataset::load()` 加载数据集包
-* `init_cache()` 缓存字段定义与文件索引信息
-
-### ✅ 数据集校验（validate）
-
-* 校验字段命名是否合法
-* 字段类型是否为 STRING / NUMBER / BOOLEAN
-* 字典字段是否出现在 parquet 表中
-
-### ✅ 查询能力
-
-#### 📍 查询数据集索引（Dataset::search_index）
-
-* 基于 DuckDB 查询 `index.json`
-* 支持分页、排序、where 条件表达
-
-#### 📍 查询单个数据表（Dataset::query_meta_table）
-
-* 查询 metadata_table 表（read_parquet）
-* 支持分页、排序、ComposeQuery
-
-#### 📍 多表执行（Dataset::execute_query）
-
-* 注册多个 Parquet 表 → DuckDB 临时表
-* 构造 QueryPlan → validate → to_sql → 执行
-
-### ✅ 其他功能
-
-* `group_by(field)`：分组统计频率、占比
-* `get_schema()`：获取字段定义信息
-* `get_datafiles()`：获取原始数据文件列表
 
 ---
 

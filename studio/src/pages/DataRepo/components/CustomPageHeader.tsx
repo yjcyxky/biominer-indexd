@@ -1,6 +1,6 @@
 import React, { ReactNode } from 'react';
-import { useIntl } from 'umi';
-import { FileSearchOutlined, ImportOutlined, ShareAltOutlined } from '@ant-design/icons';
+import { useIntl, history } from 'umi';
+import { FileSearchOutlined, ImportOutlined, SearchOutlined, ShareAltOutlined } from '@ant-design/icons';
 import { Tag, Button, Row, PageHeader } from 'antd';
 import HeaderContent from './HeaderContent';
 import DataStatisticsCard from './DataStatisticsCard';
@@ -34,6 +34,19 @@ const CustomPageHeader: React.FC<PageHeaderProps> = (props: PageHeaderProps) => 
       })}
       tags={<Tag color="blue">{props.fileStat.registry_id}</Tag>}
       extra={[
+        <Button
+          icon={<SearchOutlined />}
+          onClick={() => {
+            history.push('/index');
+          }}
+          key="2"
+          type="primary"
+        >
+          {intl.formatMessage({
+            id: 'data-repo.custom-page-header.resolve',
+            defaultMessage: 'Resolve',
+          })}
+        </Button>,
         <Button
           icon={<FileSearchOutlined />}
           onClick={() => {

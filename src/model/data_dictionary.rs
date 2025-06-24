@@ -26,7 +26,8 @@ impl DataDictionary {
             Ok(data_dictionary) => data_dictionary,
             Err(e) => {
                 return Err(anyhow::anyhow!(
-                    "Failed to read data dictionary file: {}",
+                    "Failed to read data dictionary file {}: {}",
+                    data_dictionary_path.display(),
                     e
                 ));
             }
@@ -36,7 +37,8 @@ impl DataDictionary {
             Ok(data_dictionary) => data_dictionary,
             Err(e) => {
                 return Err(anyhow::anyhow!(
-                    "Failed to parse data dictionary file: {}",
+                    "Failed to parse data dictionary file {}: {}",
+                    data_dictionary_path.display(),
                     e
                 ));
             }

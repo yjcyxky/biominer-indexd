@@ -846,15 +846,24 @@
         "operationId": "getDatasets"
       }
     },
-    "/api/v1/datasets/{key}/data-dictionary": {
+    "/api/v1/datasets/{key}/{version}/data-dictionary": {
       "get": {
         "tags": [
           "Datasets"
         ],
-        "summary": "Call `/api/v1/datasets` to get the datasets.",
+        "summary": "Call `/api/v1/datasets/:key/:version/data-dictionary` to get the dataset data dictionary.",
         "parameters": [
           {
             "name": "key",
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "required": true,
+            "deprecated": false
+          },
+          {
+            "name": "version",
             "schema": {
               "type": "string"
             },
@@ -908,15 +917,24 @@
         "operationId": "getDataDictionary"
       }
     },
-    "/api/v1/datasets/{key}/license": {
+    "/api/v1/datasets/{key}/{version}/license": {
       "get": {
         "tags": [
           "Datasets"
         ],
-        "summary": "Call `/api/v1/datasets/:key/license` to get the dataset license.",
+        "summary": "Call `/api/v1/datasets/:key/:version/license` to get the dataset license.",
         "parameters": [
           {
             "name": "key",
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "required": true,
+            "deprecated": false
+          },
+          {
+            "name": "version",
             "schema": {
               "type": "string"
             },
@@ -970,15 +988,95 @@
         "operationId": "getDatasetLicense"
       }
     },
-    "/api/v1/datasets/{key}/datafiles": {
+    "/api/v1/datasets/{key}/{version}/readme": {
       "get": {
         "tags": [
           "Datasets"
         ],
-        "summary": "Call `/api/v1/datasets/:key/datafiles` to get the dataset datafiles.",
+        "summary": "Call `/api/v1/datasets/:key/:version/readme` to get the dataset readme.",
         "parameters": [
           {
             "name": "key",
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "required": true,
+            "deprecated": false
+          },
+          {
+            "name": "version",
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "required": true,
+            "deprecated": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getDatasetReadme"
+      }
+    },
+    "/api/v1/datasets/{key}/{version}/datafiles": {
+      "get": {
+        "tags": [
+          "Datasets"
+        ],
+        "summary": "Call `/api/v1/datasets/:key/:version/datafiles` to get the dataset datafiles.",
+        "parameters": [
+          {
+            "name": "key",
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "required": true,
+            "deprecated": false
+          },
+          {
+            "name": "version",
             "schema": {
               "type": "string"
             },
@@ -1036,12 +1134,12 @@
         "operationId": "getDatafiles"
       }
     },
-    "/api/v1/datasets/{key}/group-stats": {
+    "/api/v1/datasets/{key}/{version}/data": {
       "get": {
         "tags": [
           "Datasets"
         ],
-        "summary": "Call `/api/v1/datasets/:key/group-stats` to get the dataset groups.",
+        "summary": "Call `/api/v1/datasets/:key/:version/data` to get the dataset data.",
         "parameters": [
           {
             "name": "key",
@@ -1053,81 +1151,7 @@
             "deprecated": false
           },
           {
-            "name": "field_key",
-            "schema": {
-              "type": "string"
-            },
-            "in": "query",
-            "required": false,
-            "deprecated": false
-          },
-          {
-            "name": "query",
-            "schema": {
-              "type": "string"
-            },
-            "in": "query",
-            "required": false,
-            "deprecated": false
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/FieldGroupSummary"
-                  }
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        },
-        "operationId": "getDatasetGroupStats"
-      }
-    },
-    "/api/v1/datasets/{key}/data": {
-      "get": {
-        "tags": [
-          "Datasets"
-        ],
-        "summary": "Call `/api/v1/datasets/:key/data` to get the dataset data.",
-        "parameters": [
-          {
-            "name": "key",
+            "name": "version",
             "schema": {
               "type": "string"
             },
@@ -1390,7 +1414,8 @@
           "groups",
           "tags",
           "total",
-          "is_filebased"
+          "is_filebased",
+          "version"
         ],
         "properties": {
           "key": {
@@ -1426,6 +1451,12 @@
           },
           "is_filebased": {
             "type": "boolean"
+          },
+          "version": {
+            "type": "string"
+          },
+          "license": {
+            "type": "string"
           }
         }
       },
@@ -1466,27 +1497,6 @@
         "properties": {
           "msg": {
             "type": "string"
-          }
-        }
-      },
-      "FieldGroupSummary": {
-        "type": "object",
-        "required": [
-          "value",
-          "count",
-          "freq_percent"
-        ],
-        "properties": {
-          "value": {
-            "type": "string"
-          },
-          "count": {
-            "type": "integer",
-            "format": "uint64"
-          },
-          "freq_percent": {
-            "type": "number",
-            "format": "double"
           }
         }
       },

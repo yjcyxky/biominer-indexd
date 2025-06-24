@@ -51,7 +51,7 @@ export default {
   'menu.editor.koni': '拓扑编辑器',
 
   // Customized
-  'menu.data-repo': '数据仓库',
+  'menu.data-repo': '文件仓库',
   'menu.datasets': '数据集',
   'menu.datatable': '数据表',
   'menu.about': '帮助',

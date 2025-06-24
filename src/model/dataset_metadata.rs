@@ -15,6 +15,8 @@ pub struct DatasetMetadata {
     pub tags: Vec<String>,
     pub total: usize,
     pub is_filebased: bool,
+    pub version: String,  // The version of the dataset, like "v1.0.0"
+    pub license: Option<String>, // The license of the dataset, like "CC-BY-4.0"
 }
 
 impl DatasetMetadata {
@@ -46,6 +48,8 @@ impl DatasetMetadata {
                 .collect(),
             total: value["total"].as_u64().unwrap() as usize,
             is_filebased: value["is_filebased"].as_bool().unwrap(),
+            version: value["version"].as_str().unwrap().to_string(),
+            license: value.get("license").and_then(|v| v.as_str().map(|s| s.to_string()))
         }
     }
 }

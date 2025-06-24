@@ -23,6 +23,7 @@
     name: 'home',
     icon: 'home',
     component: './Index',
+    hideInMenu: true,
   },
   {
     path: '/datasets',
@@ -51,7 +52,7 @@
   },
   {
     path: '/',
-    redirect: '/index',
+    redirect: '/datasets',
   },
   {
     path: '/:guid(biominer.fudan-pgx/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})',

@@ -31,6 +31,6 @@ for dataset in $data_dir/*; do
         dataset_dir=$output_dir/$(basename $dataset)
         echo "Processing $dataset -> $dataset_dir"
 
-        python examples/cbioportal2dataset.py $dataset $dataset_dir
+        python examples/cbioportal2dataset.py $dataset $dataset_dir --version v0.0.1
     fi
 done

@@ -1,0 +1,20 @@
+{
+  "key": "acbc_mskcc_2015",
+  "name": "Adenoid Cystic Carcinoma of the Breast (MSK, J Pathol. 2015)",
+  "description": "Whole exome sequencing of 12 breast AdCCs.",
+  "citation": "Martelotto et al. J Pathol 2015",
+  "pmid": "26095796",
+  "groups": [
+    "PUBLIC",
+    "ACYC"
+  ],
+  "tags": [
+    "disease:Adenoid Cystic Breast Cancer",
+    "organ:Breast",
+    "org:Unassigned"
+  ],
+  "total": 12,
+  "is_filebased": false,
+  "version": "v0.0.2",
+  "license": "CC-BY-4.0"
+}

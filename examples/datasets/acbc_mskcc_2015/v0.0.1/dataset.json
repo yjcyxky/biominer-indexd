@@ -14,5 +14,7 @@
     "org:Unassigned"
   ],
   "total": 12,
-  "is_filebased": false
+  "is_filebased": false,
+  "version": "v0.0.1",
+  "license": "CC-BY-4.0"
 }

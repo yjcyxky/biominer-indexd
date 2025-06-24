@@ -284,6 +284,21 @@ enum GetDatasetLicenseResponse {
     InternalError(PlainText<String>),
 }
 
+#[derive(ApiResponse)]
+enum GetDatasetReadmeResponse {
+    #[oai(status = 200)]
+    Ok(Json<String>),
+
+    #[oai(status = 404)]
+    NotFound(PlainText<String>),
+
+    #[oai(status = 400)]
+    BadRequest(PlainText<String>),
+
+    #[oai(status = 500)]
+    InternalError(PlainText<String>),
+}
+
 pub struct BioMinerIndexdApi;
 
 #[OpenApi(prefix_path = "/api/v1")]
@@ -849,15 +864,15 @@ impl BioMinerIndexdApi {
         GetDatasetsResponse::Ok(Json(datasets))
     }
 
-    /// Call `/api/v1/datasets` to get the datasets.
+    /// Call `/api/v1/datasets/:key/:version/data-dictionary` to get the dataset data dictionary.
     #[oai(
-        path = "/datasets/:key/data-dictionary",
+        path = "/datasets/:key/:version/data-dictionary",
         method = "get",
         tag = "DatasetApiTags::Datasets",
         operation_id = "getDataDictionary"
     )]
-    async fn get_data_dictionary(&self, key: Path<String>) -> GetDatasetDataDictionaryResponse {
-        let dataset = match Datasets::get(&key.0) {
+    async fn get_data_dictionary(&self, key: Path<String>, version: Path<String>) -> GetDatasetDataDictionaryResponse {
+        let dataset = match Datasets::get_by_version(&key.0, &version.0) {
             Ok(dataset) => dataset,
             Err(e) => {
                 warn!("Failed to get dataset: {}", e);
@@ -876,15 +891,15 @@ impl BioMinerIndexdApi {
         GetDatasetDataDictionaryResponse::Ok(Json(data_dictionary))
     }
 
-    /// Call `/api/v1/datasets/:key/license` to get the dataset license.
+    /// Call `/api/v1/datasets/:key/:version/license` to get the dataset license.
     #[oai(
-        path = "/datasets/:key/license",
+        path = "/datasets/:key/:version/license",
         method = "get",
         tag = "DatasetApiTags::Datasets",
         operation_id = "getDatasetLicense"
     )]
-    async fn get_dataset_license(&self, key: Path<String>) -> GetDatasetLicenseResponse {
-        let dataset = match Datasets::get(&key.0) {
+    async fn get_dataset_license(&self, key: Path<String>, version: Path<String>) -> GetDatasetLicenseResponse {
+        let dataset = match Datasets::get_by_version(&key.0, &version.0) {
             Ok(dataset) => dataset,
             Err(e) => {
                 warn!("Failed to get dataset: {}", e);
@@ -903,15 +918,42 @@ impl BioMinerIndexdApi {
         GetDatasetLicenseResponse::Ok(Json(license))
     }
 
-    /// Call `/api/v1/datasets/:key/datafiles` to get the dataset datafiles.
+    /// Call `/api/v1/datasets/:key/:version/readme` to get the dataset readme.
     #[oai(
-        path = "/datasets/:key/datafiles",
+        path = "/datasets/:key/:version/readme",
+        method = "get",
+        tag = "DatasetApiTags::Datasets",
+        operation_id = "getDatasetReadme"
+    )]
+    async fn get_dataset_readme(&self, key: Path<String>, version: Path<String>) -> GetDatasetReadmeResponse {
+        let dataset = match Datasets::get_by_version(&key.0, &version.0) {
+            Ok(dataset) => dataset,
+            Err(e) => {
+                warn!("Failed to get dataset: {}", e);
+                return GetDatasetReadmeResponse::NotFound(PlainText(e.to_string()));
+            }
+        };
+
+        let readme = match dataset.get_readme() {
+            Ok(readme) => readme,
+            Err(e) => {
+                warn!("Failed to get readme: {}", e);
+                return GetDatasetReadmeResponse::NotFound(PlainText(e.to_string()));
+            }
+        };
+
+        GetDatasetReadmeResponse::Ok(Json(readme))
+    }
+
+    /// Call `/api/v1/datasets/:key/:version/datafiles` to get the dataset datafiles.
+    #[oai(
+        path = "/datasets/:key/:version/datafiles",
         method = "get",
         tag = "DatasetApiTags::Datasets",
         operation_id = "getDatafiles"
     )]
-    async fn get_datafiles(&self, key: Path<String>) -> GetDatasetDatafilesResponse {
-        let dataset = match Datasets::get(&key.0) {
+    async fn get_datafiles(&self, key: Path<String>, version: Path<String>) -> GetDatasetDatafilesResponse {
+        let dataset = match Datasets::get_by_version(&key.0, &version.0) {
             Ok(dataset) => dataset,
             Err(e) => {
                 warn!("Failed to get dataset: {}", e);
@@ -936,9 +978,9 @@ impl BioMinerIndexdApi {
         };
     }
 
-    /// Call `/api/v1/datasets/:key/data` to get the dataset data.
+    /// Call `/api/v1/datasets/:key/:version/data` to get the dataset data.
     #[oai(
-        path = "/datasets/:key/data",
+        path = "/datasets/:key/:version/data",
         method = "get",
         tag = "DatasetApiTags::Datasets",
         operation_id = "getDatasetData"
@@ -946,6 +988,7 @@ impl BioMinerIndexdApi {
     async fn get_dataset_data(
         &self,
         key: Path<String>,
+        version: Path<String>,
         query: Query<Option<String>>,
         page: Query<Option<usize>>,
         page_size: Query<Option<usize>>,
@@ -966,7 +1009,7 @@ impl BioMinerIndexdApi {
         let page_size = page_size.0.unwrap_or(10);
         let order_by = order_by.0;
 
-        let dataset = match Datasets::get(&key.0) {
+        let dataset = match Datasets::get_by_version(&key.0, &version.0) {
             Ok(dataset) => dataset,
             Err(e) => {
                 warn!("Failed to get dataset: {}", e);

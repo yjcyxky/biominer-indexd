@@ -79,6 +79,7 @@ export default {
   'data-repo.custom-page-header.hideQuery': '隐藏搜索框',
   'data-repo.custom-page-header.batchImport': '批量导入',
   'data-repo.custom-page-header.share': '分享',
+  'data-repo.custom-page-header.resolve': '解析GUID',
 
   // Data Statistics Card
   'data-repo.data-statistics-card.version': '版本号',

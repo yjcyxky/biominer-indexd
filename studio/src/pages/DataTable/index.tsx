@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Button, Modal, Typography, Row, Col, message, Tooltip, Spin, Tag, Tabs } from 'antd';
+import { Button, Modal, Typography, Row, Col, message, Tooltip, Spin, Tag, Tabs, Select } from 'antd';
 import { useEffect } from 'react';
-import { getDatasetData, getDataDictionary, getDatasets, getDatafiles } from '@/services/biominer/datasets';
+import { getDatasetData, getDataDictionary, getDatasets, getDatafiles, getDatasetReadme, getDatasetLicense } from '@/services/biominer/datasets';
 import { history } from 'umi';
 import ColumnSelector, { getDefaultSelectedKeys } from './ColumnSelector';
 import { filters2string } from './Filter';
@@ -13,6 +13,9 @@ import VirtualTable from './VirtualTable';
 import DataInfo from './DataInfo';
 import DataDownloader from './DataDownloader';
 import Papa from 'papaparse';
+import semver from 'semver';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 import './index.less';
 
@@ -40,11 +43,12 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
         page_size: 100,
         total: 0,
     });
+    const [datasetMetadataList, setDatasetMetadataList] = useState<API.DatasetMetadata[]>([]);
+    const [datasetMetadata, setDatasetMetadata] = useState<API.DatasetMetadata | null>(null);
     const [dataDictionary, setDataDictionary] = useState<API.DataDictionary>({
         fields: [],
     });
     const [filterModalVisible, setFilterModalVisible] = useState<boolean>(false);
-    const [datasetMetadata, setDatasetMetadata] = useState<API.DatasetMetadata | null>(null);
     const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
     // TODO: Use a correct type for the columns
     const [columns, setColumns] = useState<any[]>([]);
@@ -52,12 +56,15 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
     const [pageSize, setPageSize] = useState<number>(data.page_size);
     const [loading, setLoading] = useState<boolean>(false);
     const [cachedDatasetKey, setCachedDatasetKey] = useState<string | undefined>(undefined);
+    const [cachedDatasetVersion, setCachedDatasetVersion] = useState<string | undefined>(undefined);
     const [filters, setFilters] = useState<ComposeQueryItem | undefined>(undefined);
     const [currentRecord, setCurrentRecord] = useState<Record<string, any> | null>(null);
     const [datasetDownloadModalVisible, setDatasetDownloadModalVisible] = useState<boolean>(false);
     const [activeTab, setActiveTab] = useState<string>('plots');
+    const [readme, setReadme] = useState<string | undefined>(undefined);
+    const [license, setLicense] = useState<string | undefined>(undefined);
 
-    useEffect(() => {
+    const getDatasetKey = (): string => {
         let datasetKey = key ?? '';
         if (!datasetKey) {
             // Get the key from the url, but not the query params.
@@ -65,72 +72,103 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
             const key = url.split('/').pop();
             if (!key) {
                 history.push('/');
+                return '';
+            }
+            datasetKey = key;
+        }
+
+        return datasetKey;
+    }
+
+    const getDatasetVersion = () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const version = urlParams.get('version');
+        return version ?? undefined;
+    }
+
+    const fetchData = (datasetKey: string, version: string | undefined) => {
+        setLoading(true);
+
+        // Fetch the dataset metadata.
+        getDatasets({
+            page: 1,
+            page_size: 1000,
+            // TODO: Add a query param to filter the datasets by the key and version.
+        }).then(datasets => {
+            const filteredDatasets = datasets.records.filter(ds => ds.key === datasetKey);
+            if (!filteredDatasets) {
+                history.push('/');
                 return;
             }
 
-            datasetKey = key;
-            setCachedDatasetKey(datasetKey);
-        }
+            setDatasetMetadataList(filteredDatasets);
 
-        const fetchData = () => {
-            setLoading(true);
+            // 1. 获取最新版本（降序排列）
+            const sortedDatasets = filteredDatasets.sort((a, b) =>
+                semver.rcompare(a.version, b.version)
+            );
+            const latestDataset = sortedDatasets[0];
 
-            // Fetch the dataset metadata.
-            getDatasets({
-                page: 1,
-                page_size: 1000,
-            }).then(datasets => {
-                const dataset = datasets.records.find(ds => ds.key === datasetKey);
-                if (!dataset) {
-                    history.push('/');
-                    return;
-                }
-                setDatasetMetadata(dataset);
-            }).catch(err => {
-                message.error('Failed to fetch the dataset metadata.');
-                history.push('/');
-            });
+            // 2. 根据 version 查找 dataset，否则 fallback 到 latestDataset
+            const selectedVersion = version ?? latestDataset?.version;
+            let dataset = filteredDatasets.find(ds => ds.version === selectedVersion);
 
-            // Fetch the dataset data.
-            const queryMap: any = {
-                key: datasetKey,
-                page: page,
-                page_size: pageSize,
-            };
-
-            if (filters) {
-                queryMap.query = filters;
+            // 3. fallback 再次尝试使用 latestDataset
+            if (!dataset && latestDataset) {
+                dataset = latestDataset;
             }
 
-            getDatasetData(queryMap).then(d => {
-                setData(d);
-                setLoading(false);
-            }).catch(err => {
-                message.error('Failed to fetch the dataset data.');
-                setLoading(false);
-            });
+            // 4. 更新状态
+            if (dataset) {
+                setCachedDatasetVersion(dataset.version);
+                setDatasetMetadata(dataset);
+            } else {
+                message.error('Failed to fetch the dataset metadata.');
+                history.push('/');
+            }
+        }).catch(err => {
+            message.error('Failed to fetch the dataset metadata.');
+            history.push('/');
+        });
+    };
 
-            // Fetch the dataset data dictionary.
-            getDataDictionary({
-                key: datasetKey,
-            }).then(dDictionary => {
-                setDataDictionary(dDictionary);
-                setSelectedColumns(getDefaultSelectedKeys(dDictionary.fields));
-            }).catch(err => {
-                message.error('Failed to fetch the dataset data dictionary.');
-            });
-        };
+    useEffect(() => {
+        const datasetKey = getDatasetKey();
+        const version = getDatasetVersion();
+        setCachedDatasetKey(datasetKey);
+        setCachedDatasetVersion(version);
 
-        fetchData();
-    }, [key]);
+        console.log("datasetKey", datasetKey, "version", version);
+        fetchData(datasetKey, version);
+    }, []);
 
     useEffect(() => {
         if (!cachedDatasetKey) return;
+        if (!cachedDatasetVersion) return;
+
+        // Fetch the dataset data dictionary.
+        getDataDictionary({
+            key: cachedDatasetKey,
+            version: cachedDatasetVersion ?? '',
+        }).then(dDictionary => {
+            setDataDictionary(dDictionary);
+            setSelectedColumns(getDefaultSelectedKeys(dDictionary.fields));
+        }).catch(err => {
+            message.error('Failed to fetch the dataset data dictionary.');
+        });
+    }, [cachedDatasetKey, cachedDatasetVersion])
+
+    useEffect(() => {
+        if (!cachedDatasetKey) return;
+        if (!cachedDatasetVersion) return;
+
         setLoading(true);
 
         const fetchData = async () => {
+            // Fetch the dataset data.
             const queryMap: any = {
                 key: cachedDatasetKey,
+                version: cachedDatasetVersion ?? '',
                 page: page,
                 page_size: pageSize,
             };
@@ -145,7 +183,7 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
             setLoading(false);
         }
         fetchData();
-    }, [page, pageSize, cachedDatasetKey, filters])
+    }, [page, pageSize, cachedDatasetKey, cachedDatasetVersion, filters])
 
     useEffect(() => {
         setColumns(dataDictionary.fields.filter(col => selectedColumns.includes(col.key)));
@@ -156,19 +194,61 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
         setPageSize(100);
     }
 
+    const setDatasetVersion = (version: string) => {
+        console.log("setDatasetVersion", version);
+        setCachedDatasetVersion(version);
+        history.replace(`/datatable/${cachedDatasetKey}?version=${version}`);
+    }
+
     return (
         <Spin spinning={loading}>
             <Row className="datatable-header">
                 <Typography.Title level={4} style={{ height: 28 }}>
                     {datasetMetadata?.name}
                     {!loading ?
-                        <Tooltip title="Cite the dataset">
+                        <>
+                            <Tooltip title="Cite the dataset" placement="top">
+                                <Button onClick={() => {
+                                    window.open(`https://www.ncbi.nlm.nih.gov/pubmed/${datasetMetadata?.pmid}`, '_blank');
+                                }} icon={<FileOutlined />} style={{ marginLeft: 8 }} type="default">
+                                    Cite Dataset
+                                </Button>
+                            </Tooltip>
                             <Button onClick={() => {
-                                window.open(`https://www.ncbi.nlm.nih.gov/pubmed/${datasetMetadata?.pmid}`, '_blank');
-                            }} icon={<FileOutlined />} style={{ marginLeft: 8 }} type="default" size="small">
-                                Cite Dataset
+                                getDatasetReadme({
+                                    key: cachedDatasetKey ?? '',
+                                    version: cachedDatasetVersion ?? '',
+                                }).then(readme => {
+                                    setReadme(readme);
+                                }).catch(err => {
+                                    message.error('Failed to fetch the dataset readme.');
+                                    setReadme(undefined);
+                                });
+                            }} icon={<FileOutlined />} style={{ marginLeft: 8 }} type="default">
+                                README
                             </Button>
-                        </Tooltip>
+                            <Button onClick={() => {
+                                getDatasetLicense({
+                                    key: cachedDatasetKey ?? '',
+                                    version: cachedDatasetVersion ?? '',
+                                }).then(license => {
+                                    setLicense(license);
+                                }).catch(err => {
+                                    message.error('Failed to fetch the dataset license.');
+                                    setLicense(undefined);
+                                });
+                            }} icon={<FileOutlined />} style={{ marginLeft: 8 }} type="default">
+                                License
+                            </Button>
+                            <Select
+                                defaultValue={cachedDatasetVersion ?? 'Select Version'}
+                                style={{ marginLeft: 8, width: 100 }}
+                                options={datasetMetadataList.map(ds => ({ label: ds.version, value: ds.version }))}
+                                onChange={(value: string) => {
+                                    setDatasetVersion(value);
+                                }}
+                            />
+                        </>
                         : null}
                 </Typography.Title>
                 <p style={{ width: '100%', overflow: 'hidden', margin: 0, textOverflow: 'ellipsis', maxHeight: 45 }}
@@ -343,11 +423,13 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
                     if (data.records.length === data.total) {
                         downloadTSV(data.records, 'metadata.tsv')
                     } else {
-                        // TODO: The cachedDatasetKey must exist?
+                        // TODO: The cachedDatasetKey and cachedDatasetVersion must exist.
                         if (!cachedDatasetKey) return;
+                        if (!cachedDatasetVersion) return;
 
                         getDatasetData({
                             key: cachedDatasetKey,
+                            version: cachedDatasetVersion ?? '',
                             page: 1,
                             page_size: data.total,
                         }).then(d => {
@@ -365,13 +447,30 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
                     }
 
                     getDatafiles({
-                        key: cachedDatasetKey
+                        key: cachedDatasetKey,
+                        version: cachedDatasetVersion ?? '',
                     }).then((d: any) => {
                         downloadTSV(d, 'datafiles.tsv')
                     }).catch((err: any) => {
                         message.error('Failed to download the datafiles, please try again later.');
                     });
                 }} />
+            {
+                readme ?
+                    <Modal open={readme !== null} width={800} onCancel={() => setReadme(undefined)} footer={null}
+                        title={<Typography.Title level={4}>README</Typography.Title>}>
+                        <ReactMarkdown remarkPlugins={[remarkGfm]} children={readme}></ReactMarkdown>
+                    </Modal>
+                    : null
+            }
+            {
+                license ?
+                    <Modal open={license !== null} width={800} onCancel={() => setLicense(undefined)} footer={null}
+                        title={<Typography.Title level={4}>License</Typography.Title>}>
+                        <ReactMarkdown remarkPlugins={[remarkGfm]} children={license}></ReactMarkdown>
+                    </Modal>
+                    : null
+            }
         </Spin >
     );
 };

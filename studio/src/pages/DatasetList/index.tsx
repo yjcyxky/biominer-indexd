@@ -5,6 +5,7 @@ import { AimOutlined, BarChartOutlined, ClusterOutlined, FileTextFilled, InfoCir
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useHistory } from 'umi';
+import semver from 'semver';
 
 import './index.less';
 
@@ -54,9 +55,23 @@ const DatasetList: React.FC = () => {
 
     useEffect(() => {
         setLoading(true);
+        // TODO: Add a query param to filter the datasets by the key and version. Like only show the latest version of the dataset.
         getDatasets({ page: 1, page_size: 1000 })
             .then(res => {
-                setDatasets(res);
+                // Group the datasets by the key field and only keep the latest version.
+                const groupedDatasets = res.records.reduce((acc: Record<string, API.DatasetMetadata>, ds: API.DatasetMetadata) => {
+                    acc[ds.key] = ds;
+                    return acc;
+                }, {});
+
+                const datasets = Object.values(groupedDatasets).sort((a, b) => semver.gt(a.version, b.version) ? -1 : 1);
+
+                setDatasets({
+                    records: datasets,
+                    total: datasets.length,
+                    page: 1,
+                    page_size: 10,
+                });
                 setLoading(false);
             })
             .catch(err => message.error(err.message))
@@ -230,7 +245,7 @@ const DatasetList: React.FC = () => {
                                                 // TODO: Show the license of the dataset in another modal.
                                                 setIsModalOpen(true);
                                                 setMarkdownTitle(<span>Dataset License for <Tag style={{ fontSize: 16 }}>{item.name}</Tag></span>);
-                                                getDatasetLicense({ key: item.key })
+                                                getDatasetLicense({ key: item.key, version: item.version })
                                                     .then(res => {
                                                         setMarkdown(res);
                                                     })

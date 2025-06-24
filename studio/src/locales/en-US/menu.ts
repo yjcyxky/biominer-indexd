@@ -43,7 +43,7 @@ export default {
   'menu.editor.koni': 'Koni Editor',
 
   // Customized
-  'menu.data-repo': 'Data Repo',
+  'menu.data-repo': 'DataFile Repo',
   'menu.datasets': 'Datasets',
   'menu.datatable': 'Data Table',
   'menu.about': 'About',

@@ -74,6 +74,8 @@ declare namespace API {
     tags: string[];
     total: number;
     is_filebased: boolean;
+    version: string;
+    license?: string;
   };
 
   type DatasetsResponse = {
@@ -103,12 +105,6 @@ declare namespace API {
     contain_alias?: boolean;
     contain_url?: boolean;
     contain_tag?: boolean;
-  };
-
-  type FieldGroupSummary = {
-    value: string;
-    count: number;
-    freq_percent: number;
   };
 
   type File = {
@@ -144,28 +140,31 @@ declare namespace API {
 
   type getDataDictionaryParams = {
     key: string;
+    version: string;
   };
 
   type getDatafilesParams = {
     key: string;
+    version: string;
   };
 
   type getDatasetDataParams = {
     key: string;
+    version: string;
     query?: string;
     page?: number;
     page_size?: number;
     order_by?: string;
   };
 
-  type getDatasetGroupStatsParams = {
-    key: string;
-    field_key?: string;
-    query?: string;
-  };
-
   type getDatasetLicenseParams = {
     key: string;
+    version: string;
+  };
+
+  type getDatasetReadmeParams = {
+    key: string;
+    version: string;
   };
 
   type getDatasetsParams = {

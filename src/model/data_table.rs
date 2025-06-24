@@ -5,7 +5,8 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 
 lazy_static! {
-    pub static ref DATA_FILE_TABLES: Mutex<Vec<&'static str>> = Mutex::new(vec!["maf", "mrna_expr"]);
+    pub static ref DATA_FILE_TABLES: Mutex<Vec<&'static str>> =
+        Mutex::new(vec!["maf", "mrna_expr"]);
 }
 
 #[derive(Debug, Clone)]
@@ -18,7 +19,7 @@ pub struct MetadataTable {
 impl MetadataTable {
     pub fn new(base_path: &PathBuf) -> Result<Self, Error> {
         let path = base_path.join("metadata_table.parquet");
-        let data_dictionary = DataDictionary::from_file(&path.join("metadata_dictionary.json"))?;
+        let data_dictionary = DataDictionary::load_metadata_dictionary(base_path)?;
 
         Ok(Self {
             table_name: "metadata",
@@ -49,8 +50,12 @@ pub struct MAFTable {
 
 impl MAFTable {
     pub fn new(base_path: &PathBuf) -> Result<Self, Error> {
+        let data_dictionary = DataDictionary::from_file(&base_path.join("maf_dictionary.json"))?;
+
         let path = base_path.join("maf.parquet");
-        let data_dictionary = DataDictionary::from_file(&path.join("maf_dictionary.json"))?;
+        if !path.exists() {
+            return Err(anyhow::anyhow!("MAF table not found at {:?}", path));
+        }
 
         Ok(Self {
             table_name: "maf",
@@ -81,8 +86,16 @@ pub struct MRNAExprTable {
 
 impl MRNAExprTable {
     pub fn new(base_path: &PathBuf) -> Result<Self, Error> {
+        let data_dictionary =
+            DataDictionary::from_file(&base_path.join("mrna_expr_dictionary.json"))?;
+
         let path = base_path.join("mrna_expr_table.parquet");
-        let data_dictionary = DataDictionary::from_file(&path.join("mrna_expr_dictionary.json"))?;
+        if !path.exists() {
+            return Err(anyhow::anyhow!(
+                "MRNA expression table not found at {:?}",
+                path
+            ));
+        }
 
         Ok(Self {
             table_name: "mrna_expr",

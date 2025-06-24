@@ -321,6 +321,12 @@ def build_data_dictionary_from_header(df, header_lines):
         allowed_values = df[col_key].dropna().unique().tolist()
         # if len(allowed_values) > 100:
         #     allowed_values = []
+        
+        def min_max_value(col_key):
+            if data_type == "NUMBER":
+                return [df[col_key].min(), df[col_key].max()]
+            else:
+                return []
 
         fields.append(
             {
@@ -329,7 +335,7 @@ def build_data_dictionary_from_header(df, header_lines):
                 "description": desc_row[col_key],
                 "data_type": data_type,
                 "notes": "",
-                "allowed_values": allowed_values,
+                "allowed_values": allowed_values if data_type != "NUMBER" else min_max_value(col_key),
                 "order": order_row[col_key],
             }
         )
@@ -373,7 +379,7 @@ def read_clinical_file(path):
     return df, header_lines
 
 
-def convert_cbioportal_study(study_dir, output_dir, organization):
+def convert_cbioportal_study(study_dir, output_dir, organization, version="v0.0.1") -> Path:
     """
     Convert a cBioPortal-formatted dataset folder into a normalized dataset format.
 
@@ -388,6 +394,7 @@ def convert_cbioportal_study(study_dir, output_dir, organization):
     """
     study_dir = Path(study_dir)
     output_dir = Path(output_dir)
+    output_dir = output_dir / version
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # Parse metadata
@@ -463,17 +470,19 @@ def convert_cbioportal_study(study_dir, output_dir, organization):
 
     dataset_meta["total"] = len(combined_df)
     dataset_meta["is_filebased"] = False
+    dataset_meta["version"] = version
+    dataset_meta["license"] = ""
 
     # Save Parquet
-    combined_df.to_parquet(output_dir / "data.parquet", index=False)
-    print(f"✅ Data saved to {output_dir / 'data.parquet'}")
+    combined_df.to_parquet(output_dir / "metadata_table.parquet", index=False)
+    print(f"✅ Data saved to {output_dir / 'metadata_table.parquet'}")
 
     # Save data_dictionary.json using header info if available
     dictionary = build_data_dictionary_from_header(combined_df, headers)
-    with open(output_dir / "data_dictionary.json", "w") as f:
+    with open(output_dir / "metadata_dictionary.json", "w") as f:
         json.dump(dictionary, f, indent=2)
 
-    print(f"✅ Data dictionary saved to {output_dir / 'data_dictionary.json'}")
+    print(f"✅ Data dictionary saved to {output_dir / 'metadata_dictionary.json'}")
 
     # Save dataset metadata
     with open(output_dir / "dataset.json", "w") as f:
@@ -489,15 +498,27 @@ def convert_cbioportal_study(study_dir, output_dir, organization):
     datafile = make_datafile(tarball_path, dataset_meta)
     datafile_path = make_datafile_tsv(datafile, output_dir)
     print(f"✅ Datafile saved to {datafile_path}")
+    
+    # Check if the README.md and LICENSE.md exist
+    if not (output_dir / "README.md").exists():
+        print(f"⚠️ README.md not found, creating a dummy one")
+        (output_dir / "README.md").touch()
+
+    if not (output_dir / "LICENSE.md").exists():
+        print(f"⚠️ LICENSE.md not found, creating a dummy one")
+        (output_dir / "LICENSE.md").touch()
 
     print(f"✅ Converted study saved to {output_dir}")
+    
+    return output_dir
 
 
 @click.command()
 @click.argument("study_dir", type=click.Path(exists=True, file_okay=False))
 @click.argument("output_dir", type=click.Path())
 @click.option("--organization", type=str, default="Unassigned")
-def cli(study_dir, output_dir, organization):
+@click.option("--version", type=str, default="v0.0.1")
+def cli(study_dir, output_dir, organization, version):
     """
     CLI entry point to convert a cBioPortal dataset.
 
@@ -505,9 +526,9 @@ def cli(study_dir, output_dir, organization):
     OUTPUT_DIR is the output directory to save data.parquet, data_dictionary.json, dataset.json.
     """
     build_mappings()
-
+    
     try:
-        convert_cbioportal_study(study_dir, output_dir, organization)
+        output_dir = convert_cbioportal_study(study_dir, output_dir, organization, version)
     except Exception as e:
         print(f"⚠️ Failed to convert the dataset: {e}\n")
 
@@ -516,14 +537,14 @@ def cli(study_dir, output_dir, organization):
     if not dataset_dir.exists():
         print(f"⚠️ The dataset is invalid: {dataset_dir}")
         return
-
-    if not (dataset_dir / "data.parquet").exists():
+    
+    if not (dataset_dir / "metadata_table.parquet").exists():
         # Delete the dataset directory
         shutil.rmtree(dataset_dir)
         print(f"⚠️ The dataset is invalid: {dataset_dir}")
         return
 
-    if not (dataset_dir / "data_dictionary.json").exists():
+    if not (dataset_dir / "metadata_dictionary.json").exists():
         # Delete the dataset directory
         shutil.rmtree(dataset_dir)
         print(f"⚠️ The dataset is invalid: {dataset_dir}")

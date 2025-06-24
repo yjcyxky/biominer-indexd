@@ -1,2 +1,0 @@
-guid	filename	size	created_at	updated_at	status	baseid	rev	version	uploader	access	acl	url_0_url	url_0_created_at	url_0_status	url_0_uploader	hash_0_hash_type	hash_0_hash
-biominer.fudan-pgx/385256f8-b94a-56a9-a397-ce7424df31cf	acc_2019.tar.gz	2164736	1749042345	1749042345	pending	90229aa4-f857-5392-93b7-206956810dac	biominer	1	Jingcheng Yang	public		minio://processed-data/OmicsDatasets/acc_2019.tar.gz	1749042345	pending	Jingcheng Yang	md5	204b2a4d3ef6535ecaddbde210f30d0a
