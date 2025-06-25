@@ -74,9 +74,7 @@
 use super::util::load_tsv;
 use super::{datafile::File, duckdb_util::row_to_json};
 use crate::model::data_dictionary::DataDictionary;
-use crate::model::data_table::{
-    DataFileTable, MAFTable, MRNAExprTable, MetadataTable, DATA_FILE_TABLES,
-};
+use crate::model::data_table::{DataFileTable, DataTable, FileGroup, MetadataTable};
 use crate::model::dataset_metadata::DatasetMetadata;
 use crate::query_builder::query_plan::{QueryPlan, SelectExpr};
 use crate::query_builder::where_builder::ComposeQuery;
@@ -88,7 +86,6 @@ use poem_openapi::Object;
 use polars::prelude::LazyFrame;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use sqlx::query;
 use std::collections::{HashMap, HashSet};
 use std::sync::Mutex;
 use std::{fs, path::Path, path::PathBuf};
@@ -234,13 +231,14 @@ impl Datasets {
         let content = match fs::read_to_string(&index_path) {
             Ok(content) => content,
             Err(e) => {
-                return Err(anyhow::anyhow!("Failed to read index file: {}", e));
+                return Err(anyhow::anyhow!("Failed to read index file ({}): {}", index_path.display(), e));
             }
         };
+
         let index_entries: Vec<DatasetMetadata> = match serde_json::from_str(&content) {
             Ok(entries) => entries,
             Err(e) => {
-                return Err(anyhow::anyhow!("Failed to parse index file: {}", e));
+                return Err(anyhow::anyhow!("Failed to parse index file ({}): {}", index_path.display(), e));
             }
         };
 
@@ -248,7 +246,7 @@ impl Datasets {
             .into_iter()
             .map(|entry| {
                 let path = base_path.join(&entry.key).join(&entry.version);
-                Dataset::load(&path).expect("Failed to load dataset")
+                Dataset::load(&path).expect(&format!("Failed to load dataset {}", path.display()))
             })
             .collect();
 
@@ -629,6 +627,30 @@ impl Datasets {
         Ok(dataset.unwrap().values().cloned().collect())
     }
 
+    /// Get a dataset by its key and version.
+    ///
+    /// This method searches through the loaded dataset records and returns the one
+    /// that matches the given `key` and `version`.
+    ///
+    /// # Arguments
+    ///
+    /// * `key` - A string slice representing the unique key of the dataset to retrieve.
+    /// * `version` - A string slice representing the version of the dataset to retrieve.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(Dataset)` if a dataset with the specified key and version is found, or an `Err(Error)`
+    /// if no matching dataset exists.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if no dataset with the given key and version is found.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// let dataset = Datasets::get_by_version("tcga_brca", "v1.0.0")?;
+    /// ```
     pub fn get_by_version(key: &str, version: &str) -> Result<Dataset, Error> {
         let dataset_cache = DATASET_CACHE.lock().unwrap();
         let dataset = dataset_cache.get(key);
@@ -771,30 +793,12 @@ impl Dataset {
         let mut datafile_tables: HashMap<String, Option<DataFileTable>> = HashMap::new();
         let path = dataset_path.join("datafiles");
 
-        for table_name in DATA_FILE_TABLES.lock().unwrap().iter() {
-            if table_name.to_string() == "maf" {
-                match MAFTable::new(&path) {
-                    Ok(datafile_table) => {
-                        let datafile_table = DataFileTable::MAF(datafile_table);
-                        datafile_tables.insert(table_name.to_string(), Some(datafile_table));
-                    }
-                    Err(e) => {
-                        warn!("{}", e);
-                        datafile_tables.insert(table_name.to_string(), None);
-                    }
-                }
-            } else if table_name.to_string() == "mrna_expr" {
-                match MRNAExprTable::new(&path) {
-                    Ok(datafile_table) => {
-                        let datafile_table = DataFileTable::MRNAExpr(datafile_table);
-                        datafile_tables.insert(table_name.to_string(), Some(datafile_table));
-                    }
-                    Err(e) => {
-                        warn!("{}", e);
-                        datafile_tables.insert(table_name.to_string(), None);
-                    }
-                }
-            }
+        let file_groups = FileGroup::find_file_groups(&path);
+
+        for file_group in file_groups {
+            let table_name = file_group.prefix;
+            let datafile_table = DataFileTable::new(&path, &table_name)?;
+            datafile_tables.insert(table_name, Some(datafile_table));
         }
 
         Ok(Self {
@@ -936,6 +940,27 @@ impl Dataset {
     }
 
     /// Search engine for the dataset.
+    ///
+    /// This method uses the `QueryPlan` to construct a SQL query and execute it.
+    ///
+    /// # Arguments
+    ///
+    /// * `query_plan` - A `QueryPlan` struct containing the query plan.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(DatasetDataResponse)` containing:
+    /// - `records`: Vector of matching records as JSON values
+    /// - `total`: Total number of matching records
+    /// - `page`: Current page number
+    /// - `page_size`: Number of records per page
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The `QueryPlan` is invalid
+    /// - The `QueryPlan` table is not found
+    /// - The `QueryPlan` SQL query fails
     pub fn search_with_query_plan(
         &self,
         query_plan: &QueryPlan,
@@ -945,10 +970,7 @@ impl Dataset {
             self.metadata_table.get_conn()?
         } else {
             let conn = match self.datafile_tables.get(&query_plan.table) {
-                Some(Some(DataFileTable::MAF(maf_table))) => maf_table.get_conn()?,
-                Some(Some(DataFileTable::MRNAExpr(mrna_expr_table))) => {
-                    mrna_expr_table.get_conn()?
-                }
+                Some(Some(datafile_table)) => datafile_table.get_conn()?,
                 _ => {
                     return Err(anyhow::anyhow!(
                         "Datafile table not found: {}",
@@ -984,7 +1006,7 @@ impl Dataset {
         query_plan_clone.selects = vec![SelectExpr::AggFunc {
             func: "count".to_string(),
             field: "*".to_string(),
-            alias: None,
+            alias: Some("count".to_string()),
         }];
 
         let count_sql = query_plan_clone.to_sql()?;
@@ -1000,55 +1022,6 @@ impl Dataset {
             page_size,
         })
     }
-
-    /// Search engine for the dataset.
-    // pub fn search(&self, query_plan: &QueryPlan) -> Result<DatasetDataResponse, Error> {
-    //     let parquet_path = self.path.join("metadata_table.parquet");
-    //     if !parquet_path.exists() {
-    //         return Err(anyhow::anyhow!(
-    //             "Dataset parquet file not found at {:?}",
-    //             parquet_path
-    //         ));
-    //     }
-
-    //     let conn = Connection::open_in_memory()?;
-    //     conn.execute(
-    //         "CREATE TABLE metadata_table AS SELECT * FROM read_parquet(?)",
-    //         params![parquet_path.to_str().unwrap()],
-    //     )?;
-
-    //     let sql_with_params = query_plan.to_sql()?;
-
-    //     info!("Query SQL: {}", sql_with_params.sql);
-
-    //     let mut stmt = conn.prepare("PRAGMA table_info(metadata);")?;
-    //     let columns: Vec<String> = stmt
-    //         .query_map([], |row| row.get::<_, String>(1))?
-    //         .filter_map(Result::ok)
-    //         .collect();
-
-    //     info!("Table Columns: {:?}", columns);
-    //     let mut stmt = conn.prepare(&sql_with_params.sql)?;
-    //     let rows = stmt.query_map(sql_with_params.params, move |row| {
-    //         let record = row_to_json(row, &columns)?;
-    //         Ok(record)
-    //     })?;
-
-    //     let mut records = Vec::new();
-    //     for row in rows {
-    //         records.push(row?);
-    //     }
-
-    //     let count_sql = format!("SELECT COUNT(*) FROM metadata WHERE {}", query_str);
-    //     let count: i64 = conn.query_row(&count_sql, [], |row| row.get(0))?;
-
-    //     Ok(DatasetDataResponse {
-    //         records,
-    //         total: count as usize,
-    //         page: page as usize,
-    //         page_size: page_size as usize,
-    //     })
-    // }
 
     /// Get the data dictionary for this dataset from the cache.
     ///
@@ -1091,6 +1064,30 @@ impl Dataset {
             .clone())
     }
 
+    /// Get the data dictionary for all datafile tables in this dataset.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(Vec<DataDictionary>)` containing the data dictionaries for all datafile tables,
+    /// or an `Err(Error)` if the data dictionaries are not found.
+    ///
+    /// # Errors
+    ///
+    /// This function returns an error if:
+    /// - The data dictionaries are not found in the cache
+    /// - The cache has not been initialized
+    ///
+    /// # Example
+    /// ```rust
+    /// let datafile_dictionaries = dataset.get_datafile_dictionaries()?;
+    /// for dictionary in datafile_dictionaries {
+    ///     println!("Dictionary: {:?}", dictionary);
+    /// }
+    /// ```
+    pub fn get_datafile_tables(&self) -> Result<Vec<DataFileTable>, Error> {
+        return Ok(self.datafile_tables.values().filter_map(|table| table.clone()).collect());
+    }
+
     /// Get the license information for this dataset.
     ///
     /// This method reads the `LICENSE.md` file from the dataset directory.
@@ -1116,7 +1113,7 @@ impl Dataset {
         let license = match fs::read_to_string(&license_path) {
             Ok(license) => license,
             Err(e) => {
-                return Err(anyhow::anyhow!("Failed to read license file: {}", e));
+                return Err(anyhow::anyhow!("Failed to read license file ({}): {}", license_path.display(), e));
             }
         };
         Ok(license)

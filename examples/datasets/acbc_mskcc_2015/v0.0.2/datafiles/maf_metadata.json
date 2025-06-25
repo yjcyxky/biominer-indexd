@@ -1,0 +1,5 @@
+{
+    "title": "MAF",
+    "description": "Mutation Annotation Format",
+    "id_column_name": "Tumor_Sample_Barcode"
+}

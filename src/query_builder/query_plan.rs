@@ -506,23 +506,26 @@ impl QueryPlan {
         self.validate()?;
         let mut params = Vec::new();
 
-        let select_clause = self
-            .selects
-            .iter()
-            .map(|expr| expr.format(self.field_table_map.as_ref(), !self.joins.is_empty()))
-            .collect::<Vec<_>>()
-            .join(", ");
+        let select_clause = if self.selects.is_empty() {
+            "*".to_string()
+        } else {
+            self.selects
+                .iter()
+                .map(|expr| expr.format(self.field_table_map.as_ref(), !self.joins.is_empty()))
+                .collect::<Vec<_>>()
+                .join(", ")
+        };
 
         let mut sql = if explain {
             format!(
-                "EXPLAIN SELECT{} {} FROM {}",
+                "EXPLAIN SELECT {} {} FROM {}",
                 if self.distinct { " DISTINCT" } else { "" },
                 select_clause,
                 self.table
             )
         } else {
             format!(
-                "SELECT{} {} FROM {}",
+                "SELECT {} {} FROM {}",
                 if self.distinct { " DISTINCT" } else { "" },
                 select_clause,
                 self.table

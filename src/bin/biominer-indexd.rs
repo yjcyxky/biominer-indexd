@@ -138,7 +138,7 @@ impl Endpoint for IndexHtmlEmbed {
                                 .body(formated_str))
                         }
                     }
-                    Err(e) => {
+                    Err(_e) => {
                         return {
                             Ok(Response::builder()
                                 .header(header::CONTENT_TYPE, "text/html")

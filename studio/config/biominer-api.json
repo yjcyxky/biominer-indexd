@@ -917,6 +917,80 @@
         "operationId": "getDataDictionary"
       }
     },
+    "/api/v1/datasets/{key}/{version}/datafile-tables": {
+      "get": {
+        "tags": [
+          "Datasets"
+        ],
+        "summary": "Call `/api/v1/datasets/:key/:version/datafiles/dictionaries` to get the dataset data dictionaries.",
+        "parameters": [
+          {
+            "name": "key",
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "required": true,
+            "deprecated": false
+          },
+          {
+            "name": "version",
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "required": true,
+            "deprecated": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DataFileTable"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getDatafileTables"
+      }
+    },
     "/api/v1/datasets/{key}/{version}/license": {
       "get": {
         "tags": [
@@ -1134,12 +1208,92 @@
         "operationId": "getDatafiles"
       }
     },
+    "/api/v1/datasets/{key}/{version}/data-with-query-plan": {
+      "get": {
+        "tags": [
+          "Datasets"
+        ],
+        "summary": "Call `/api/v1/datasets/:key/:version/data-with-query-plan` to get the dataset data with query plan.",
+        "parameters": [
+          {
+            "name": "key",
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "required": true,
+            "deprecated": false
+          },
+          {
+            "name": "version",
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "required": true,
+            "deprecated": false
+          },
+          {
+            "name": "query_plan",
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "required": true,
+            "deprecated": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetDataResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getDatasetDataWithQueryPlan"
+      }
+    },
     "/api/v1/datasets/{key}/{version}/data": {
       "get": {
         "tags": [
           "Datasets"
         ],
-        "summary": "Call `/api/v1/datasets/:key/:version/data` to get the dataset data.",
+        "summary": "[Deprecated] Call `/api/v1/datasets/:key/:version/data` to get the dataset data.",
         "parameters": [
           {
             "name": "key",
@@ -1373,6 +1527,37 @@
           "order": {
             "type": "integer",
             "format": "uint64"
+          }
+        }
+      },
+      "DataFileTable": {
+        "type": "object",
+        "required": [
+          "title",
+          "description",
+          "id_column_name",
+          "table_name",
+          "data_dictionary",
+          "path"
+        ],
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "id_column_name": {
+            "type": "string"
+          },
+          "table_name": {
+            "type": "string"
+          },
+          "data_dictionary": {
+            "$ref": "#/components/schemas/DataDictionary"
+          },
+          "path": {
+            "type": "string"
           }
         }
       },

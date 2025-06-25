@@ -17,7 +17,7 @@ export async function getDatasets(
   });
 }
 
-/** Call `/api/v1/datasets/:key/:version/data` to get the dataset data. GET /api/v1/datasets/${param0}/${param1}/data */
+/** [Deprecated] Call `/api/v1/datasets/:key/:version/data` to get the dataset data. GET /api/v1/datasets/${param0}/${param1}/data */
 export async function getDatasetData(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
   params: API.getDatasetDataParams,
@@ -41,6 +41,39 @@ export async function getDataDictionary(
 ) {
   const { key: param0, version: param1, ...queryParams } = params;
   return request<API.DataDictionary>(`/api/v1/datasets/${param0}/${param1}/data-dictionary`, {
+    method: 'GET',
+    params: { ...queryParams },
+    ...(options || {}),
+  });
+}
+
+/** Call `/api/v1/datasets/:key/:version/data-with-query-plan` to get the dataset data with query plan. GET /api/v1/datasets/${param0}/${param1}/data-with-query-plan */
+export async function getDatasetDataWithQueryPlan(
+  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
+  params: API.getDatasetDataWithQueryPlanParams,
+  options?: { [key: string]: any },
+) {
+  const { key: param0, version: param1, ...queryParams } = params;
+  return request<API.DatasetDataResponse>(
+    `/api/v1/datasets/${param0}/${param1}/data-with-query-plan`,
+    {
+      method: 'GET',
+      params: {
+        ...queryParams,
+      },
+      ...(options || {}),
+    },
+  );
+}
+
+/** Call `/api/v1/datasets/:key/:version/datafiles/dictionaries` to get the dataset data dictionaries. GET /api/v1/datasets/${param0}/${param1}/datafile-tables */
+export async function getDatafileTables(
+  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
+  params: API.getDatafileTablesParams,
+  options?: { [key: string]: any },
+) {
+  const { key: param0, version: param1, ...queryParams } = params;
+  return request<API.DataFileTable[]>(`/api/v1/datasets/${param0}/${param1}/datafile-tables`, {
     method: 'GET',
     params: { ...queryParams },
     ...(options || {}),

@@ -1,4 +1,4 @@
-import { InfoCircleOutlined, PercentageOutlined } from '@ant-design/icons';
+import { InfoCircleOutlined, PercentageOutlined, SettingOutlined } from '@ant-design/icons';
 import { Dropdown, Button, Input, Checkbox, Tooltip } from 'antd';
 import { useState, useMemo } from 'react';
 
@@ -6,7 +6,15 @@ export const getDefaultSelectedKeys = (fields: API.DataDictionaryField[]) => {
     return fields.filter(field => field.order <= 5).map(field => field.key).slice(0, 6);
 }
 
-const ColumnSelector = ({ fields, selectedKeys, onChange }: { fields: API.DataDictionaryField[], selectedKeys: string[], onChange: (keys: string[]) => void }) => {
+interface ColumnSelectorProps {
+    title?: string,
+    className?: string,
+    fields: API.DataDictionaryField[],
+    selectedKeys: string[],
+    onChange: (keys: string[]) => void
+}
+
+const ColumnSelector: React.FC<ColumnSelectorProps> = ({ className, title, fields, selectedKeys, onChange }) => {
     const [search, setSearch] = useState('');
 
     const filteredFields = useMemo(() => {
@@ -71,7 +79,7 @@ const ColumnSelector = ({ fields, selectedKeys, onChange }: { fields: API.DataDi
 
     return (
         <Dropdown overlay={menu} trigger={['click']}>
-            <Button>Select Columns</Button>
+            <Button icon={<SettingOutlined />} className={`${className}`}>{title ?? 'Select Columns'}</Button>
         </Dropdown>
     );
 };

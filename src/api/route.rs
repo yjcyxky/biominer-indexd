@@ -2,6 +2,7 @@ use crate::model::data_dictionary::DataDictionary;
 use crate::model::datafile::{
     Config, File, FileStatResponse, FileTagsResponse, Hash, QueryFilter, RecordResponse, URL,
 };
+use crate::model::data_table::DataFileTable;
 use crate::model::dataset::{DatasetDataResponse, Datasets, DatasetsResponse};
 use crate::model::util::to_hashmap;
 use crate::query_builder::query_plan::QueryPlan;
@@ -226,9 +227,24 @@ enum GetDatasetsResponse {
 }
 
 #[derive(ApiResponse)]
-enum GetDatasetDataDictionaryResponse {
+enum GetDatasetMetadataDictionaryResponse {
     #[oai(status = 200)]
     Ok(Json<DataDictionary>),
+
+    #[oai(status = 404)]
+    NotFound(PlainText<String>),
+
+    #[oai(status = 500)]
+    InternalError(PlainText<String>),
+
+    #[oai(status = 400)]
+    BadRequest(PlainText<String>),
+}
+
+#[derive(ApiResponse)]
+enum GetDatasetDataFileTablesResponse {
+    #[oai(status = 200)]
+    Ok(Json<Vec<DataFileTable>>),
 
     #[oai(status = 404)]
     NotFound(PlainText<String>),
@@ -876,12 +892,12 @@ impl BioMinerIndexdApi {
         &self,
         key: Path<String>,
         version: Path<String>,
-    ) -> GetDatasetDataDictionaryResponse {
+    ) -> GetDatasetMetadataDictionaryResponse {
         let dataset = match Datasets::get_by_version(&key.0, &version.0) {
             Ok(dataset) => dataset,
             Err(e) => {
                 warn!("Failed to get dataset: {}", e);
-                return GetDatasetDataDictionaryResponse::NotFound(PlainText(e.to_string()));
+                return GetDatasetMetadataDictionaryResponse::NotFound(PlainText(e.to_string()));
             }
         };
 
@@ -889,11 +905,42 @@ impl BioMinerIndexdApi {
             Ok(data_dictionary) => data_dictionary,
             Err(e) => {
                 warn!("Failed to load data dictionary: {}", e);
-                return GetDatasetDataDictionaryResponse::InternalError(PlainText(e.to_string()));
+                return GetDatasetMetadataDictionaryResponse::InternalError(PlainText(e.to_string()));
             }
         };
 
-        GetDatasetDataDictionaryResponse::Ok(Json(data_dictionary))
+        GetDatasetMetadataDictionaryResponse::Ok(Json(data_dictionary))
+    }
+
+    /// Call `/api/v1/datasets/:key/:version/datafiles/dictionaries` to get the dataset data dictionaries.
+    #[oai(
+        path = "/datasets/:key/:version/datafile-tables",
+        method = "get",
+        tag = "DatasetApiTags::Datasets",
+        operation_id = "getDatafileTables"
+    )]
+    async fn get_datafile_tables(
+        &self,
+        key: Path<String>,
+        version: Path<String>,
+    ) -> GetDatasetDataFileTablesResponse {
+        let dataset = match Datasets::get_by_version(&key.0, &version.0) {
+            Ok(dataset) => dataset,
+            Err(e) => {
+                warn!("Failed to get dataset: {}", e);
+                return GetDatasetDataFileTablesResponse::NotFound(PlainText(e.to_string()));
+            }
+        };
+
+        let datafile_tables = match dataset.get_datafile_tables() {
+            Ok(datafile_tables) => datafile_tables,
+            Err(e) => {
+                warn!("Failed to load datafile tables: {}", e);
+                return GetDatasetDataFileTablesResponse::InternalError(PlainText(e.to_string()));
+            }
+        };
+
+        GetDatasetDataFileTablesResponse::Ok(Json(datafile_tables))
     }
 
     /// Call `/api/v1/datasets/:key/:version/license` to get the dataset license.

@@ -61,7 +61,7 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
         }));
 
         setColumns(columnDefs);
-    }, [dataDictionary]);
+    }, [dataDictionary, dataSource]);
 
     const [connectObject] = useState(() => {
         const obj = {};

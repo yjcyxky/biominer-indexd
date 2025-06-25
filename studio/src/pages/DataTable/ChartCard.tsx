@@ -224,6 +224,7 @@ const ChartCard: React.FC<ChartCardProps> = ({ field, data, isFileBased, total, 
     const [plotData, setPlotData] = useState<any[]>([]);
 
     useEffect(() => {
+        console.log("ChartCard: ", data, field.key);
         setPlotData(buildUnifiedPlotData(data, field.key, {
             normalizeNull: true,
             sort: true,

@@ -57,6 +57,15 @@ declare namespace API {
     order: number;
   };
 
+  type DataFileTable = {
+    title: string;
+    description: string;
+    id_column_name: string;
+    table_name: string;
+    data_dictionary: DataDictionary;
+    path: string;
+  };
+
   type DatasetDataResponse = {
     records: any[];
     total: number;
@@ -148,6 +157,11 @@ declare namespace API {
     version: string;
   };
 
+  type getDatafileTablesParams = {
+    key: string;
+    version: string;
+  };
+
   type getDatasetDataParams = {
     key: string;
     version: string;
@@ -155,6 +169,12 @@ declare namespace API {
     page?: number;
     page_size?: number;
     order_by?: string;
+  };
+
+  type getDatasetDataWithQueryPlanParams = {
+    key: string;
+    version: string;
+    query_plan: string;
   };
 
   type getDatasetLicenseParams = {

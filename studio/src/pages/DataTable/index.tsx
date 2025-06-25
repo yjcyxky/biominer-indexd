@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Button, Modal, Typography, Row, Col, message, Tooltip, Spin, Tag, Tabs, Select } from 'antd';
 import { useEffect } from 'react';
-import { getDatasetData, getDataDictionary, getDatasets, getDatafiles, getDatasetReadme, getDatasetLicense } from '@/services/biominer/datasets';
+import { getDatasetData, getDataDictionary, getDatasets, getDatafiles, getDatasetReadme, getDatasetLicense, getDatafileTables, getDatasetDataWithQueryPlan } from '@/services/biominer/datasets';
 import { history } from 'umi';
 import ColumnSelector, { getDefaultSelectedKeys } from './ColumnSelector';
 import { filters2string } from './Filter';
@@ -60,9 +60,17 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
     const [filters, setFilters] = useState<ComposeQueryItem | undefined>(undefined);
     const [currentRecord, setCurrentRecord] = useState<Record<string, any> | null>(null);
     const [datasetDownloadModalVisible, setDatasetDownloadModalVisible] = useState<boolean>(false);
-    const [activeTab, setActiveTab] = useState<string>('plots');
+    const [activeTab, setActiveTab] = useState<string>('summary');
     const [readme, setReadme] = useState<string | undefined>(undefined);
     const [license, setLicense] = useState<string | undefined>(undefined);
+
+    const [dataFileTables, setDataFileTables] = useState<API.DataFileTable[]>([]);
+    const [dataFileTableData, setDataFileTableData] = useState<Record<string, API.DatasetDataResponse['records']>>({});
+    const [dataFileTablePage, setDataFileTablePage] = useState<Record<string, number>>({});
+    const [dataFileTablePageSize, setDataFileTablePageSize] = useState<Record<string, number>>({});
+    const [dataFileTableTotal, setDataFileTableTotal] = useState<Record<string, number>>({});
+    const [dataFileTableColumns, setDataFileTableColumns] = useState<Record<string, any[]>>({});
+    const [dataFileTableSelectedColumns, setDataFileTableSelectedColumns] = useState<Record<string, string[]>>({});
 
     const getDatasetKey = (): string => {
         let datasetKey = key ?? '';
@@ -156,6 +164,24 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
         }).catch(err => {
             message.error('Failed to fetch the dataset data dictionary.');
         });
+
+        // Fetch the datafiles dictionaries.
+        getDatafileTables({
+            key: cachedDatasetKey,
+            version: cachedDatasetVersion ?? '',
+        }).then((dTables: API.DataFileTable[]) => {
+            setDataFileTables(dTables);
+            setDataFileTableSelectedColumns({
+                ...dataFileTableSelectedColumns,
+                ...dTables.reduce((acc, table) => {
+                    acc[table.table_name] = getDefaultSelectedKeys(table.data_dictionary.fields);
+                    return acc;
+                }, {} as Record<string, string[]>),
+            });
+        }).catch((err: any) => {
+            message.error('Failed to fetch the dataset datafile tables.');
+            console.error('Failed to fetch the dataset datafile tables.', err);
+        });
     }, [cachedDatasetKey, cachedDatasetVersion])
 
     useEffect(() => {
@@ -186,17 +212,96 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
     }, [page, pageSize, cachedDatasetKey, cachedDatasetVersion, filters])
 
     useEffect(() => {
+        if (!cachedDatasetKey) return;
+        if (!cachedDatasetVersion) return;
+
+        if (!dataFileTables.find(table => table.table_name === activeTab)) {
+            setLoading(false);
+            return;
+        }
+
+        setLoading(true);
+
+        const filters = {
+            field: dataFileTables.find(table => table.table_name === activeTab)?.id_column_name,
+            operator: 'in',
+            value: data.records.map((record: any) => record["patient_id"]),
+        }
+
+        const fetchData = async () => {
+            const queryPlan: any = {
+                table: activeTab,
+                joins: [],
+                selects: [],
+                filters: filters,
+                group_by: [],
+                having: undefined,
+                order_by: [],
+                limit: dataFileTablePageSize[activeTab] ?? 100,
+                offset: (dataFileTablePage[activeTab] ?? 1 - 1) * (dataFileTablePageSize[activeTab] ?? 100),
+                distinct: false,
+            }
+
+            const data = await getDatasetDataWithQueryPlan({
+                key: cachedDatasetKey,
+                version: cachedDatasetVersion ?? '',
+                query_plan: queryPlan,
+            });
+
+            setDataFileTableData({ ...dataFileTableData, [activeTab]: data.records });
+            setDataFileTableTotal({ ...dataFileTableTotal, [activeTab]: data.total });
+            setDataFileTablePage({ ...dataFileTablePage, [activeTab]: data.page });
+            setDataFileTablePageSize({ ...dataFileTablePageSize, [activeTab]: data.page_size });
+
+            setLoading(false);
+        }
+        fetchData();
+    }, [activeTab, filters, data])
+
+    useEffect(() => {
         setColumns(dataDictionary.fields.filter(col => selectedColumns.includes(col.key)));
     }, [dataDictionary, selectedColumns]);
+
+    useEffect(() => {
+        if (!cachedDatasetKey) return;
+        if (!cachedDatasetVersion) return;
+
+        const table = dataFileTables.find(table => table.table_name === activeTab);
+        if (!table) return;
+
+        const selectedDataFileTableColumns = dataFileTableSelectedColumns[activeTab] ?? [];
+        const columns = table.data_dictionary.fields.filter(col => selectedDataFileTableColumns.includes(col.key));
+        setDataFileTableColumns({ ...dataFileTableColumns, [activeTab]: columns });
+    }, [activeTab, dataFileTables, dataFileTableSelectedColumns])
 
     const resetParams = () => {
         setPage(1);
         setPageSize(100);
     }
 
+    const resetAllState = () => {
+        setPage(1);
+        setPageSize(100);
+        setFilters(undefined);
+        setCurrentRecord(null);
+        setDatasetDownloadModalVisible(false);
+        setActiveTab('summary');
+        setReadme(undefined);
+        setLicense(undefined);
+
+        setDataFileTables([]);
+        setDataFileTableData({});
+        setDataFileTablePage({});
+        setDataFileTablePageSize({});
+        setDataFileTableTotal({});
+        setDataFileTableColumns({});
+        setDataFileTableSelectedColumns({});
+    };
+
     const setDatasetVersion = (version: string) => {
         console.log("setDatasetVersion", version);
         setCachedDatasetVersion(version);
+        resetAllState();
         history.replace(`/datatable/${cachedDatasetKey}?version=${version}`);
     }
 
@@ -254,7 +359,7 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
                 <p style={{ width: '100%', overflow: 'hidden', margin: 0, textOverflow: 'ellipsis', maxHeight: 45 }}
                     dangerouslySetInnerHTML={{ __html: datasetMetadata?.description ?? '' }} />
             </Row>
-            <Tabs defaultActiveKey="plots" activeKey={activeTab} onChange={(key) => { setActiveTab(key) }}
+            <Tabs defaultActiveKey="summary" activeKey={activeTab} onChange={(key) => { setActiveTab(key) }} destroyInactiveTabPane={true}
                 className='datatable-tabs' tabBarExtraContent={
                     <Row className='datatable-tabs-extra-content'>
                         <Col className="datatable-tabs-extra-content-left">
@@ -328,7 +433,7 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
                         </Col>
                     </Row>
                 }>
-                <Tabs.TabPane tab="Summary" key="plots">
+                <Tabs.TabPane tab="Summary" key="summary">
                     <VisualPanel fields={dataDictionary.fields} data={data.records} isFileBased={datasetMetadata?.is_filebased ?? false}
                         total={data.total} selectedColumns={selectedColumns}
                         onClose={(field) => {
@@ -386,6 +491,43 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
                         isFileBased={datasetMetadata?.is_filebased ?? false}
                     />
                 </Tabs.TabPane>
+                {
+                    dataFileTables.map(table => (
+                        <Tabs.TabPane tab={<Tooltip title={table.description}>{table.title}</Tooltip>} key={table.table_name}>
+                            <Row>
+                                <ColumnSelector fields={table.data_dictionary.fields}
+                                    selectedKeys={dataFileTableSelectedColumns[table.table_name] ?? []}
+                                    className={`column-selector-${table.table_name}`}
+                                    title={`Select Columns for ${table.title}`}
+                                    onChange={(keys) => {
+                                        setDataFileTableSelectedColumns({ ...dataFileTableSelectedColumns, [table.table_name]: keys });
+                                    }} />
+                                <VirtualTable
+                                    className='datatable-table'
+                                    size="small"
+                                    dataSource={dataFileTableData[table.table_name] ?? []}
+                                    rowKey={(record: any, idx: any) => idx?.toString() ?? ''}
+                                    scroll={{ y: window.innerHeight - 276, x: window.innerWidth - 48 }}
+                                    pagination={{
+                                        position: ['bottomRight'],
+                                        pageSize: dataFileTablePageSize[table.table_name] ?? 100,
+                                        current: dataFileTablePage[table.table_name] ?? 1,
+                                        total: dataFileTableTotal[table.table_name] ?? 0,
+                                        onChange: (page: number, pageSize: number) => {
+                                            setDataFileTablePage({ ...dataFileTablePage, [table.table_name]: page });
+                                            setDataFileTablePageSize({ ...dataFileTablePageSize, [table.table_name]: pageSize });
+                                        },
+                                        showSizeChanger: true,
+                                        showQuickJumper: true,
+                                        pageSizeOptions: [100, 200, 300, 500, 1000],
+                                    }}
+                                    dataDictionary={dataFileTableColumns[table.table_name] ?? []}
+                                    isFileBased={false}
+                                />
+                            </Row>
+                        </Tabs.TabPane>
+                    ))
+                }
             </Tabs >
             <QueryBuilder
                 visible={filterModalVisible}
