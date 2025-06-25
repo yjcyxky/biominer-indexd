@@ -7,7 +7,6 @@ use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 
-
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct FileGroup {
     pub prefix: String,
@@ -22,7 +21,7 @@ impl FileGroup {
     /// # Returns
     ///
     /// - A vector of `FileGroup` objects
-    /// 
+    ///
     /// # Example
     ///
     /// ```rust
@@ -33,7 +32,11 @@ impl FileGroup {
         let mut candidates: HashMap<String, HashSet<String>> = HashMap::new();
         let mut files: HashMap<(String, String), PathBuf> = HashMap::new();
 
-        for entry in fs::read_dir(&dir).expect("Cannot read directory") {
+        if !dir.as_ref().exists() {
+            return Vec::new();
+        }
+
+        for entry in fs::read_dir(&dir).expect(&format!("Cannot read directory {}", &dir.as_ref().display())) {
             let entry = entry.expect("Invalid DirEntry");
             let path = entry.path();
             if let Some(file_name) = path.file_name().and_then(|n| n.to_str()) {
@@ -71,7 +74,7 @@ impl FileGroup {
     ///
     /// - If the file name matches the pattern, return the prefix and type
     /// - If the file name does not match the pattern, return None
-    /// 
+    ///
     /// # Example
     ///
     /// ```rust
@@ -105,14 +108,21 @@ pub struct DataFileTableMetadata {
 impl DataFileTableMetadata {
     pub fn from_file(filepath: &PathBuf) -> Result<Self, Error> {
         if !filepath.exists() {
-            return Err(Error::msg(format!("Data file table metadata file ({}) not found", &filepath.display())));
+            return Err(Error::msg(format!(
+                "Data file table metadata file ({}) not found",
+                &filepath.display()
+            )));
         }
 
         let metadata = fs::read_to_string(&filepath)?;
         let metadata: DataFileTableMetadata = match serde_json::from_str(&metadata) {
             Ok(metadata) => metadata,
             Err(e) => {
-                return Err(Error::msg(format!("Failed to parse data file table metadata file ({}): {}", &filepath.display(), e)));
+                return Err(Error::msg(format!(
+                    "Failed to parse data file table metadata file ({}): {}",
+                    &filepath.display(),
+                    e
+                )));
             }
         };
 
@@ -237,7 +247,11 @@ impl DataFileTable {
             table_name: table_name.to_string(),
             data_dictionary,
             // TODO: It might be a risk point to expose the full path to the client.
-            path: base_path.join(format!("{}.parquet", table_name)).to_str().unwrap().to_string(),
+            path: base_path
+                .join(format!("{}.parquet", table_name))
+                .to_str()
+                .unwrap()
+                .to_string(),
         })
     }
 }
