@@ -4,6 +4,7 @@ use crate::model::datafile::{
 };
 use crate::model::dataset::{DatasetDataResponse, Datasets, DatasetsResponse};
 use crate::model::util::to_hashmap;
+use crate::query_builder::query_plan::QueryPlan;
 use crate::query_builder::where_builder::ComposeQuery;
 use crate::repo_config::{RepoConfig, SignData};
 use crate::util;
@@ -871,7 +872,11 @@ impl BioMinerIndexdApi {
         tag = "DatasetApiTags::Datasets",
         operation_id = "getDataDictionary"
     )]
-    async fn get_data_dictionary(&self, key: Path<String>, version: Path<String>) -> GetDatasetDataDictionaryResponse {
+    async fn get_data_dictionary(
+        &self,
+        key: Path<String>,
+        version: Path<String>,
+    ) -> GetDatasetDataDictionaryResponse {
         let dataset = match Datasets::get_by_version(&key.0, &version.0) {
             Ok(dataset) => dataset,
             Err(e) => {
@@ -898,7 +903,11 @@ impl BioMinerIndexdApi {
         tag = "DatasetApiTags::Datasets",
         operation_id = "getDatasetLicense"
     )]
-    async fn get_dataset_license(&self, key: Path<String>, version: Path<String>) -> GetDatasetLicenseResponse {
+    async fn get_dataset_license(
+        &self,
+        key: Path<String>,
+        version: Path<String>,
+    ) -> GetDatasetLicenseResponse {
         let dataset = match Datasets::get_by_version(&key.0, &version.0) {
             Ok(dataset) => dataset,
             Err(e) => {
@@ -925,7 +934,11 @@ impl BioMinerIndexdApi {
         tag = "DatasetApiTags::Datasets",
         operation_id = "getDatasetReadme"
     )]
-    async fn get_dataset_readme(&self, key: Path<String>, version: Path<String>) -> GetDatasetReadmeResponse {
+    async fn get_dataset_readme(
+        &self,
+        key: Path<String>,
+        version: Path<String>,
+    ) -> GetDatasetReadmeResponse {
         let dataset = match Datasets::get_by_version(&key.0, &version.0) {
             Ok(dataset) => dataset,
             Err(e) => {
@@ -952,7 +965,11 @@ impl BioMinerIndexdApi {
         tag = "DatasetApiTags::Datasets",
         operation_id = "getDatafiles"
     )]
-    async fn get_datafiles(&self, key: Path<String>, version: Path<String>) -> GetDatasetDatafilesResponse {
+    async fn get_datafiles(
+        &self,
+        key: Path<String>,
+        version: Path<String>,
+    ) -> GetDatasetDatafilesResponse {
         let dataset = match Datasets::get_by_version(&key.0, &version.0) {
             Ok(dataset) => dataset,
             Err(e) => {
@@ -978,7 +995,47 @@ impl BioMinerIndexdApi {
         };
     }
 
-    /// Call `/api/v1/datasets/:key/:version/data` to get the dataset data.
+    /// Call `/api/v1/datasets/:key/:version/data-with-query-plan` to get the dataset data with query plan.
+    #[oai(
+        path = "/datasets/:key/:version/data-with-query-plan",
+        method = "get",
+        tag = "DatasetApiTags::Datasets",
+        operation_id = "getDatasetDataWithQueryPlan"
+    )]
+    async fn get_dataset_data_with_query_plan(
+        &self,
+        key: Path<String>,
+        version: Path<String>,
+        query_plan: Query<String>,
+    ) -> GetDatasetDataResponse {
+        let query_plan = match QueryPlan::from_json(&query_plan.0) {
+            Ok(query_plan) => query_plan,
+            Err(e) => {
+                warn!("Failed to parse query plan: {}", e);
+                return GetDatasetDataResponse::BadRequest(PlainText(e.to_string()));
+            }
+        };
+
+        let dataset = match Datasets::get_by_version(&key.0, &version.0) {
+            Ok(dataset) => dataset,
+            Err(e) => {
+                warn!("Failed to get dataset: {}", e);
+                return GetDatasetDataResponse::NotFound(PlainText(e.to_string()));
+            }
+        };
+
+        let data = match dataset.search_with_query_plan(&query_plan) {
+            Ok(data) => data,
+            Err(e) => {
+                warn!("Failed to search dataset: {}", e);
+                return GetDatasetDataResponse::InternalError(PlainText(e.to_string()));
+            }
+        };
+
+        GetDatasetDataResponse::Ok(Json(data))
+    }
+
+    /// [Deprecated] Call `/api/v1/datasets/:key/:version/data` to get the dataset data.
     #[oai(
         path = "/datasets/:key/:version/data",
         method = "get",

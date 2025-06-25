@@ -1,10 +1,14 @@
 use crate::query_builder::where_builder::{ComposeQuery, Value};
 use anyhow::{anyhow, Error, Result};
+use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
 pub enum SelectExpr {
-    Field(String),
+    Field {
+        value: String,
+    },
     AggFunc {
         func: String,
         field: String,
@@ -27,20 +31,20 @@ impl SelectExpr {
 
     pub fn validate(&self, field_table_map: Option<&HashMap<String, String>>) -> Result<(), Error> {
         match self {
-            SelectExpr::Field(f) => {
-                if f.is_empty() {
+            SelectExpr::Field { value } => {
+                if value.is_empty() {
                     return Err(anyhow!("Field name is empty."));
                 }
 
-                if !Self::is_valid_identifier(f) {
-                    return Err(anyhow!("Invalid field name: '{}'", f));
+                if !Self::is_valid_identifier(value) {
+                    return Err(anyhow!("Invalid field name: '{}'", value));
                 }
 
                 // How to check if the field is in a specific table? In especial, join clause exists.
                 if let Some(map) = field_table_map {
                     // check if the field is in the map
-                    if !map.contains_key(f) {
-                        return Err(anyhow!("Field '{}' is not in any table.", f));
+                    if !map.contains_key(value) {
+                        return Err(anyhow!("Field '{}' is not in any table.", value));
                     }
                 }
             }
@@ -73,20 +77,20 @@ impl SelectExpr {
         multi_table: bool,
     ) -> String {
         match self {
-            SelectExpr::Field(f) => {
+            SelectExpr::Field { value } => {
                 if let Some(map) = field_table_map {
-                    if let Some(t) = map.get(f) {
+                    if let Some(t) = map.get(value) {
                         // If only one table, no need to add the table name.
                         if !multi_table {
-                            format!("{}", f)
+                            format!("{}", value)
                         } else {
-                            format!("{}.{}", t, f)
+                            format!("{}.{}", t, value)
                         }
                     } else {
-                        f.clone()
+                        value.clone()
                     }
                 } else {
-                    f.clone()
+                    value.clone()
                 }
             }
             SelectExpr::AggFunc { func, field, alias } => {
@@ -105,23 +109,24 @@ impl SelectExpr {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
 pub enum AggExpr {
-    Alias(String),
+    Alias { value: String },
     Function { func: String, field: String },
 }
 
 impl AggExpr {
     pub fn is_empty(&self) -> bool {
         match self {
-            AggExpr::Alias(name) => name.is_empty(),
+            AggExpr::Alias { value } => value.is_empty(),
             AggExpr::Function { func, field } => func.is_empty() || field.is_empty(),
         }
     }
 
     pub fn format(&self) -> String {
         match self {
-            AggExpr::Alias(name) => name.clone(),
+            AggExpr::Alias { value } => value.clone(),
             AggExpr::Function { func, field } => {
                 if field == "*" {
                     format!("{}(*)", func.to_uppercase())
@@ -146,16 +151,16 @@ impl AggExpr {
 
     pub fn validate(&self, field_table_map: Option<&HashMap<String, String>>) -> Result<(), Error> {
         match self {
-            AggExpr::Alias(name) => {
-                if name.is_empty() {
+            AggExpr::Alias { value } => {
+                if value.is_empty() {
                     return Err(anyhow!("Alias is empty."));
-                } else if !Self::is_valid_identifier(name) {
-                    return Err(anyhow!("Invalid alias: '{}'", name));
+                } else if !Self::is_valid_identifier(value) {
+                    return Err(anyhow!("Invalid alias: '{}'", value));
                 }
 
                 if let Some(map) = field_table_map {
-                    if !map.contains_key(name) {
-                        return Err(anyhow!("Alias '{}' is not in any table.", name));
+                    if !map.contains_key(value) {
+                        return Err(anyhow!("Alias '{}' is not in any table.", value));
                     }
                 }
             }
@@ -172,7 +177,7 @@ impl AggExpr {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct HavingExpr {
     pub left: AggExpr,
     pub operator: String,
@@ -208,9 +213,12 @@ impl HavingExpr {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
 pub enum HavingClause {
-    Expr(HavingExpr),
+    Expr {
+        value: HavingExpr,
+    },
     Group {
         operator: String, // "AND" or "OR"
         items: Vec<HavingClause>,
@@ -220,14 +228,14 @@ pub enum HavingClause {
 impl HavingClause {
     pub fn is_empty(&self) -> bool {
         match self {
-            HavingClause::Expr(e) => e.is_empty(),
+            HavingClause::Expr { value } => value.is_empty(),
             HavingClause::Group { operator, items } => items.is_empty(),
         }
     }
 
     pub fn format(&self) -> String {
         match self {
-            HavingClause::Expr(e) => e.format(),
+            HavingClause::Expr { value } => value.format(),
             HavingClause::Group { operator, items } => {
                 format!(
                     "({})",
@@ -243,7 +251,7 @@ impl HavingClause {
 
     pub fn to_sql_with_params(&self) -> (String, Vec<Value>) {
         match self {
-            HavingClause::Expr(e) => e.to_sql_with_params(),
+            HavingClause::Expr { value } => value.to_sql_with_params(),
             HavingClause::Group { operator, items } => {
                 let mut parts = Vec::new();
                 let mut params = Vec::new();
@@ -265,7 +273,7 @@ impl HavingClause {
 
     pub fn validate(&self, field_table_map: Option<&HashMap<String, String>>) -> Result<(), Error> {
         match self {
-            HavingClause::Expr(e) => e.validate(field_table_map),
+            HavingClause::Expr { value } => value.validate(field_table_map),
             HavingClause::Group { operator, items } => {
                 for item in items {
                     item.validate(field_table_map)?;
@@ -276,7 +284,8 @@ impl HavingClause {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
 pub enum JoinOn {
     Expr {
         left_table: String,
@@ -284,7 +293,9 @@ pub enum JoinOn {
         right_table: String,
         right_field: String,
     },
-    Raw(String),
+    Raw {
+        value: String,
+    },
 }
 
 impl JoinOn {
@@ -299,7 +310,7 @@ impl JoinOn {
                 "{}.{} = {}.{}",
                 left_table, left_field, right_table, right_field
             ),
-            JoinOn::Raw(s) => s.clone(),
+            JoinOn::Raw { value } => value.clone(),
         }
     }
 
@@ -334,8 +345,8 @@ impl JoinOn {
                     ));
                 }
             }
-            JoinOn::Raw(s) => {
-                if s.is_empty() {
+            JoinOn::Raw { value } => {
+                if value.is_empty() {
                     return Err(anyhow!("Raw join on clause is empty."));
                 }
             }
@@ -344,7 +355,7 @@ impl JoinOn {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct JoinClause {
     pub table: String,
     pub on: JoinOn,
@@ -370,13 +381,13 @@ impl JoinClause {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SqlWithParams {
     pub sql: String,
     pub params: Vec<Value>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct QueryPlan {
     pub table: String,
     pub joins: Vec<JoinClause>,
@@ -412,16 +423,71 @@ impl QueryPlan {
         format!("{}_{}", func.to_lowercase(), normalized)
     }
 
+    pub fn to_json(&self) -> Result<String, Error> {
+        let json = serde_json::to_string(self)?;
+        Ok(json)
+    }
+
+    pub fn from_json(json: &str) -> Result<QueryPlan, Error> {
+        let plan: QueryPlan = serde_json::from_str(json)?;
+        Ok(plan)
+    }
+
     pub fn to_sql_with_params(&self) -> Result<SqlWithParams, Error> {
         self.build_sql(false)
     }
 
-    pub fn to_sql(&self) -> Result<SqlWithParams, Error> {
-        self.build_sql(false)
+    pub fn to_sql(&self) -> Result<String, Error> {
+        let sql_with_params = self.build_sql(false)?;
+        Ok(self.replace_params_with_values(&sql_with_params.sql, &sql_with_params.params))
     }
 
     pub fn to_explain_sql(&self) -> Result<SqlWithParams, Error> {
         self.build_sql(true)
+    }
+
+    /// Replace parameter placeholders (?) with actual values in the SQL string
+    fn replace_params_with_values(&self, sql: &str, params: &[Value]) -> String {
+        let mut result = sql.to_string();
+        let mut param_index = 0;
+
+        while let Some(pos) = result.find('?') {
+            if param_index >= params.len() {
+                break;
+            }
+
+            let value_str = match &params[param_index] {
+                Value::Int(i) => i.to_string(),
+                Value::Float(f) => f.to_string(),
+                Value::String(s) => format!("'{}'", s.replace("'", "''")), // Escape single quotes
+                Value::Bool(b) => b.to_string(),
+                Value::Null => "NULL".to_string(),
+                Value::ArrayString(arr) => {
+                    let values: Vec<String> = arr
+                        .iter()
+                        .map(|s| format!("'{}'", s.replace("'", "''")))
+                        .collect();
+                    format!("({})", values.join(", "))
+                }
+                Value::ArrayInt(arr) => {
+                    let values: Vec<String> = arr.iter().map(|i| i.to_string()).collect();
+                    format!("({})", values.join(", "))
+                }
+                Value::ArrayFloat(arr) => {
+                    let values: Vec<String> = arr.iter().map(|f| f.to_string()).collect();
+                    format!("({})", values.join(", "))
+                }
+                Value::ArrayBool(arr) => {
+                    let values: Vec<String> = arr.iter().map(|b| b.to_string()).collect();
+                    format!("({})", values.join(", "))
+                }
+            };
+
+            result.replace_range(pos..pos + 1, &value_str);
+            param_index += 1;
+        }
+
+        result
     }
 
     fn is_mixed_with_aggregation(&self) -> bool {
@@ -432,7 +498,7 @@ impl QueryPlan {
         let has_non_agg = self
             .selects
             .iter()
-            .any(|expr| matches!(expr, SelectExpr::Field(_)));
+            .any(|expr| matches!(expr, SelectExpr::Field { .. }));
         has_agg && has_non_agg
     }
 
@@ -476,7 +542,7 @@ impl QueryPlan {
                         left_table, left_field, right_table, right_field
                     )
                 }
-                JoinOn::Raw(s) => s.clone(),
+                JoinOn::Raw { value } => value.clone(),
             };
             sql += &format!(" JOIN {} ON {}", join.table, on_clause);
         }
@@ -563,8 +629,8 @@ impl QueryPlan {
         for expr in &self.selects {
             expr.validate(self.field_table_map.as_ref())?;
             match expr {
-                SelectExpr::Field(f) => {
-                    non_agg_fields.insert(f.clone());
+                SelectExpr::Field { value } => {
+                    non_agg_fields.insert(value.clone());
                 }
                 SelectExpr::AggFunc { func, field, alias } => match alias {
                     Some(name) => {
@@ -667,7 +733,7 @@ mod tests {
         let plan = QueryPlan {
             table: "t1".into(),
             joins: vec![],
-            selects: vec![SelectExpr::Field("id".into())],
+            selects: vec![SelectExpr::Field { value: "id".into() }],
             filters: None,
             group_by: vec![],
             having: None,
@@ -679,7 +745,7 @@ mod tests {
             field_type_map: None,
         };
 
-        let sql = plan.to_sql().unwrap().sql;
+        let sql = plan.to_sql().unwrap();
         println!("sql: {}", sql);
         assert!(sql.starts_with("SELECT id FROM t1"));
         assert!(sql.contains("LIMIT 10"));
@@ -691,7 +757,9 @@ mod tests {
             table: "t1".into(),
             joins: vec![],
             selects: vec![
-                SelectExpr::Field("group".into()),
+                SelectExpr::Field {
+                    value: "group".into(),
+                },
                 SelectExpr::AggFunc {
                     func: "SUM".into(),
                     field: "age".into(),
@@ -709,7 +777,7 @@ mod tests {
             field_type_map: None,
         };
 
-        let sql = plan.to_sql().unwrap().sql;
+        let sql = plan.to_sql().unwrap();
         assert!(sql.contains("SUM(age) AS sum_age"));
         assert!(sql.contains("GROUP BY group"));
         assert!(sql.contains("ORDER BY sum_age DESC"));
@@ -720,7 +788,7 @@ mod tests {
         let mut plan = QueryPlan {
             table: "123table".into(), // invalid
             joins: vec![],
-            selects: vec![SelectExpr::Field("id".into())],
+            selects: vec![SelectExpr::Field { value: "id".into() }],
             filters: None,
             group_by: vec![],
             having: None,
@@ -770,20 +838,19 @@ mod tests {
 
     #[test]
     fn test_select_with_join_and_filter_and_having() {
-        let filters = ComposeQuery::QueryItem(QueryItem::new(
-            "age".into(),
-            Value::Int(20),
-            ">".into(),
-        ));
+        let filters =
+            ComposeQuery::QueryItem(QueryItem::new("age".into(), Value::Int(20), ">".into()));
 
-        let having_clause = HavingClause::Expr(HavingExpr {
-            left: AggExpr::Function {
-                func: "avg".into(),
-                field: "score".into(),
+        let having_clause = HavingClause::Expr {
+            value: HavingExpr {
+                left: AggExpr::Function {
+                    func: "avg".into(),
+                    field: "score".into(),
+                },
+                operator: ">".into(),
+                value: Value::Float(60.0),
             },
-            operator: ">".into(),
-            value: Value::Float(60.0),
-        });
+        };
 
         let plan = QueryPlan {
             table: "t1".into(),
@@ -797,7 +864,9 @@ mod tests {
                 },
             }],
             selects: vec![
-                SelectExpr::Field("group".into()),
+                SelectExpr::Field {
+                    value: "group".into(),
+                },
                 SelectExpr::AggFunc {
                     func: "AVG".into(),
                     field: "score".into(),
@@ -831,7 +900,9 @@ mod tests {
             table: "t1".into(),
             joins: vec![],
             selects: vec![
-                SelectExpr::Field("name".into()),
+                SelectExpr::Field {
+                    value: "name".into(),
+                },
                 SelectExpr::AggFunc {
                     func: "count".into(),
                     field: "*".into(),
@@ -852,5 +923,30 @@ mod tests {
         let err = plan.validate().unwrap_err();
         println!("err: {}", err);
         assert!(err.to_string().contains("GROUP BY clause is required"));
+    }
+
+    #[test]
+    fn test_to_json_and_from_json() {
+        let plan = QueryPlan {
+            table: "t1".into(),
+            joins: vec![],
+            selects: vec![SelectExpr::Field { value: "id".into() }],
+            filters: None,
+            group_by: vec![],
+            having: None,
+            order_by: vec![],
+            limit: None,
+            offset: None,
+            distinct: false,
+            field_table_map: Some(mock_field_table_map()),
+            field_type_map: None,
+        };
+
+        let json = plan.to_json().unwrap();
+        println!("json: {}", json);
+
+        let plan2 = QueryPlan::from_json(&json).unwrap();
+        println!("plan2: {:?}", plan2);
+        assert_eq!(plan, plan2);
     }
 }

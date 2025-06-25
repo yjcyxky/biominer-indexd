@@ -203,7 +203,7 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
     return (
         <Spin spinning={loading}>
             <Row className="datatable-header">
-                <Typography.Title level={4} style={{ height: 28 }}>
+                <Typography.Title level={4} style={{ height: 36 }}>
                     {datasetMetadata?.name}
                     {!loading ?
                         <>

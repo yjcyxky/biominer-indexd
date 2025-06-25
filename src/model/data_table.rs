@@ -1,5 +1,6 @@
 use crate::model::data_dictionary::DataDictionary;
 use anyhow::{anyhow, Error};
+use duckdb::{params, Connection};
 use lazy_static::lazy_static;
 use std::path::PathBuf;
 use std::sync::Mutex;
@@ -22,7 +23,7 @@ impl MetadataTable {
         let data_dictionary = DataDictionary::load_metadata_dictionary(base_path)?;
 
         Ok(Self {
-            table_name: "metadata",
+            table_name: "metadata_table",
             data_dictionary,
             path,
         })
@@ -38,6 +39,19 @@ impl MetadataTable {
 
     fn get_path(&self) -> PathBuf {
         self.path.clone()
+    }
+
+    pub fn get_conn(&self) -> Result<Connection, Error> {
+        let conn = Connection::open_in_memory()?;
+        conn.execute(
+            &format!(
+                "CREATE TABLE {} AS SELECT * FROM read_parquet(?)",
+                self.table_name
+            ),
+            params![self.path.to_str().unwrap()],
+        )?;
+
+        Ok(conn)
     }
 }
 
@@ -74,6 +88,19 @@ impl MAFTable {
 
     fn get_path(&self) -> PathBuf {
         self.path.clone()
+    }
+
+    pub fn get_conn(&self) -> Result<Connection, Error> {
+        let conn = Connection::open_in_memory()?;
+        conn.execute(
+            &format!(
+                "CREATE TABLE {} AS SELECT * FROM read_parquet(?)",
+                self.table_name
+            ),
+            params![self.path.to_str().unwrap()],
+        )?;
+
+        Ok(conn)
     }
 }
 
@@ -114,6 +141,19 @@ impl MRNAExprTable {
 
     fn get_path(&self) -> PathBuf {
         self.path.clone()
+    }
+
+    pub fn get_conn(&self) -> Result<Connection, Error> {
+        let conn = Connection::open_in_memory()?;
+        conn.execute(
+            &format!(
+                "CREATE TABLE {} AS SELECT * FROM read_parquet(?)",
+                self.table_name
+            ),
+            params![self.path.to_str().unwrap()],
+        )?;
+
+        Ok(conn)
     }
 }
 
