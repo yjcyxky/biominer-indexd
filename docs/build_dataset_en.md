@@ -22,7 +22,7 @@ This file contains key-value pairs (one per line) that describe the dataset's me
 * **version**: Version identifier (e.g., `v0.0.1`).
 * **license**: License or usage terms (URL or text); leave empty if none.
 
-\*\*Example \*\***`dataset.txt`** (simplified):
+**Example `dataset.txt` (simplified):**
 
 ```text
 key: fuscc_tnbc_465  
@@ -40,7 +40,7 @@ version: v0.0.1
 license:  
 ```
 
-> ⚠️ **Important**: The folder name containing `dataset.txt` **must exactly match the ****`key`**** value**.
+> ⚠️ **Important**: The folder name containing `dataset.txt` **must exactly match the **`key`** value**.
 
 ### Metadata Table File: `metadata_table.tsv`
 
@@ -140,7 +140,7 @@ To add new datasets or versions:
 * **Keep raw and generated files separate**: Store raw `dataset.txt` and `metadata_table.tsv` outside the `datasets/` directory.
 * **Follow naming conventions**: `key` must match folder name; use underscores and lowercase.
 * **Structure properly**: `datasets/<key>/<version>/` is required.
-* **Back up ****`datasets/`**** and \*\*\*\*`index.json`**: You can migrate or rebuild the index by re-running `index-datasets` if needed.
+* **Back up **`datasets/`** and **`index.json`**: You can migrate or rebuild the index by re-running `index-datasets` if needed.
 
 ---
 
