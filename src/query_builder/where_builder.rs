@@ -1,7 +1,72 @@
 //! A SQL builder for building SQL queries.
 
+use anyhow::{anyhow, Error, Result};
 use log::{debug, info, warn};
 use serde::{Deserialize, Serialize};
+
+/// SQL保留关键字列表
+const SQL_KEYWORDS: &[&str] = &[
+    "ALL",
+    "AND",
+    "AS",
+    "ASC",
+    "BETWEEN",
+    "BY",
+    "CASE",
+    "CHECK",
+    "CREATE",
+    "CROSS",
+    "DEFAULT",
+    "DELETE",
+    "DESC",
+    "DISTINCT",
+    "DROP",
+    "ELSE",
+    "END",
+    "EXISTS",
+    "FOREIGN",
+    "FROM",
+    "FULL",
+    "GROUP",
+    "HAVING",
+    "IN",
+    "INNER",
+    "INSERT",
+    "INTERSECT",
+    "INTO",
+    "IS",
+    "JOIN",
+    "LEFT",
+    "LIKE",
+    "NOT",
+    "NULL",
+    "ON",
+    "OR",
+    "ORDER",
+    "OUTER",
+    "PRIMARY",
+    "REFERENCES",
+    "RIGHT",
+    "SELECT",
+    "SET",
+    "TABLE",
+    "THEN",
+    "UNION",
+    "UPDATE",
+    "VALUES",
+    "WHEN",
+    "WHERE",
+    "WITH",
+];
+
+/// Quote identifier if it is a SQL keyword.
+pub fn quote_identifier(identifier: &str) -> String {
+    if SQL_KEYWORDS.contains(&identifier.to_uppercase().as_str()) {
+        format!("\"{}\"", identifier)
+    } else {
+        identifier.to_string()
+    }
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(untagged)]
@@ -113,38 +178,63 @@ impl QueryItem {
 
     pub fn format(&self) -> String {
         match &self.value {
-            Value::Int(v) => format!("{} {} {}", self.field, self.operator, v),
-            Value::Float(v) => format!("{} {} {}", self.field, self.operator, v),
-            Value::String(v) => format!("{} {} '{}'", self.field, self.operator, v),
-            Value::Bool(v) => format!("{} {} {}", self.field, self.operator, v),
-            Value::Null => format!("{} {} NULL", self.field, self.operator),
+            Value::Int(v) => format!("{} {} {}", quote_identifier(&self.field), self.operator, v),
+            Value::Float(v) => format!("{} {} {}", quote_identifier(&self.field), self.operator, v),
+            Value::String(v) => format!(
+                "{} {} '{}'",
+                quote_identifier(&self.field),
+                self.operator,
+                v
+            ),
+            Value::Bool(v) => format!("{} {} {}", quote_identifier(&self.field), self.operator, v),
+            Value::Null => format!("{} {} NULL", quote_identifier(&self.field), self.operator),
             Value::ArrayString(v) => {
                 let mut values = vec![];
                 for item in v {
                     values.push(format!("'{}'", item));
                 }
-                format!("{} {} ({})", self.field, self.operator, values.join(","))
+                format!(
+                    "{} {} ({})",
+                    quote_identifier(&self.field),
+                    self.operator,
+                    values.join(",")
+                )
             }
             Value::ArrayInt(v) => {
                 let mut values = vec![];
                 for item in v {
                     values.push(format!("{}", item));
                 }
-                format!("{} {} ({})", self.field, self.operator, values.join(","))
+                format!(
+                    "{} {} ({})",
+                    quote_identifier(&self.field),
+                    self.operator,
+                    values.join(",")
+                )
             }
             Value::ArrayFloat(v) => {
                 let mut values = vec![];
                 for item in v {
                     values.push(format!("{}", item));
                 }
-                format!("{} {} ({})", self.field, self.operator, values.join(","))
+                format!(
+                    "{} {} ({})",
+                    quote_identifier(&self.field),
+                    self.operator,
+                    values.join(",")
+                )
             }
             Value::ArrayBool(v) => {
                 let mut values = vec![];
                 for item in v {
                     values.push(format!("{}", item));
                 }
-                format!("{} {} ({})", self.field, self.operator, values.join(","))
+                format!(
+                    "{} {} ({})",
+                    quote_identifier(&self.field),
+                    self.operator,
+                    values.join(",")
+                )
             }
         }
     }
@@ -161,12 +251,20 @@ impl QueryItem {
             Value::Int(_) | Value::Float(_) | Value::String(_) | Value::Bool(_) => {
                 let placeholder = format!("?");
                 (
-                    format!("{} {} {}", self.field, self.operator, placeholder),
+                    format!(
+                        "{} {} {}",
+                        quote_identifier(&self.field),
+                        self.operator,
+                        placeholder
+                    ),
                     vec![self.value.clone()],
                 )
             }
             // Null is embedded literally – there is no value to bind.
-            Value::Null => (format!("{} {} NULL", self.field, self.operator), vec![]),
+            Value::Null => (
+                format!("{} {} NULL", quote_identifier(&self.field), self.operator),
+                vec![],
+            ),
 
             // ---------- Array values (IN / NOT IN) ----------
             Value::ArrayString(arr) => {
@@ -175,7 +273,7 @@ impl QueryItem {
                 (
                     format!(
                         "{} {} ({})",
-                        self.field,
+                        quote_identifier(&self.field),
                         self.operator,
                         placeholders.join(", ")
                     ),
@@ -188,7 +286,7 @@ impl QueryItem {
                 (
                     format!(
                         "{} {} ({})",
-                        self.field,
+                        quote_identifier(&self.field),
                         self.operator,
                         placeholders.join(", ")
                     ),
@@ -201,7 +299,7 @@ impl QueryItem {
                 (
                     format!(
                         "{} {} ({})",
-                        self.field,
+                        quote_identifier(&self.field),
                         self.operator,
                         placeholders.join(", ")
                     ),
@@ -214,7 +312,7 @@ impl QueryItem {
                 (
                     format!(
                         "{} {} ({})",
-                        self.field,
+                        quote_identifier(&self.field),
                         self.operator,
                         placeholders.join(", ")
                     ),
@@ -735,5 +833,18 @@ mod tests {
         let json = r#"{ "operator": "and", "items": [ { "bad": "key" } ] }"#;
         let result = ComposeQuery::from_str(json);
         assert!(result.is_err()); // should fail due to missing required keys like `field` and `value`
+    }
+
+    #[test]
+    fn test_sql_keyword_quoting() {
+        let query_item = QueryItem::new("group".into(), Value::String("test".into()), "=".into());
+        let sql = query_item.format();
+        println!("Query with keyword: {}", sql);
+        assert!(sql.contains("\"group\"")); // 验证字段名被正确引用
+
+        let (sql_with_params, params) = query_item.to_sql_with_params();
+        println!("Query with params: {}", sql_with_params);
+        assert!(sql_with_params.contains("\"group\"")); // 验证参数化SQL中的字段名被正确引用
+        assert_eq!(params, vec![Value::String("test".into())]);
     }
 }

@@ -1,4 +1,4 @@
-use crate::query_builder::where_builder::{ComposeQuery, Value};
+use crate::query_builder::where_builder::{ComposeQuery, Value, quote_identifier};
 use anyhow::{anyhow, Error, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -82,25 +82,25 @@ impl SelectExpr {
                     if let Some(t) = map.get(value) {
                         // If only one table, no need to add the table name.
                         if !multi_table {
-                            format!("{}", value)
+                            quote_identifier(value)
                         } else {
-                            format!("{}.{}", t, value)
+                            format!("{}.{}", quote_identifier(t), quote_identifier(value))
                         }
                     } else {
-                        value.clone()
+                        quote_identifier(value)
                     }
                 } else {
-                    value.clone()
+                    quote_identifier(value)
                 }
             }
             SelectExpr::AggFunc { func, field, alias } => {
                 let base = if field == "*" {
                     format!("{}(*)", func.to_uppercase())
                 } else {
-                    format!("{}({})", func.to_uppercase(), field)
+                    format!("{}({})", func.to_uppercase(), quote_identifier(field))
                 };
                 if let Some(alias) = alias {
-                    format!("{} AS {}", base, alias)
+                    format!("{} AS {}", base, quote_identifier(alias))
                 } else {
                     base
                 }
@@ -126,12 +126,12 @@ impl AggExpr {
 
     pub fn format(&self) -> String {
         match self {
-            AggExpr::Alias { value } => value.clone(),
+            AggExpr::Alias { value } => quote_identifier(value),
             AggExpr::Function { func, field } => {
                 if field == "*" {
                     format!("{}(*)", func.to_uppercase())
                 } else {
-                    format!("{}({})", func.to_uppercase(), field)
+                    format!("{}({})", func.to_uppercase(), quote_identifier(field))
                 }
             }
         }
@@ -308,7 +308,10 @@ impl JoinOn {
                 right_field,
             } => format!(
                 "{}.{} = {}.{}",
-                left_table, left_field, right_table, right_field
+                quote_identifier(left_table),
+                quote_identifier(left_field),
+                quote_identifier(right_table),
+                quote_identifier(right_field)
             ),
             JoinOn::Raw { value } => value.clone(),
         }
@@ -363,7 +366,11 @@ pub struct JoinClause {
 
 impl JoinClause {
     pub fn format(&self) -> String {
-        format!("JOIN {} ON {}", self.table, self.on.format())
+        format!(
+            "JOIN {} ON {}",
+            quote_identifier(&self.table),
+            self.on.format()
+        )
     }
 
     fn is_valid_identifier(name: &str) -> bool {
@@ -518,17 +525,17 @@ impl QueryPlan {
 
         let mut sql = if explain {
             format!(
-                "EXPLAIN SELECT {} {} FROM {}",
+                "EXPLAIN SELECT{} {} FROM {}",
                 if self.distinct { " DISTINCT" } else { "" },
                 select_clause,
-                self.table
+                quote_identifier(&self.table)
             )
         } else {
             format!(
-                "SELECT {} {} FROM {}",
+                "SELECT{} {} FROM {}",
                 if self.distinct { " DISTINCT" } else { "" },
                 select_clause,
-                self.table
+                quote_identifier(&self.table)
             )
         };
 
@@ -542,12 +549,15 @@ impl QueryPlan {
                 } => {
                     format!(
                         "{}.{} = {}.{}",
-                        left_table, left_field, right_table, right_field
+                        quote_identifier(left_table),
+                        quote_identifier(left_field),
+                        quote_identifier(right_table),
+                        quote_identifier(right_field)
                     )
                 }
                 JoinOn::Raw { value } => value.clone(),
             };
-            sql += &format!(" JOIN {} ON {}", join.table, on_clause);
+            sql += &format!(" JOIN {} ON {}", quote_identifier(&join.table), on_clause);
         }
 
         if let Some(filter) = &self.filters {
@@ -559,7 +569,9 @@ impl QueryPlan {
         }
 
         if !self.group_by.is_empty() {
-            sql += &format!(" GROUP BY {}", self.group_by.join(", "));
+            let group_by_fields: Vec<String> =
+                self.group_by.iter().map(|f| quote_identifier(f)).collect();
+            sql += &format!(" GROUP BY {}", group_by_fields.join(", "));
         }
 
         if let Some(having_clause) = &self.having {
@@ -576,9 +588,9 @@ impl QueryPlan {
                 .iter()
                 .map(|(f, desc)| {
                     if *desc {
-                        format!("{} DESC", f)
+                        format!("{} DESC", quote_identifier(f))
                     } else {
-                        format!("{} ASC", f)
+                        format!("{} ASC", quote_identifier(f))
                     }
                 })
                 .collect::<Vec<_>>()
@@ -721,6 +733,8 @@ mod tests {
             ("age".into(), "t1".into()),
             ("score".into(), "t2".into()),
             ("group".into(), "t1".into()),
+            ("order".into(), "t1".into()),
+            ("normal_field".into(), "t1".into()),
         ])
     }
 
@@ -781,8 +795,9 @@ mod tests {
         };
 
         let sql = plan.to_sql().unwrap();
+        println!("sql: {}", sql);
         assert!(sql.contains("SUM(age) AS sum_age"));
-        assert!(sql.contains("GROUP BY group"));
+        assert!(sql.contains("GROUP BY \"group\""));
         assert!(sql.contains("ORDER BY sum_age DESC"));
     }
 
@@ -951,6 +966,44 @@ mod tests {
         let plan2 = QueryPlan::from_json(&json).unwrap();
         println!("plan2: {:?}", plan2);
         assert_eq!(plan, plan2);
+    }
+
+    #[test]
+    fn test_sql_keyword_quoting() {
+        let plan = QueryPlan {
+            table: "t1".into(),
+            joins: vec![],
+            selects: vec![
+                SelectExpr::Field {
+                    value: "group".into(), // SQL保留关键字
+                },
+                SelectExpr::Field {
+                    value: "order".into(), // SQL保留关键字
+                },
+                SelectExpr::Field {
+                    value: "normal_field".into(), // 普通字段名
+                },
+            ],
+            filters: None,
+            group_by: vec!["group".into()], // SQL保留关键字
+            having: None,
+            order_by: vec![("group".into(), false)], // SQL保留关键字
+            limit: None,
+            offset: None,
+            distinct: false,
+            field_table_map: Some(mock_field_table_map()),
+            field_type_map: None,
+        };
+
+        let sql = plan.to_sql().unwrap();
+        println!("SQL with keywords: {}", sql);
+
+        // 验证SQL保留关键字被正确引用
+        assert!(sql.contains("\"group\""));
+        assert!(sql.contains("\"order\""));
+        assert!(sql.contains("normal_field")); // 普通字段名不需要引号
+        assert!(sql.contains("GROUP BY \"group\"")); // GROUP BY子句中的关键字被引用
+        assert!(sql.contains("ORDER BY \"group\" ASC")); // ORDER BY子句中的关键字被引用
     }
 
     #[test]

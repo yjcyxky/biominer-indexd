@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { Button, Modal, Typography, Row, Col, message, Tooltip, Spin, Tag, Tabs, Select } from 'antd';
+import { Button, Modal, Typography, Row, Col, message, Tooltip, Spin, Tag, Tabs, Select, Progress, Alert } from 'antd';
 import { useEffect } from 'react';
 import { getDatasetData, getDataDictionary, getDatasets, getDatafiles, getDatasetReadme, getDatasetLicense, getDatafileTables, getDatasetDataWithQueryPlan } from '@/services/biominer/datasets';
 import { history } from 'umi';
 import ColumnSelector, { getDefaultSelectedKeys } from './ColumnSelector';
 import { filters2string } from './Filter';
 import type { ComposeQueryItem } from './Filter';
-import { CloudDownloadOutlined, DownloadOutlined, FileOutlined, FilterOutlined, QuestionCircleOutlined } from '@ant-design/icons';
+import { CloudDownloadOutlined, DownloadOutlined, FileOutlined, FilterOutlined, QuestionCircleOutlined, LoadingOutlined } from '@ant-design/icons';
 import QueryBuilder from './QueryBuilder';
 import VisualPanel from './VisualPanel';
 import VirtualTable from './VirtualTable';
@@ -37,33 +37,64 @@ export const downloadTSV = (data: Record<string, any>[], filename = 'metadata.ts
 };
 
 const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
+    // Initial dataset metadata which is dependent by other states.
+    const [datasetMetadataList, setDatasetMetadataList] = useState<API.DatasetMetadata[]>([]);
+    const [datasetMetadata, setDatasetMetadata] = useState<API.DatasetMetadata | null>(null);
+    const [dataDictionary, setDataDictionary] = useState<API.DataDictionary>({
+        fields: [],
+    });
+    const [isReady, setIsReady] = useState<boolean>(false);
+
+    // Data
     const [data, setData] = useState<API.DatasetDataResponse>({
         records: [],
         page: 1,
         page_size: 100,
         total: 0,
     });
-    const [datasetMetadataList, setDatasetMetadataList] = useState<API.DatasetMetadata[]>([]);
-    const [datasetMetadata, setDatasetMetadata] = useState<API.DatasetMetadata | null>(null);
-    const [dataDictionary, setDataDictionary] = useState<API.DataDictionary>({
-        fields: [],
-    });
-    const [filterModalVisible, setFilterModalVisible] = useState<boolean>(false);
     const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
     // TODO: Use a correct type for the columns
     const [columns, setColumns] = useState<any[]>([]);
     const [page, setPage] = useState<number>(data.page);
     const [pageSize, setPageSize] = useState<number>(data.page_size);
-    const [loading, setLoading] = useState<boolean>(false);
+
     const [cachedDatasetKey, setCachedDatasetKey] = useState<string | undefined>(undefined);
     const [cachedDatasetVersion, setCachedDatasetVersion] = useState<string | undefined>(undefined);
     const [filters, setFilters] = useState<ComposeQueryItem | undefined>(undefined);
+
+    // UI states
     const [currentRecord, setCurrentRecord] = useState<Record<string, any> | null>(null);
     const [datasetDownloadModalVisible, setDatasetDownloadModalVisible] = useState<boolean>(false);
+    const [filterModalVisible, setFilterModalVisible] = useState<boolean>(false);
     const [activeTab, setActiveTab] = useState<string>('summary');
+
+    // Enhanced loading states
+    const [loadingStates, setLoadingStates] = useState<{
+        metadata: boolean;
+        data: boolean;
+        datafileTables: boolean;
+        rendering: boolean;
+    }>({
+        metadata: false,
+        data: false,
+        datafileTables: false,
+        rendering: false,
+    });
+    const [loadingProgress, setLoadingProgress] = useState<{
+        current: number;
+        total: number;
+        message: string;
+    }>({
+        current: 0,
+        total: 0,
+        message: '',
+    });
+
+    // README and LICENSE
     const [readme, setReadme] = useState<string | undefined>(undefined);
     const [license, setLicense] = useState<string | undefined>(undefined);
 
+    // Datafile tables
     const [dataFileTables, setDataFileTables] = useState<API.DataFileTable[]>([]);
     const [dataFileTableData, setDataFileTableData] = useState<Record<string, API.DatasetDataResponse['records']>>({});
     const [dataFileTablePage, setDataFileTablePage] = useState<Record<string, number>>({});
@@ -95,7 +126,12 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
     }
 
     const fetchData = (datasetKey: string, version: string | undefined) => {
-        setLoading(true);
+        setLoadingStates(prev => ({ ...prev, metadata: true }));
+        setLoadingProgress({
+            current: 0,
+            total: 3,
+            message: 'Loading dataset metadata...'
+        });
 
         // Fetch the dataset metadata.
         getDatasets({
@@ -103,6 +139,8 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
             page_size: 1000,
             // TODO: Add a query param to filter the datasets by the key and version.
         }).then(datasets => {
+            setLoadingProgress(prev => ({ ...prev, current: 1, message: 'Processing dataset information...' }));
+            
             const filteredDatasets = datasets.records.filter(ds => ds.key === datasetKey);
             if (!filteredDatasets) {
                 history.push('/');
@@ -130,13 +168,18 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
             if (dataset) {
                 setCachedDatasetVersion(dataset.version);
                 setDatasetMetadata(dataset);
+                setPageSize(dataset.total);
+                setLoadingProgress(prev => ({ ...prev, current: 2, message: 'Dataset metadata loaded' }));
             } else {
                 message.error('Failed to fetch the dataset metadata.');
                 history.push('/');
             }
+            
+            setLoadingStates(prev => ({ ...prev, metadata: false }));
         }).catch(err => {
             message.error('Failed to fetch the dataset metadata.');
             history.push('/');
+            setLoadingStates(prev => ({ ...prev, metadata: false }));
         });
     };
 
@@ -154,18 +197,30 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
         if (!cachedDatasetKey) return;
         if (!cachedDatasetVersion) return;
 
+        setLoadingStates(prev => ({ ...prev, metadata: true }));
+        setLoadingProgress({
+            current: 0,
+            total: 2,
+            message: 'Loading data dictionary...'
+        });
+
         // Fetch the dataset data dictionary.
         getDataDictionary({
             key: cachedDatasetKey,
             version: cachedDatasetVersion ?? '',
         }).then(dDictionary => {
+            setLoadingProgress(prev => ({ ...prev, current: 1, message: 'Processing data dictionary...' }));
             setDataDictionary(dDictionary);
             setSelectedColumns(getDefaultSelectedKeys(dDictionary.fields));
+            setLoadingProgress(prev => ({ ...prev, current: 2, message: 'Data dictionary loaded' }));
+            setLoadingStates(prev => ({ ...prev, metadata: false }));
         }).catch(err => {
             message.error('Failed to fetch the dataset data dictionary.');
+            setLoadingStates(prev => ({ ...prev, metadata: false }));
         });
 
         // Fetch the datafiles dictionaries.
+        setLoadingStates(prev => ({ ...prev, datafileTables: true }));
         getDatafileTables({
             key: cachedDatasetKey,
             version: cachedDatasetVersion ?? '',
@@ -178,32 +233,38 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
                     return acc;
                 }, {} as Record<string, string[]>),
             });
+            setLoadingStates(prev => ({ ...prev, datafileTables: false }));
         }).catch((err: any) => {
             message.error('Failed to fetch the dataset datafile tables.');
             console.error('Failed to fetch the dataset datafile tables.', err);
+            setLoadingStates(prev => ({ ...prev, datafileTables: false }));
         });
     }, [cachedDatasetKey, cachedDatasetVersion])
 
     useEffect(() => {
+        if (dataDictionary.fields.length > 0 && datasetMetadata) {
+            setIsReady(true);
+        }
+    }, [dataDictionary, datasetMetadata])
+
+    useEffect(() => {
+        setColumns(dataDictionary.fields.filter(col => selectedColumns.includes(col.key)));
+    }, [dataDictionary, selectedColumns]);
+
+    useEffect(() => {
         if (!cachedDatasetKey) return;
         if (!cachedDatasetVersion) return;
+        if (!isReady) return;
 
-        setLoading(true);
+        setLoadingStates(prev => ({ ...prev, data: true }));
+        setLoadingProgress({
+            current: 0,
+            total: 3,
+            message: 'Building query plan...'
+        });
 
         const fetchData = async () => {
-            // // Fetch the dataset data.
-            // const queryMap: any = {
-            //     key: cachedDatasetKey,
-            //     version: cachedDatasetVersion ?? '',
-            //     page: page,
-            //     page_size: pageSize,
-            // };
-
-            // if (filters) {
-            //     queryMap.query = filters;
-            // }
-
-            // const data = await getDatasetData(queryMap);
+            setLoadingProgress(prev => ({ ...prev, current: 1, message: 'Executing data query...' }));
 
             const queryPlan: any = {
                 table: "metadata_table",
@@ -231,22 +292,42 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
                 query_plan: queryPlan,
             });
 
+            setLoadingProgress(prev => ({ ...prev, current: 2, message: 'Processing query result...' }));
+
             setData(data);
-            setLoading(false);
+            
+            setLoadingProgress(prev => ({ ...prev, current: 3, message: 'Data loaded, rendering components...' }));
+            
+            // 模拟组件渲染时间
+            setLoadingStates(prev => ({ ...prev, rendering: true }));
+            setTimeout(() => {
+                setLoadingStates(prev => ({ ...prev, rendering: false, data: false }));
+                setLoadingProgress({
+                    current: 0,
+                    total: 0,
+                    message: ''
+                });
+            }, 500);
         }
         fetchData();
-    }, [page, pageSize, cachedDatasetKey, cachedDatasetVersion, filters, selectedColumns])
+    }, [page, pageSize, cachedDatasetKey, cachedDatasetVersion, filters, selectedColumns, isReady])
 
     useEffect(() => {
         if (!cachedDatasetKey) return;
         if (!cachedDatasetVersion) return;
+        if (!isReady) return;
 
         if (!dataFileTables.find(table => table.table_name === activeTab)) {
-            setLoading(false);
+            setLoadingStates(prev => ({ ...prev, data: false }));
             return;
         }
 
-        setLoading(true);
+        setLoadingStates(prev => ({ ...prev, data: true }));
+        setLoadingProgress({
+            current: 0,
+            total: 2,
+            message: `Loading ${activeTab} table data...`
+        });
 
         const filters = {
             field: dataFileTables.find(table => table.table_name === activeTab)?.id_column_name,
@@ -255,10 +336,15 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
         }
 
         const fetchData = async () => {
+            setLoadingProgress(prev => ({ ...prev, current: 1, message: 'Querying data file...' }));
+
             const queryPlan: any = {
                 table: activeTab,
                 joins: [],
-                selects: [],
+                selects: (dataFileTableSelectedColumns[activeTab] ?? []).map(col => ({
+                    type: "field",
+                    value: col,
+                })),
                 filters: filters,
                 group_by: [],
                 having: undefined,
@@ -274,23 +360,27 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
                 query_plan: queryPlan,
             });
 
+            setLoadingProgress(prev => ({ ...prev, current: 2, message: 'Processing data file result...' }));
+
             setDataFileTableData({ ...dataFileTableData, [activeTab]: data.records });
             setDataFileTableTotal({ ...dataFileTableTotal, [activeTab]: data.total });
             setDataFileTablePage({ ...dataFileTablePage, [activeTab]: data.page });
             setDataFileTablePageSize({ ...dataFileTablePageSize, [activeTab]: data.page_size });
 
-            setLoading(false);
+            setLoadingStates(prev => ({ ...prev, data: false }));
+            setLoadingProgress({
+                current: 0,
+                total: 0,
+                message: ''
+            });
         }
         fetchData();
-    }, [activeTab, filters, data])
-
-    useEffect(() => {
-        setColumns(dataDictionary.fields.filter(col => selectedColumns.includes(col.key)));
-    }, [dataDictionary, selectedColumns]);
+    }, [activeTab, filters, data, isReady, dataFileTableSelectedColumns, dataFileTablePage, dataFileTablePageSize])
 
     useEffect(() => {
         if (!cachedDatasetKey) return;
         if (!cachedDatasetVersion) return;
+        if (!isReady) return;
 
         const table = dataFileTables.find(table => table.table_name === activeTab);
         if (!table) return;
@@ -331,12 +421,36 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
         history.replace(`/datatable/${cachedDatasetKey}?version=${version}`);
     }
 
+    // 计算总体loading状态
+    const isAnyLoading = loadingStates.metadata || loadingStates.data || loadingStates.datafileTables || loadingStates.rendering;
+    const showProgress = loadingProgress.total > 0;
+
     return (
-        <Spin spinning={loading}>
+        <Spin spinning={isAnyLoading} indicator={<LoadingOutlined style={{ fontSize: 24 }} spin />}>
+            {/* Loading Progress Indicator */}
+            {showProgress && (
+                <Alert
+                    message={
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                            <span>{loadingProgress.message}</span>
+                            <Progress 
+                                percent={Math.round((loadingProgress.current / loadingProgress.total) * 100)} 
+                                size="small" 
+                                style={{ maxWidth: 'calc(100% - 240px)' }}
+                                showInfo={false}
+                            />
+                        </div>
+                    }
+                    type="info"
+                    showIcon
+                    style={{ margin: '0 auto 16px', width: '50%' }}
+                />
+            )}
+
             <Row className="datatable-header">
                 <Typography.Title level={4} style={{ height: 36 }}>
                     {datasetMetadata?.name}
-                    {!loading ?
+                    {!isAnyLoading ?
                         <>
                             <Tooltip title="Cite the dataset" placement="top">
                                 <Button onClick={() => {
@@ -389,7 +503,7 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
                 className='datatable-tabs' tabBarExtraContent={
                     <Row className='datatable-tabs-extra-content'>
                         <Col className="datatable-tabs-extra-content-left">
-                            {!loading ?
+                            {!isAnyLoading ?
                                 <>
                                     {
                                         filters && <Row className="datatable-filters">
@@ -424,7 +538,7 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
                                 : null}
                         </Col>
                         <Col className="datatable-tabs-extra-content-right">
-                            {!loading ?
+                            {!isAnyLoading ?
                                 <>
                                     <Tooltip title="Download the dataset (each dataset might have at least two files: metadata table and datafile table which contain information about the data)">
                                         <Button
