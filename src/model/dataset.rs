@@ -917,18 +917,15 @@ impl Dataset {
             query_str, order_by_str, pagination_str
         );
 
-        info!("Query SQL: {}", sql);
+        debug!("Query SQL: {}", sql);
 
-        let mut stmt = conn.prepare("PRAGMA table_info(metadata);")?;
-        let columns: Vec<String> = stmt
-            .query_map([], |row| row.get::<_, String>(1))?
-            .filter_map(Result::ok)
-            .collect();
-
-        info!("Table Columns: {:?}", columns);
         let mut stmt = conn.prepare(&sql)?;
+        stmt.execute([])?;
+        let column_names = stmt.column_names();
+        debug!("Table Columns: {:?}", column_names);
+
         let rows = stmt.query_map([], move |row| {
-            let record = row_to_json(row, &columns)?;
+            let record = row_to_json(row, &column_names)?;
             Ok(record)
         })?;
 
@@ -994,17 +991,14 @@ impl Dataset {
         let sql = query_plan.to_sql()?;
 
         debug!("Query SQL: {}", sql);
-        let mut stmt = conn.prepare(format!("PRAGMA table_info({});", query_plan.table).as_str())?;
-        let columns: Vec<String> = stmt
-            .query_map([], |row| row.get::<_, String>(1))?
-            .filter_map(Result::ok)
-            .collect();
-
-        debug!("Table Columns: {:?}", columns);
 
         let mut stmt = conn.prepare(&sql)?;
+        stmt.execute([])?;
+        let column_names = stmt.column_names();
+        debug!("Table Columns: {:?}", column_names);
+
         let rows = stmt.query_map([], move |row| {
-            let record = row_to_json(row, &columns)?;
+            let record = row_to_json(row, &column_names)?;
             Ok(record)
         })?;
 

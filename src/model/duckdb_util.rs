@@ -1,7 +1,7 @@
 use duckdb::types::{ValueRef, ValueRef::*};
 use duckdb::Row;
-use serde_json::{Map, Value};
 use log::debug;
+use serde_json::{Map, Value};
 
 pub fn row_to_json(row: &Row, column_names: &[String]) -> Result<Value, duckdb::Error> {
     let mut record = Map::new();
@@ -64,5 +64,34 @@ fn to_json_from_value(value: ValueRef) -> Value {
             eprintln!("Unsupported or nested type: {:?}", other);
             Value::Null
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use duckdb::Connection;
+
+    #[test]
+    fn test_row_to_json() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch("CREATE TABLE test (a INTEGER, b TEXT, c BOOLEAN)")
+            .unwrap();
+        conn.execute_batch("INSERT INTO test VALUES (1, 'hello', true)")
+            .unwrap();
+        let mut stmt = conn.prepare("SELECT a, c FROM test").unwrap();
+        stmt.execute([]).unwrap();
+        let column_names = stmt.column_names();
+
+        let rows = stmt
+            .query_and_then([], |row| row_to_json(&row, &column_names))
+            .unwrap();
+
+            let mut records = Vec::new();
+        for row in rows {
+            records.push(row.unwrap());
+        }
+
+        println!("{:?}", records);
     }
 }
