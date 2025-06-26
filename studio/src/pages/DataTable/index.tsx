@@ -16,6 +16,7 @@ import Papa from 'papaparse';
 import semver from 'semver';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { DEFAULT_ID_COLUMN_NAME } from './ChartCard';
 
 import './index.less';
 
@@ -140,7 +141,7 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
             // TODO: Add a query param to filter the datasets by the key and version.
         }).then(datasets => {
             setLoadingProgress(prev => ({ ...prev, current: 1, message: 'Processing dataset information...' }));
-            
+
             const filteredDatasets = datasets.records.filter(ds => ds.key === datasetKey);
             if (!filteredDatasets) {
                 history.push('/');
@@ -174,7 +175,7 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
                 message.error('Failed to fetch the dataset metadata.');
                 history.push('/');
             }
-            
+
             setLoadingStates(prev => ({ ...prev, metadata: false }));
         }).catch(err => {
             message.error('Failed to fetch the dataset metadata.');
@@ -295,9 +296,9 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
             setLoadingProgress(prev => ({ ...prev, current: 2, message: 'Processing query result...' }));
 
             setData(data);
-            
+
             setLoadingProgress(prev => ({ ...prev, current: 3, message: 'Data loaded, rendering components...' }));
-            
+
             // 模拟组件渲染时间
             setLoadingStates(prev => ({ ...prev, rendering: true }));
             setTimeout(() => {
@@ -322,6 +323,8 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
             return;
         }
 
+        console.log("Fetching data file table: ", activeTab, filters, data, isReady, dataFileTableSelectedColumns, dataFileTablePage, dataFileTablePageSize)
+
         setLoadingStates(prev => ({ ...prev, data: true }));
         setLoadingProgress({
             current: 0,
@@ -329,10 +332,10 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
             message: `Loading ${activeTab} table data...`
         });
 
-        const filters = {
+        const dataFileTableFilters = {
             field: dataFileTables.find(table => table.table_name === activeTab)?.id_column_name,
             operator: 'in',
-            value: data.records.map((record: any) => record["patient_id"]),
+            value: data.records.map((record: any) => record[DEFAULT_ID_COLUMN_NAME]),
         }
 
         const fetchData = async () => {
@@ -345,7 +348,7 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
                     type: "field",
                     value: col,
                 })),
-                filters: filters,
+                filters: dataFileTableFilters,
                 group_by: [],
                 having: undefined,
                 order_by: [],
@@ -364,8 +367,9 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
 
             setDataFileTableData({ ...dataFileTableData, [activeTab]: data.records });
             setDataFileTableTotal({ ...dataFileTableTotal, [activeTab]: data.total });
-            setDataFileTablePage({ ...dataFileTablePage, [activeTab]: data.page });
-            setDataFileTablePageSize({ ...dataFileTablePageSize, [activeTab]: data.page_size });
+            // TODO: Why they cause the dead loop?
+            // setDataFileTablePage({ ...dataFileTablePage, [activeTab]: data.page });
+            // setDataFileTablePageSize({ ...dataFileTablePageSize, [activeTab]: data.page_size });
 
             setLoadingStates(prev => ({ ...prev, data: false }));
             setLoadingProgress({
@@ -433,9 +437,9 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
                     message={
                         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                             <span>{loadingProgress.message}</span>
-                            <Progress 
-                                percent={Math.round((loadingProgress.current / loadingProgress.total) * 100)} 
-                                size="small" 
+                            <Progress
+                                percent={Math.round((loadingProgress.current / loadingProgress.total) * 100)}
+                                size="small"
                                 style={{ maxWidth: 'calc(100% - 240px)' }}
                                 showInfo={false}
                             />

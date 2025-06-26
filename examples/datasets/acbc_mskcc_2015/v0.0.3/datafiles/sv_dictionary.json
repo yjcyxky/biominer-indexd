@@ -1,0 +1,134 @@
+[
+  {
+    "key": "Sample_Id",
+    "name": "Sample_Id",
+    "description": "",
+    "data_type": "STRING",
+    "notes": "",
+    "allowed_values": [
+      "AdCC1T",
+      "AdCC2T",
+      "AdCC3T",
+      "AdCC4T",
+      "AdCC5T",
+      "AdCC6T",
+      "AdCC8T",
+      "AdCC9T",
+      "AdCC10T",
+      "AdCC32T"
+    ],
+    "order": 0
+  },
+  {
+    "key": "Site1_Hugo_Symbol",
+    "name": "Site1_Hugo_Symbol",
+    "description": "",
+    "data_type": "STRING",
+    "notes": "",
+    "allowed_values": [
+      "MYB"
+    ],
+    "order": 0
+  },
+  {
+    "key": "Site1_Entrez_Gene_Id",
+    "name": "Site1_Entrez_Gene_Id",
+    "description": "",
+    "data_type": "NUMBER",
+    "notes": "",
+    "allowed_values": [
+      4602.0,
+      4602.0
+    ],
+    "order": 0
+  },
+  {
+    "key": "Site2_Hugo_Symbol",
+    "name": "Site2_Hugo_Symbol",
+    "description": "",
+    "data_type": "STRING",
+    "notes": "",
+    "allowed_values": [
+      "NFIB"
+    ],
+    "order": 0
+  },
+  {
+    "key": "Site2_Entrez_Gene_Id",
+    "name": "Site2_Entrez_Gene_Id",
+    "description": "",
+    "data_type": "NUMBER",
+    "notes": "",
+    "allowed_values": [
+      4781.0,
+      4781.0
+    ],
+    "order": 0
+  },
+  {
+    "key": "DNA_support",
+    "name": "DNA_support",
+    "description": "",
+    "data_type": "STRING",
+    "notes": "",
+    "allowed_values": [
+      "Yes"
+    ],
+    "order": 0
+  },
+  {
+    "key": "RNA_support",
+    "name": "RNA_support",
+    "description": "",
+    "data_type": "STRING",
+    "notes": "",
+    "allowed_values": [
+      "Yes"
+    ],
+    "order": 0
+  },
+  {
+    "key": "SV_Status",
+    "name": "SV_Status",
+    "description": "",
+    "data_type": "STRING",
+    "notes": "",
+    "allowed_values": [
+      "SOMATIC"
+    ],
+    "order": 0
+  },
+  {
+    "key": "Center",
+    "name": "Center",
+    "description": "",
+    "data_type": "STRING",
+    "notes": "",
+    "allowed_values": [
+      "MSKCC"
+    ],
+    "order": 0
+  },
+  {
+    "key": "Event_Info",
+    "name": "Event_Info",
+    "description": "",
+    "data_type": "STRING",
+    "notes": "",
+    "allowed_values": [
+      "MYB-NFIB Fusion"
+    ],
+    "order": 0
+  },
+  {
+    "key": "Method",
+    "name": "Method",
+    "description": "",
+    "data_type": "STRING",
+    "notes": "",
+    "allowed_values": [
+      "WGS, FISH, RT-PCR"
+    ],
+    "order": 0
+  }
+]

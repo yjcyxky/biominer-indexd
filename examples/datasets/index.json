@@ -1,5 +1,24 @@
 [
   {
+    "key": "acc_tcga",
+    "name": "Adrenocortical Carcinoma (TCGA, Firehose Legacy)",
+    "description": "TCGA Adrenocortical Carcinoma. Source data from <A HREF=\"http://gdac.broadinstitute.org/runs/stddata__2016_01_28/data/ACC/20160128/\">GDAC Firehose</A>. Previously known as TCGA Provisional.",
+    "citation": "",
+    "pmid": "",
+    "groups": [
+      "PUBLIC"
+    ],
+    "tags": [
+      "disease:Adrenocortical Carcinoma",
+      "organ:Adrenal Gland",
+      "org:Unassigned"
+    ],
+    "total": 92,
+    "is_filebased": false,
+    "version": "v0.0.1",
+    "license": ""
+  },
+  {
     "key": "acbc_mskcc_2015",
     "name": "Adenoid Cystic Carcinoma of the Breast (MSK, J Pathol. 2015)",
     "description": "Whole exome sequencing of 12 breast AdCCs.",
@@ -38,5 +57,25 @@
     "is_filebased": false,
     "version": "v0.0.2",
     "license": "CC-BY-4.0"
+  },
+  {
+    "key": "acbc_mskcc_2015",
+    "name": "Adenoid Cystic Carcinoma of the Breast (MSK, J Pathol. 2015)",
+    "description": "Whole exome sequencing of 12 breast AdCCs.",
+    "citation": "Martelotto et al. J Pathol 2015",
+    "pmid": "26095796",
+    "groups": [
+      "PUBLIC",
+      "ACYC"
+    ],
+    "tags": [
+      "disease:Adenoid Cystic Breast Cancer",
+      "organ:Breast",
+      "org:Unassigned"
+    ],
+    "total": 12,
+    "is_filebased": false,
+    "version": "v0.0.3",
+    "license": ""
   }
 ]

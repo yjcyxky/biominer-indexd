@@ -1,0 +1,7 @@
+{
+  "title": "STRUCTURAL_VARIANTS",
+  "description": "Structural Variant Data.",
+  "datatype": "SV",
+  "genetic_alteration_type": "STRUCTURAL_VARIANT",
+  "id_column_name": "Sample_Id"
+}

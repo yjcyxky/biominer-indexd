@@ -1,0 +1,7 @@
+{
+  "title": "CNA",
+  "description": "Putative copy-number from GISTIC 2.0. Values: -2 = homozygous deletion; -1 = hemizygous deletion; 0 = neutral / no change; 1 = gain; 2 = high level amplification.",
+  "datatype": "DISCRETE",
+  "genetic_alteration_type": "COPY_NUMBER_ALTERATION",
+  "id_column_name": "sample_id"
+}

@@ -324,8 +324,8 @@ async fn main() {
             info!("Index datasets successfully.");
 
             match Datasets::validate(&datasets_dir) {
-                Ok(_) => info!("Validate datasets successfully."),
-                Err(e) => error!("Validate datasets failed: {}", e),
+                Ok(_) => info!("✅ All datasets validated successfully."),
+                Err(e) => error!("❌ Validate datasets failed: {}", e),
             }
         }
     }

@@ -39,10 +39,10 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
                 <div style={{ display: 'flex', justifyContent: 'space-between', whiteSpace: 'nowrap', gap: 4, alignItems: 'center' }}>
                     <span>{col.name}</span>
                     <Space>
-                        <Tooltip title={col.description}>
+                        <Tooltip title={col.description || 'No description'}>
                             <Button size="small" icon={<InfoCircleOutlined />} />
                         </Tooltip>
-                        <Popover content={<ChartCard className='chart-card-popover'
+                        <Popover content={<ChartCard className='chart-card-popover' allowChangeChartType={true}
                             field={col} data={dataSource} isFileBased={isFileBased} total={dataSource.length} />}
                             trigger="click" destroyTooltipOnHide>
                             <Button size="small" icon={<BarChartOutlined />} type="primary" />

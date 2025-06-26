@@ -160,7 +160,7 @@ impl MetadataTable {
 
         Ok(Self {
             title: "Clinical Data".to_string(),
-            id_column_name: "patient_id".to_string(),
+            id_column_name: "sample_id".to_string(),
             description: "Information about the patients and samples".to_string(),
             table_name: "metadata_table".to_string(),
             data_dictionary,

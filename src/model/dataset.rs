@@ -91,6 +91,10 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Mutex;
 use std::{fs, path::Path, path::PathBuf};
 
+// The front has a variable called DEFAULT_ID_COLUMN_NAME, which is "sample_id" by default.
+// We need to validate that the dataset contains this field. The DEFAULT_ID_COLUMN_NAME will be used to merge data across metadata_table and datafiles.
+const REQUIRED_FIELDS: &[&str] = &["sample_id"];
+
 // Cache the dataset metadata and data dictionary for better performance
 lazy_static! {
     static ref DATASET_CACHE: Mutex<HashMap<String, HashMap<String, Dataset>>> =
@@ -265,6 +269,37 @@ impl Datasets {
         })
     }
 
+    /// Validates whether the dataset contains required fields.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `dataset` - A reference to the dataset to validate.
+    /// 
+    /// # Returns
+    /// 
+    /// Returns `Ok(())` if the dataset contains required fields, otherwise returns an `Err(Error)`
+    /// 
+    /// # Errors
+    /// 
+    /// This function returns an error if:
+    /// - The dataset does not contain required fields.
+    /// 
+    /// # Example
+    /// 
+    /// ```rust
+    /// let dataset = Dataset::load(&PathBuf::from("data_dir/dataset_key/version"))?;
+    /// Datasets::validate_fields(&dataset)?;
+    /// ```
+    pub fn validate_fields(dict: &DataDictionary, required_fields: &[&str]) -> Result<(), Error> {
+        for field in required_fields {
+            if !dict.fields.iter().any(|f| f.key == *field) {
+                bail!("❌ Dataset does not contain required field: {}", field);
+            }
+        }
+
+        Ok(())
+    }
+
     /// Validates that the fields in the data dictionary match the columns in the parquet file.
     ///
     /// This function reads a parquet file and checks that all fields defined in the data dictionary
@@ -298,7 +333,7 @@ impl Datasets {
         dict: &DataDictionary,
         parquet_path: &PathBuf,
     ) -> Result<()> {
-        // 读取 parquet 文件的列名
+        // Read the parquet file's columns
         let df = LazyFrame::scan_parquet(parquet_path, Default::default())?.collect()?; // 触发读取
         let parquet_columns: HashSet<String> = df
             .get_column_names()
@@ -309,7 +344,7 @@ impl Datasets {
         for field in &dict.fields {
             if !parquet_columns.contains(&field.key) {
                 warn!(
-                    "Field key '{}' defined in dictionary but missing in metadata_table.parquet.",
+                    "⚠️ Field key '{}' defined in dictionary but missing in metadata_table.parquet.",
                     field.key
                 );
             }
@@ -360,12 +395,12 @@ impl Datasets {
     /// ```
     pub fn validate(base_path: &PathBuf) -> Result<(), Error> {
         if !base_path.is_dir() {
-            bail!("Base path {:?} is not a directory", base_path);
+            bail!("❌ Base path {:?} is not a directory", base_path);
         }
 
         if !base_path.join("index.json").exists() {
             bail!(
-                "Index file {:?} does not exist",
+                "❌ Index file {:?} does not exist",
                 base_path.join("index.json")
             );
         }
@@ -376,12 +411,12 @@ impl Datasets {
         let index_entries: Vec<DatasetMetadata> = match serde_json::from_str(&content) {
             Ok(entries) => entries,
             Err(e) => {
-                bail!("Failed to parse index file: {}", e);
+                bail!("❌ Failed to parse index file: {}", e);
             }
         };
 
         if index_entries.len() == 0 {
-            bail!("No datasets found in index.json, you might forget to index the datasets.");
+            bail!("⚠️ No datasets found in index.json, you might forget to index the datasets.");
         }
 
         // 2. Load all datasets' metadata from index.json
@@ -394,8 +429,10 @@ impl Datasets {
         // 3. Validate each dataset's metadata
         let key_re = Regex::new(r"^[a-z][a-z0-9_]*$").unwrap();
         for dataset in &records {
+            info!("🔍 Validating dataset {:?} at {:?}", dataset.metadata.key, dataset.path);
+
             if !dataset.path.is_dir() {
-                warn!("Dataset directory {:?} does not exist", dataset.path);
+                warn!("❌ Dataset directory {:?} does not exist", dataset.path);
                 continue;
             }
 
@@ -403,7 +440,7 @@ impl Datasets {
             for field in &dict.fields {
                 if !key_re.is_match(&field.key) {
                     warn!(
-                        "Invalid key '{}' in dataset '{}'.",
+                        "❌ Invalid key '{}' in dataset '{}'.",
                         field.key, dataset.metadata.key
                     );
 
@@ -412,7 +449,7 @@ impl Datasets {
 
                 if !matches!(field.data_type.as_str(), "STRING" | "NUMBER" | "BOOLEAN") {
                     warn!(
-                        "Invalid data_type '{}' in dataset '{}', key '{}'.",
+                        "❌ Invalid data_type '{}' in dataset '{}', key '{}'.",
                         field.data_type, dataset.metadata.key, field.key
                     );
 
@@ -420,48 +457,62 @@ impl Datasets {
                 }
             }
 
-            // 4. Check whether the metadata_table.parquet file exists
+            // 4. Validate whether the dataset contains required fields
+            info!("🔍 Validating Metadata Table...");
+            Datasets::validate_fields(&dict, REQUIRED_FIELDS)?;
+
+            // 5. Check whether the metadata_table.parquet file exists
             let parquet_path = dataset.path.join("metadata_table.parquet");
             if !parquet_path.exists() {
-                warn!("Missing metadata_table.parquet in {:?}", dataset.path);
+                warn!("❌ Missing metadata_table.parquet in {:?}", dataset.path);
                 continue;
             }
 
-            // 5. Check whether the dict.fields.key is the same as the metadata_table.parquet.columns
+            // 6. Check whether the dict.fields.key is the same as the metadata_table.parquet.columns
             Datasets::validate_fields_against_parquet(&dict, &parquet_path)?;
 
-            // 6. Check whether the datafile.tsv file exists
+            // 7. Check whether the datafile.tsv file exists
             let datafile_path = dataset.path.join("datafile.tsv");
             if !datafile_path.exists() {
-                warn!("Missing datafile.tsv in {:?}", dataset.path);
+                warn!("❌ Missing datafile.tsv in {:?}", dataset.path);
                 continue;
             }
 
             match load_tsv(&datafile_path.to_path_buf()) {
                 Ok(datafiles) => {}
                 Err(e) => {
-                    warn!("Failed to load datafile.tsv in {:?}: {}", dataset.path, e);
+                    warn!("❌ Failed to load datafile.tsv in {:?}: {}", dataset.path, e);
                     continue;
                 }
             }
-
-            // 7. Check whether the data files' dictionary is the same as the data files' columns
+            
             for (table_name, datafile_table) in &dataset.datafile_tables {
+                info!("🔍 Validating Datafile Table {:?}...", table_name);
                 if datafile_table.is_none() {
                     warn!(
-                        "Missing datafile table {:?} in {:?}",
+                        "❌ Missing datafile table {:?} in {:?}",
                         table_name, dataset.path
                     );
                     continue;
                 }
 
+                // 8. Check whether the datafile parquet file exists
+                let datafile_parquet_path = PathBuf::from(datafile_table.as_ref().unwrap().path.clone());
+                if !datafile_parquet_path.exists() {
+                    warn!("❌ Missing datafile parquet file {:?} in {:?}", datafile_parquet_path, dataset.path);
+                    continue;
+                }
+
                 let datafile_table = datafile_table.as_ref().unwrap();
 
-                todo!()
+                // 9. Validate whether the datafile contains required fields
+                Datasets::validate_fields(&datafile_table.data_dictionary, &[datafile_table.id_column_name.as_str()])?;
+
+                // 10. Check whether the data files' dictionary is the same as the data files' columns
+                Datasets::validate_fields_against_parquet(&datafile_table.data_dictionary, &PathBuf::from(datafile_table.path.clone()))?;
             }
         }
 
-        println!("✅ All datasets validated successfully.");
         Ok(())
     }
 

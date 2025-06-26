@@ -1,0 +1,7 @@
+{
+  "title": "MUTATIONS",
+  "description": "Whole exome sequencing of 12 breast AdCCs.",
+  "datatype": "MAF",
+  "genetic_alteration_type": "MUTATION_EXTENDED",
+  "id_column_name": "Tumor_Sample_Barcode"
+}

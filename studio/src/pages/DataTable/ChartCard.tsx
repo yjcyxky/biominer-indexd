@@ -1,7 +1,7 @@
 import React, { FC, useEffect, useRef, useState } from 'react';
-import { Card, Button, Empty, Space, Tooltip, Row, Col, Statistic, Table, Popover } from 'antd';
-import { CloseOutlined, EyeFilled, InfoCircleOutlined } from '@ant-design/icons';
-import { Pie, Bar, Histogram } from '@ant-design/plots';
+import { Card, Button, Empty, Space, Tooltip, Row, Col, Statistic, Table, Popover, Select } from 'antd';
+import { CloseOutlined, EyeFilled, InfoCircleOutlined, SettingOutlined } from '@ant-design/icons';
+import { Pie, Bar, Histogram, Line } from '@ant-design/plots';
 import { groupBy, sumBy } from 'lodash';
 // @ts-ignore
 import Plotly from 'plotly.js/dist/plotly';
@@ -10,10 +10,22 @@ import createPlotlyComponent from 'react-plotly.js/factory';
 
 const Plot = createPlotlyComponent(Plotly);
 
-
 import './ChartCard.less';
 
-type ChartType = 'id' | 'table' | 'pie' | 'bar' | 'histogram' | 'summary' | 'unsupported' | 'kaplan_meier';
+export const DEFAULT_ID_COLUMN_NAME = 'sample_id';
+type ChartType = 'id' | 'table' | 'pie' | 'bar' | 'histogram' | 'linechart' | 'summary' | 'unsupported' | 'kaplan_meier';
+
+const chartTypeOptions = [
+    { label: 'Line Chart', value: 'linechart' },
+    { label: 'Bar Chart', value: 'bar' },
+    { label: 'Histogram', value: 'histogram' },
+    { label: 'Pie Chart', value: 'pie' },
+    { label: 'Table', value: 'table' },
+    { label: 'Summary', value: 'summary' },
+    { label: 'Unsupported', value: 'unsupported' },
+    { label: 'Kaplan-Meier', value: 'kaplan_meier' },
+    { label: 'ID', value: 'id' },
+];
 
 type KMPoint = {
     time: number;
@@ -72,6 +84,7 @@ interface ChartCardProps {
     className?: string;
     resize?: () => void;
     total: number;
+    allowChangeChartType?: boolean;
 }
 
 const buildUnifiedPlotData = (
@@ -202,17 +215,19 @@ export const getRecommendedChartType = (field: API.DataDictionaryField, length: 
     }
 
     if (field.data_type === 'NUMBER') {
-        if (allowedValuesLength <= 6) return 'pie';
-        if (allowedValuesLength > 6 && allowedValuesLength <= 25) return 'bar';
-        if (ratio <= threshold && allowedValuesLength <= 500 && allowedValuesLength > 25) return 'table';
-        if (ratio <= threshold && allowedValuesLength > 500) return 'histogram';
-        if (ratio > threshold) return 'histogram';
+        if (allowedValuesLength <= 50) return 'linechart';
+        // if (allowedValuesLength <= 6) return 'pie';
+        // if (allowedValuesLength > 6 && allowedValuesLength <= 25) return 'bar';
+        // if (ratio <= threshold && allowedValuesLength <= 500 && allowedValuesLength > 25) return 'table';
+        // if (ratio <= threshold && allowedValuesLength > 500) return 'histogram';
+        // if (ratio > threshold) return 'histogram';
+        return 'histogram';
     }
     return 'unsupported';
 };
 
-const ChartCard: React.FC<ChartCardProps> = ({ field, data, isFileBased, total, onClose, className, resize, selectedColumns }) => {
-    const chartType = getRecommendedChartType(field, data.length, total, selectedColumns);
+const ChartCard: React.FC<ChartCardProps> = ({ field, data, isFileBased, total, onClose, className, resize, selectedColumns, allowChangeChartType = false }) => {
+    const [chartType, setChartType] = useState<ChartType>(getRecommendedChartType(field, data.length, total, selectedColumns));
     const headerOffset = 64; // Card header height
 
     const [height, setHeight] = useState<number>(300);
@@ -516,6 +531,19 @@ const ChartCard: React.FC<ChartCardProps> = ({ field, data, isFileBased, total, 
             )
         }
 
+        if (chartType === 'linechart') {
+            const xField = DEFAULT_ID_COLUMN_NAME;
+            const yField = field.key;
+            const lineChartData = data.map((r) => ({
+                [xField]: r[xField],
+                [yField]: r[yField],
+            }));
+
+            return (
+                <Line data={lineChartData} xField={xField} yField={yField} />
+            )
+        }
+
         return <Empty description={`Unsupported ${field.data_type} field`} className="chart-empty" />;
     };
 
@@ -540,6 +568,18 @@ const ChartCard: React.FC<ChartCardProps> = ({ field, data, isFileBased, total, 
                         <Tooltip title={field.description}>
                             <Button type="text" size="small" icon={<InfoCircleOutlined />} />
                         </Tooltip>
+                        {allowChangeChartType && (
+                            <Tooltip title="Change chart type">
+                                <Select
+                                    style={{ width: 150 }}
+                                    options={chartTypeOptions.sort((a, b) => a.label.localeCompare(b.label))}
+                                    value={chartType}
+                                    onChange={(value) => {
+                                        setChartType(value as ChartType);
+                                    }}
+                                />
+                            </Tooltip>
+                        )}
                         {onClose && <Button type="text" size="small" icon={<CloseOutlined />} onClick={onClose} />}
                     </Space>
                 }

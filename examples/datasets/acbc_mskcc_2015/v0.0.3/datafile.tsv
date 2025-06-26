@@ -1,0 +1,2 @@
+guid	filename	size	created_at	updated_at	status	baseid	rev	version	uploader	access	acl	url_0_url	url_0_created_at	url_0_status	url_0_uploader	hash_0_hash_type	hash_0_hash
+biominer.fudan-pgx/702cbe16-64df-5084-92d0-a54f14f7693b	acbc_mskcc_2015.tar.gz	34542	1750960105	1750960105	pending	8765f608-f574-5589-8559-8efc5e0ede99	biominer	1	Jingcheng Yang	public		minio://processed-data/OmicsDatasets/acbc_mskcc_2015.tar.gz	1750960105	pending	Jingcheng Yang	md5	f8c72cfec00b9da14fb84ecf4ff5fc9f
