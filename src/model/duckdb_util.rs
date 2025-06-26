@@ -1,12 +1,19 @@
 use duckdb::types::{ValueRef, ValueRef::*};
 use duckdb::Row;
 use serde_json::{Map, Value};
+use log::debug;
 
 pub fn row_to_json(row: &Row, column_names: &[String]) -> Result<Value, duckdb::Error> {
     let mut record = Map::new();
 
     for (i, col_name) in column_names.iter().enumerate() {
-        let value_ref = row.get_ref(i)?;
+        let value_ref = match row.get_ref(i) {
+            Ok(value_ref) => value_ref,
+            Err(e) => {
+                debug!("Error getting value for column {}: {}", col_name, e);
+                continue;
+            }
+        };
         let value = to_json_from_value(value_ref);
         record.insert(col_name.clone(), value);
     }

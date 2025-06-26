@@ -81,6 +81,7 @@ use crate::query_builder::where_builder::ComposeQuery;
 use anyhow::{bail, Context, Error, Result};
 use duckdb::{params, Connection};
 use lazy_static::lazy_static;
+use log::debug;
 use log::{info, warn};
 use poem_openapi::Object;
 use polars::prelude::LazyFrame;
@@ -231,14 +232,22 @@ impl Datasets {
         let content = match fs::read_to_string(&index_path) {
             Ok(content) => content,
             Err(e) => {
-                return Err(anyhow::anyhow!("Failed to read index file ({}): {}", index_path.display(), e));
+                return Err(anyhow::anyhow!(
+                    "Failed to read index file ({}): {}",
+                    index_path.display(),
+                    e
+                ));
             }
         };
 
         let index_entries: Vec<DatasetMetadata> = match serde_json::from_str(&content) {
             Ok(entries) => entries,
             Err(e) => {
-                return Err(anyhow::anyhow!("Failed to parse index file ({}): {}", index_path.display(), e));
+                return Err(anyhow::anyhow!(
+                    "Failed to parse index file ({}): {}",
+                    index_path.display(),
+                    e
+                ));
             }
         };
 
@@ -984,13 +993,15 @@ impl Dataset {
 
         let sql = query_plan.to_sql()?;
 
-        let mut stmt = conn.prepare(&format!("PRAGMA table_info({});", query_plan.table))?;
+        debug!("Query SQL: {}", sql);
+        let mut stmt = conn.prepare(format!("PRAGMA table_info({});", query_plan.table).as_str())?;
         let columns: Vec<String> = stmt
             .query_map([], |row| row.get::<_, String>(1))?
             .filter_map(Result::ok)
             .collect();
 
-        info!("Table Columns: {:?}", columns);
+        debug!("Table Columns: {:?}", columns);
+
         let mut stmt = conn.prepare(&sql)?;
         let rows = stmt.query_map([], move |row| {
             let record = row_to_json(row, &columns)?;
@@ -1085,7 +1096,11 @@ impl Dataset {
     /// }
     /// ```
     pub fn get_datafile_tables(&self) -> Result<Vec<DataFileTable>, Error> {
-        return Ok(self.datafile_tables.values().filter_map(|table| table.clone()).collect());
+        return Ok(self
+            .datafile_tables
+            .values()
+            .filter_map(|table| table.clone())
+            .collect());
     }
 
     /// Get the license information for this dataset.
@@ -1113,7 +1128,11 @@ impl Dataset {
         let license = match fs::read_to_string(&license_path) {
             Ok(license) => license,
             Err(e) => {
-                return Err(anyhow::anyhow!("Failed to read license file ({}): {}", license_path.display(), e));
+                return Err(anyhow::anyhow!(
+                    "Failed to read license file ({}): {}",
+                    license_path.display(),
+                    e
+                ));
             }
         };
         Ok(license)

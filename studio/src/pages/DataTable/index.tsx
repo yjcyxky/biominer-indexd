@@ -191,25 +191,51 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
         setLoading(true);
 
         const fetchData = async () => {
-            // Fetch the dataset data.
-            const queryMap: any = {
-                key: cachedDatasetKey,
-                version: cachedDatasetVersion ?? '',
-                page: page,
-                page_size: pageSize,
-            };
+            // // Fetch the dataset data.
+            // const queryMap: any = {
+            //     key: cachedDatasetKey,
+            //     version: cachedDatasetVersion ?? '',
+            //     page: page,
+            //     page_size: pageSize,
+            // };
 
-            if (filters) {
-                queryMap.query = filters;
+            // if (filters) {
+            //     queryMap.query = filters;
+            // }
+
+            // const data = await getDatasetData(queryMap);
+
+            const queryPlan: any = {
+                table: "metadata_table",
+                joins: [],
+                selects: selectedColumns.map(col => ({
+                    type: "field",
+                    value: col,
+                })),
+                filters: filters,
+                group_by: [],
+                having: undefined,
+                order_by: [],
+                limit: pageSize,
+                offset: (page - 1) * pageSize,
+                distinct: false,
             }
 
-            const data = await getDatasetData(queryMap);
+            if (filters) {
+                queryPlan.query = filters;
+            }
+
+            const data = await getDatasetDataWithQueryPlan({
+                key: cachedDatasetKey,
+                version: cachedDatasetVersion ?? '',
+                query_plan: queryPlan,
+            });
 
             setData(data);
             setLoading(false);
         }
         fetchData();
-    }, [page, pageSize, cachedDatasetKey, cachedDatasetVersion, filters])
+    }, [page, pageSize, cachedDatasetKey, cachedDatasetVersion, filters, selectedColumns])
 
     useEffect(() => {
         if (!cachedDatasetKey) return;

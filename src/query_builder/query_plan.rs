@@ -952,4 +952,53 @@ mod tests {
         println!("plan2: {:?}", plan2);
         assert_eq!(plan, plan2);
     }
+
+    #[test]
+    fn test_from_json() {
+        let json = r#"
+        {
+            "table": "metadata_table",
+            "joins": [],
+            "selects": [
+                {
+                    "type": "field",
+                    "value": "patient_id"
+                },
+                {
+                    "type": "field",
+                    "value": "subject_id"
+                },
+                {
+                    "type": "field",
+                    "value": "age"
+                },
+                {
+                    "type": "field",
+                    "value": "sex"
+                },
+                {
+                    "type": "field",
+                    "value": "arm"
+                },
+                {
+                    "type": "field",
+                    "value": "weight"
+                }
+            ],
+            "group_by": [],
+            "order_by": [],
+            "limit": 100,
+            "offset": 0,
+            "distinct": false
+        }
+        "#;
+
+        let plan = QueryPlan::from_json(json).unwrap();
+        println!("plan: {:?}", plan);
+        println!("SQL: {}", plan.to_sql().unwrap());
+        println!("SQL with params: {:?}", plan.to_sql_with_params().unwrap());
+        assert_eq!(plan.table, "metadata_table");
+        assert_eq!(plan.joins, vec![]);
+        assert_eq!(plan.selects.len(), 6);
+    }
 }
