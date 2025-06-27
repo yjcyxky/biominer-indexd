@@ -1,5 +1,6 @@
 import re
 import numpy as np
+import pandas as pd
 
 def normalize_column_name(col: str, lower: bool = True) -> str:
     """
@@ -23,5 +24,22 @@ def replace_missing_values(series, missing_values=None):
     Replace pseudo-missing values with np.nan.
     """
     if missing_values is None:
-        missing_values = {"NA", "N/A", "", "null", "NULL", "[Not Available]", "Na"}
-    return series.replace(list(missing_values), np.nan) 
+        missing_values = {
+            "NA",
+            "N/A",
+            "",
+            " ",
+            "null",
+            "NULL",
+            "[Not Available]",
+            "Na",
+            "[Not Applicable]",
+            "[Discrepancy]",
+        }
+    return series.replace(list(missing_values), np.nan)
+
+def deduplicate_column_names(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Deduplicate column names.
+    """
+    return df.loc[:, ~df.columns.duplicated()]

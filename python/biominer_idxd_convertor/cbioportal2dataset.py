@@ -6,13 +6,14 @@ import click
 import numpy as np
 import requests
 import shutil
-import re
+import tempfile
 import tarfile
 import uuid
 import hashlib
 from dataclasses import dataclass
 from typing import Optional
-from .utils import normalize_column_name
+from .utils import normalize_column_name, replace_missing_values
+from .omics import infer_dtype
 
 namespace_prefix = "biominer.fudan-pgx"
 oncotree_url = (
@@ -24,8 +25,11 @@ code_to_organ_mapping = {}
 
 def build_mappings():
     global code_to_disease_mapping, code_to_organ_mapping
-    print("Building mappings...")
-    filepath = Path(__file__).parent
+    print("\n\n⚙️ Building mappings...")
+    # Make a temp directory to store the mappings
+    filepath = Path(os.path.expanduser("~/.biominer-indexd/"))
+    filepath.mkdir(parents=True, exist_ok=True)
+
     if os.path.exists(filepath / "code_to_disease_mapping.json") and os.path.exists(
         filepath / "code_to_organ_mapping.json"
     ):
@@ -54,6 +58,13 @@ def build_mappings():
     # Start recursion from the TISSUE root node
     recurse(data["TISSUE"])
 
+    with open(filepath / "code_to_disease_mapping.json", "w") as f:
+        json.dump(code_to_disease_mapping, f, indent=2)
+    with open(filepath / "code_to_organ_mapping.json", "w") as f:
+        json.dump(code_to_organ_mapping, f, indent=2)
+
+    print(f"✅ Mappings saved to {filepath}")
+
 
 @dataclass
 class URL:
@@ -63,21 +74,26 @@ class URL:
     uploader: str
     file: Optional[str]
 
+
 @dataclass
 class Hash:
     hash_type: str  # "md5" | "sha1" | "sha256" | "sha512" | "crc32" | "crc64" | "etag"
     hash: str
     file: Optional[str]
+
+
 @dataclass
 class Alias:
     name: str
     file: Optional[str]
+
 
 @dataclass
 class Tag:
     field_name: str
     field_value: str
     file: Optional[str]
+
 
 @dataclass
 class DataFile:
@@ -172,9 +188,7 @@ def make_datafile(tarball_path, dataset_meta: dict) -> DataFile:
             file=guid,
         )
     ]
-    hashes = [
-        Hash(hash_type="md5", hash=md5sum, file=guid)
-    ]
+    hashes = [Hash(hash_type="md5", hash=md5sum, file=guid)]
     aliases = []
     tags = []
 
@@ -293,13 +307,14 @@ def parse_meta_study(meta_path, organization=None):
     }
 
 
-def build_data_dictionary_from_header(df, header_lines):
+def build_data_dictionary_from_header(df, header_lines, final_dtypes=None):
     """
     Build a data dictionary using annotated headers from clinical files.
 
     Args:
         df (pandas.DataFrame): The loaded clinical DataFrame.
         header_lines (List[List[str]]): List of header rows including name, description, type, and order.
+        final_dtypes (dict): Dictionary mapping column names to their final inferred data types.
 
     Returns:
         list: List of dictionaries defining each field's metadata.
@@ -312,24 +327,40 @@ def build_data_dictionary_from_header(df, header_lines):
         pass
 
     for idx, col_key in enumerate(df.columns):
-        data_type = (
+        # 获取用户定义的类型
+        user_defined_type = (
             type_row[col_key].strip().upper() if col_key in type_row else "STRING"
         )
-        data_type = (
-            data_type if data_type in ("STRING", "NUMBER", "BOOLEAN") else "STRING"
+        user_defined_type = (
+            user_defined_type if user_defined_type in ("STRING", "NUMBER", "BOOLEAN") else "STRING"
         )
+
+        # 使用最终确定的类型，如果没有提供则使用用户定义的类型
+        if final_dtypes and col_key in final_dtypes:
+            data_type = final_dtypes[col_key]
+            # 如果最终类型与用户定义的不同，打印警告
+            if data_type != user_defined_type:
+                print(f"⚠️ Column '{col_key}' was defined as {user_defined_type} but inferred as {data_type}, using {data_type}")
+        else:
+            data_type = user_defined_type
 
         allowed_values = df[col_key].dropna().unique().tolist()
         # if len(allowed_values) > 100:
         #     allowed_values = []
-        
+
         def min_max_value(col_key):
             if data_type == "NUMBER":
-                min_val = df[col_key].min()
-                max_val = df[col_key].max()
-                # 确保数值类型可序列化
-                return [float(min_val) if pd.notna(min_val) else None, 
-                       float(max_val) if pd.notna(max_val) else None]
+                try:
+                    min_val = df[col_key].min()
+                    max_val = df[col_key].max()
+                    # 确保数值类型可序列化
+                    return [
+                        float(min_val) if pd.notna(min_val) else None,
+                        float(max_val) if pd.notna(max_val) else None,
+                    ]
+                except (TypeError, ValueError) as e:
+                    print(f"⚠️ Error calculating min/max for column '{col_key}': {e}")
+                    return []
             else:
                 return []
 
@@ -340,7 +371,9 @@ def build_data_dictionary_from_header(df, header_lines):
                 "description": desc_row[col_key],
                 "data_type": data_type,
                 "notes": "",
-                "allowed_values": allowed_values if data_type != "NUMBER" else min_max_value(col_key),
+                "allowed_values": (
+                    allowed_values if data_type != "NUMBER" else min_max_value(col_key)
+                ),
                 "order": order_row[col_key],
             }
         )
@@ -376,7 +409,9 @@ def read_clinical_file(path):
     return df, header_lines
 
 
-def convert_cbioportal_study(study_dir, output_dir, organization, version="v0.0.1") -> Path:
+def convert_cbioportal_study(
+    study_dir, output_dir, organization, version="v0.0.1", skip: bool = False
+) -> Path:
     """
     Convert a cBioPortal-formatted dataset folder into a normalized dataset format.
 
@@ -400,12 +435,35 @@ def convert_cbioportal_study(study_dir, output_dir, organization, version="v0.0.
         raise FileNotFoundError("meta_study.txt not found")
 
     dataset_meta = parse_meta_study(meta_path, organization)
-    
+
     key = dataset_meta.get("key")
     dirname = study_dir.name
-    
+
     if key != dirname:
-        raise ValueError(f"The key in meta_study.txt ({key}) does not match the directory name ({dirname})")
+        raise ValueError(
+            f"The key in meta_study.txt ({key}) does not match the directory name ({dirname})"
+        )
+
+    metadata_table_path = output_dir / "metadata_table.parquet"
+    metadata_dictionary_path = output_dir / "metadata_dictionary.json"
+    dataset_json_path = output_dir / "dataset.json"
+    tarball_path = output_dir / f'{dataset_meta.get("key")}.tar.gz'
+    datafile_path = output_dir / "datafile.tsv"
+    license_path = output_dir / "LICENSE.md"
+    readme_path = output_dir / "README.md"
+
+    if (
+        skip
+        and metadata_table_path.exists()
+        and metadata_dictionary_path.exists()
+        and dataset_json_path.exists()
+        and tarball_path.exists()
+        and datafile_path.exists()
+        and license_path.exists()
+        and readme_path.exists()
+    ):
+        print(f"🔍 Skipping {study_dir}")
+        return output_dir
 
     # Load and merge clinical sample and patient data
     clinical_files = [
@@ -448,16 +506,32 @@ def convert_cbioportal_study(study_dir, output_dir, organization, version="v0.0.
         "BOOLEAN": "boolean",
     }
 
-    # Explicitly define all values that need to be treated as missing values
-    missing_values = {"NA", "N/A", "", "null", "NULL", "[Not Available]", "Na"}
-
+    # 对DataFrame进行类型转换，只对NUMBER列预处理缺失值
     for col in combined_df.columns:
         dtype = dtype_dict.get(col, "STRING")
         target_dtype = type_mapping.get(dtype, "string")
 
         try:
-            # Replace pseudo-missing values with np.nan
-            combined_df[col] = combined_df[col].replace(list(missing_values), np.nan)
+            # 只对NUMBER列使用replace_missing_values预处理
+            if dtype == "NUMBER":
+                combined_df[col] = replace_missing_values(combined_df[col])
+                # 对预处理后的数据进行类型推导
+                inferred_type = infer_dtype(combined_df[col])
+                if inferred_type != "NUMBER":
+                    print(f"⚠️ Column '{col}' was defined as NUMBER but inferred as {inferred_type}, using {inferred_type}")
+                    # 更新类型映射
+                    type_mapping[inferred_type] = type_mapping.get(inferred_type, "string")
+                    target_dtype = type_mapping[inferred_type]
+                    # 更新dtype_dict以便后续使用
+                    dtype_dict[col] = inferred_type
+            else:
+                # 对其他类型直接推导，不预处理
+                inferred_type = infer_dtype(combined_df[col])
+                if inferred_type != dtype:
+                    print(f"⚠️ Column '{col}' was defined as {dtype} but inferred as {inferred_type}, using {inferred_type}")
+                    type_mapping[inferred_type] = type_mapping.get(inferred_type, "string")
+                    target_dtype = type_mapping[inferred_type]
+                    dtype_dict[col] = inferred_type
 
             # Convert to target type
             combined_df[col] = combined_df[col].astype(target_dtype)
@@ -471,42 +545,41 @@ def convert_cbioportal_study(study_dir, output_dir, organization, version="v0.0.
     dataset_meta["license"] = ""
 
     # Save Parquet
-    combined_df.to_parquet(output_dir / "metadata_table.parquet", index=False)
-    print(f"✅ Data saved to {output_dir / 'metadata_table.parquet'}")
+    combined_df.to_parquet(metadata_table_path, index=False)
+    print(f"✅ Data saved to {metadata_table_path}")
 
     # Save data_dictionary.json using header info if available
-    dictionary = build_data_dictionary_from_header(combined_df, headers)
-    with open(output_dir / "metadata_dictionary.json", "w") as f:
+    dictionary = build_data_dictionary_from_header(combined_df, headers, dtype_dict)
+    with open(metadata_dictionary_path, "w") as f:
         json.dump(dictionary, f, indent=2)
 
-    print(f"✅ Data dictionary saved to {output_dir / 'metadata_dictionary.json'}")
+    print(f"✅ Data dictionary saved to {metadata_dictionary_path}")
 
     # Save dataset metadata
-    with open(output_dir / "dataset.json", "w") as f:
+    with open(dataset_json_path, "w") as f:
         json.dump(dataset_meta, f, indent=2)
 
-    print(f"✅ Dataset metadata saved to {output_dir / 'dataset.json'}")
+    print(f"✅ Dataset metadata saved to {dataset_json_path}")
 
-    tarball_path = output_dir / f'{dataset_meta.get("key")}.tar.gz'
     if not tarball_path.exists():
         make_tarball(study_dir, tarball_path)
         print(f"✅ Tarball saved to {tarball_path}")
 
     datafile = make_datafile(tarball_path, dataset_meta)
-    datafile_path = make_datafile_tsv(datafile, output_dir)
+    make_datafile_tsv(datafile, output_dir)
     print(f"✅ Datafile saved to {datafile_path}")
-    
-    # Check if the README.md and LICENSE.md exist
-    if not (output_dir / "README.md").exists():
-        print(f"⚠️ README.md not found, creating a dummy one")
-        (output_dir / "README.md").touch()
 
-    if not (output_dir / "LICENSE.md").exists():
+    # Check if the README.md and LICENSE.md exist
+    if not readme_path.exists():
+        print(f"⚠️ README.md not found, creating a dummy one")
+        readme_path.touch()
+
+    if not license_path.exists():
         print(f"⚠️ LICENSE.md not found, creating a dummy one")
-        (output_dir / "LICENSE.md").touch()
+        license_path.touch()
 
     print(f"✅ Converted study saved to {output_dir}")
-    
+
     return output_dir
 
 
@@ -523,9 +596,11 @@ def cli(study_dir, output_dir, organization, version):
     OUTPUT_DIR is the output directory to save data.parquet, data_dictionary.json, dataset.json.
     """
     build_mappings()
-    
+
     try:
-        output_dir = convert_cbioportal_study(study_dir, output_dir, organization, version)
+        output_dir = convert_cbioportal_study(
+            study_dir, output_dir, organization, version
+        )
     except Exception as e:
         print(f"⚠️ Failed to convert the dataset: {e}\n")
 
@@ -534,7 +609,7 @@ def cli(study_dir, output_dir, organization, version):
     if not dataset_dir.exists():
         print(f"⚠️ The dataset is invalid: {dataset_dir}")
         return
-    
+
     if not (dataset_dir / "metadata_table.parquet").exists():
         # Delete the dataset directory
         shutil.rmtree(dataset_dir)

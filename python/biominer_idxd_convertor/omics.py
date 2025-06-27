@@ -4,7 +4,7 @@ import pandas as pd
 import json
 import re
 import numpy as np
-from .utils import normalize_column_name, replace_missing_values, title_case
+from .utils import normalize_column_name, replace_missing_values, title_case, deduplicate_column_names
 from .formatter import format_cna, format_mutation, format_sv, format_mrna_seq, format_methylation
 
 white_list = [
@@ -154,19 +154,60 @@ def parse_meta_file(meta_path: Path) -> dict:
     return new_metadata
 
 
-def convert_omics_file(data_path: Path, meta_path: Path, output_dir: Path):
+def convert_omics_file(data_path: Path, meta_path: Path, output_dir: Path, skip: bool = False):
     """
     Read data_*.txt and meta_*.txt, output parquet, dictionary, and metadata.
     """
     prefix = data_path.stem.replace("data_", "")
+    parquet_path = output_dir / f"{prefix}.parquet"
+    dictionary_path = output_dir / f"{prefix}_dictionary.json"
+    metadata_path = output_dir / f"{prefix}_metadata.json"
+
+    if skip and parquet_path.exists() and dictionary_path.exists() and metadata_path.exists():
+        print(f"🔍 Skipping {data_path}")
+        return
+
+    # 检查文件是否存在
+    if not data_path.exists():
+        print(f"❌ Data file not found: {data_path}")
+        return
+    
+    if not meta_path.exists():
+        print(f"❌ Metadata file not found: {meta_path}")
+        return
+
     # 1. Read meta_*.txt
-    meta = parse_meta_file(meta_path)
+    try:
+        meta = parse_meta_file(meta_path)
+    except Exception as e:
+        print(f"❌ Error reading metadata file {meta_path}: {e}")
+        return
     # 2. Read data_*.txt
     try:
+        print(f"🔍 Reading {data_path}")
         df = pd.read_csv(data_path, sep="\t", dtype=str)
     except pd.errors.EmptyDataError:
         # 处理空文件
         df = pd.DataFrame()
+    except pd.errors.ParserError as e:
+        print(f"❌ Error parsing file {data_path}: {e}")
+        # 尝试从错误消息中提取行号
+        error_msg = str(e)
+        if "row" in error_msg:
+            # 提取行号信息
+            row_match = re.search(r'row (\d+)', error_msg)
+            if row_match:
+                row_num = row_match.group(1)
+                print(f"   This usually indicates malformed data (e.g., unclosed quotes) around row {row_num}")
+            else:
+                print(f"   This usually indicates malformed data (e.g., unclosed quotes)")
+        else:
+            print(f"   This usually indicates malformed data (e.g., unclosed quotes)")
+        print(f"   Please check the file for formatting issues and try again.")
+        return
+    except Exception as e:
+        print(f"❌ Unexpected error reading file {data_path}: {e}")
+        return
 
     if not df.empty:
         df = df.apply(lambda col: replace_missing_values(col), axis=0)
@@ -188,29 +229,69 @@ def convert_omics_file(data_path: Path, meta_path: Path, output_dir: Path):
                 )
 
     # 4. parquet output
-    parquet_path = output_dir / f"{prefix}.parquet"
     if meta["genetic_alteration_type"] in format_fn_map:
         df = format_fn_map[meta["genetic_alteration_type"]](df)
 
-    # 5. dictionary output
-    dictionary = build_dictionary(df)
-
+    # Normalize column names
     df.columns = [normalize_column_name(c, lower=False) for c in df.columns]
-    df.to_parquet(parquet_path, index=False)
-    df.to_csv(output_dir / f"{prefix}.tsv", sep="\t", index=False)
+    # Deduplicate column names
+    df = deduplicate_column_names(df)
 
-    with open(output_dir / f"{prefix}_dictionary.json", "w") as f:
-        json.dump(dictionary, f, indent=2)
+    # 5. dictionary output - after normalization and deduplication
+    dictionary = build_dictionary(df)
+    
+    try:
+        df.to_parquet(parquet_path, index=False)
+        df.to_csv(output_dir / f"{prefix}.tsv", sep="\t", index=False)
+    except Exception as e:
+        print(f"❌ Error saving data files for {data_path}: {e}")
+        return
+
+    try:
+        with open(dictionary_path, "w") as f:
+            json.dump(dictionary, f, indent=2)
+    except Exception as e:
+        print(f"❌ Error saving dictionary file for {data_path}: {e}")
+        return
+        
     # 6. metadata output
-    with open(output_dir / f"{prefix}_metadata.json", "w") as f:
-        json.dump(meta, f, indent=2)
+    try:
+        with open(metadata_path, "w") as f:
+            json.dump(meta, f, indent=2)
+    except Exception as e:
+        print(f"❌ Error saving metadata file for {data_path}: {e}")
+        return
+
+    print(f"✅ Successfully processed {data_path}")
 
 
-def convert_all_omics(study_dir: Path, output_dir: Path):
+def convert_all_omics(study_dir: Path, output_dir: Path, skip: bool = False):
     """
     Main entry: batch process all omics files, output to output_dir/datafiles/
     """
     pairs = find_omics_files(study_dir)
+    if not pairs:
+        print(f"⚠️  No omics files found in {study_dir}")
+        return
+    
+    print(f"🔍 Found {len(pairs)} omics file pairs to process")
     output_dir.mkdir(parents=True, exist_ok=True)
-    for data_path, meta_path, prefix in pairs:
-        convert_omics_file(data_path, meta_path, output_dir)
+    
+    success_count = 0
+    error_count = 0
+    
+    for i, (data_path, meta_path, prefix) in enumerate(pairs, 1):
+        print(f"\n📁 Processing {i}/{len(pairs)}: {data_path.name}")
+        try:
+            convert_omics_file(data_path, meta_path, output_dir, skip)
+            success_count += 1
+        except Exception as e:
+            print(f"❌ Unexpected error processing {data_path}: {e}")
+            error_count += 1
+    
+    print(f"\n📊 Processing complete:")
+    if success_count > 0:
+        print(f"   ✅ Successfully processed: {success_count} / {len(pairs)} files")
+
+    if error_count > 0:
+        print(f"   ❌ Errors: {error_count} / {len(pairs)} files")
