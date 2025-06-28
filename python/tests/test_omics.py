@@ -28,5 +28,5 @@ def test_convert_omics_file():
         assert (outdir / 'mrna_seq_dictionary.json').exists()
         assert (outdir / 'mrna_seq_metadata.json').exists()
         df = pd.read_parquet(outdir / 'mrna_seq.parquet')
-        assert 'gene' in df.columns
-        assert 'value' in df.columns 
+        assert 'Gene' in df.columns
+        assert 'Value' in df.columns 

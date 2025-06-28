@@ -47,4 +47,5 @@ export default {
   'menu.datasets': 'Datasets',
   'menu.datatable': 'Data Table',
   'menu.about': 'About',
+  'menu.site-map': 'Site Map',
 };

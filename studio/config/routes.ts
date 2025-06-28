@@ -45,6 +45,12 @@
     component: './DataRepo',
   },
   {
+    name: 'site-map',
+    icon: 'global',
+    path: '/site-map',
+    component: './SiteMap'
+  },
+  {
     path: '/about',
     name: 'about',
     icon: 'question-circle',

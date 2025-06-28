@@ -55,4 +55,5 @@ export default {
   'menu.datasets': '数据集',
   'menu.datatable': '数据表',
   'menu.about': '帮助',
+  'menu.site-map': '站点地图',
 };

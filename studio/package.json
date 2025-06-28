@@ -58,6 +58,8 @@
     "@ant-design/pro-form": "^1.60.0",
     "@ant-design/pro-layout": "^6.34.0",
     "@ant-design/pro-table": "^2.69.0",
+    "@antv/l7": "^2.22.5",
+    "@antv/l7-maps": "^2.22.5",
     "@glideapps/glide-data-grid": "^6.0.3",
     "@umijs/route-utils": "^2.0.0",
     "antd": "4",
