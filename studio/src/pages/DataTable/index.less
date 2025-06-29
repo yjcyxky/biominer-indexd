@@ -43,6 +43,23 @@
         animation: blink 2s infinite;
     }
 
+    button[class*="switch-"] {
+        position: absolute;
+        top: 50px;
+        right: 120px;
+        z-index: 1000;
+        height: 36px;
+        width: fit-content;
+        background-color: #75bdff;
+        color: #fff;
+        font-weight: bold;
+        padding: 6px 16px;
+        border-left: 4px solid #1890ff;
+        border-radius: 4px;
+        margin: 0;
+        animation: blink 2s infinite;
+    }
+
     @keyframes blink {
         0% {
             box-shadow: 0 0 0 0 rgba(24, 144, 255, 0.4);

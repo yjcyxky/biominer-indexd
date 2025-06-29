@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
-import { Button, Modal, Typography, Row, Col, message, Tooltip, Spin, Tag, Tabs, Select, Progress, Alert } from 'antd';
+import { Button, Modal, Typography, Row, Col, message, Tooltip, Spin, Tag, Tabs, Select, Progress, Alert, Switch } from 'antd';
 import { useEffect } from 'react';
 import { getDatasetData, getDataDictionary, getDatasets, getDatafiles, getDatasetReadme, getDatasetLicense, getDatafileTables, getDatasetDataWithQueryPlan } from '@/services/biominer/datasets';
 import { history } from 'umi';
 import ColumnSelector, { getDefaultSelectedKeys } from './ColumnSelector';
 import { filters2string } from './Filter';
 import type { ComposeQueryItem } from './Filter';
-import { CloudDownloadOutlined, DownloadOutlined, FileOutlined, FilterOutlined, QuestionCircleOutlined, LoadingOutlined } from '@ant-design/icons';
+import { CloudDownloadOutlined, DownloadOutlined, FileOutlined, FilterOutlined, QuestionCircleOutlined, LoadingOutlined, BarChartOutlined, TableOutlined } from '@ant-design/icons';
 import QueryBuilder from './QueryBuilder';
+import GroupedVisualPanel from './GroupedVisualPanel';
 import VisualPanel from './VisualPanel';
 import VirtualTable from './VirtualTable';
 import DataInfo from './DataInfo';
@@ -16,9 +17,19 @@ import Papa from 'papaparse';
 import semver from 'semver';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { DEFAULT_ID_COLUMN_NAME } from './ChartCard';
+import { DEFAULT_ID_COLUMN_NAME, DEFAULT_ID_COLUMN_NAMES } from './ChartCard';
+import { mergeData } from './utils';
 
 import './index.less';
+
+const pickYField = (fields: API.DataDictionaryField[], id_column_name: string) => {
+    const filteredFields = fields.filter(field => field.key !== id_column_name);
+    if (filteredFields.length === 0) {
+        return undefined;
+    }
+
+    return filteredFields[0];
+}
 
 export const downloadTSV = (data: Record<string, any>[], filename = 'metadata.tsv') => {
     const tsv = Papa.unparse(data, {
@@ -103,6 +114,7 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
     const [dataFileTableTotal, setDataFileTableTotal] = useState<Record<string, number>>({});
     const [dataFileTableColumns, setDataFileTableColumns] = useState<Record<string, any[]>>({});
     const [dataFileTableSelectedColumns, setDataFileTableSelectedColumns] = useState<Record<string, string[]>>({});
+    const [dataFileTableShowTable, setDataFileTableShowTable] = useState<Record<string, boolean>>({});
 
     const getDatasetKey = (): string => {
         let datasetKey = key ?? '';
@@ -230,7 +242,8 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
             setDataFileTableSelectedColumns({
                 ...dataFileTableSelectedColumns,
                 ...dTables.reduce((acc, table) => {
-                    acc[table.table_name] = getDefaultSelectedKeys(table.data_dictionary.fields);
+                    const cols = getDefaultSelectedKeys(table.data_dictionary.fields.filter(field => field.key !== table.id_column_name), 1);
+                    acc[table.table_name] = [...cols, table.id_column_name];
                     return acc;
                 }, {} as Record<string, string[]>),
             });
@@ -639,35 +652,61 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
                     dataFileTables.map(table => (
                         <Tabs.TabPane tab={<Tooltip title={table.description}>{table.title}</Tooltip>} key={table.table_name}>
                             <Row>
-                                <ColumnSelector fields={table.data_dictionary.fields}
+                                <Button onClick={() => {
+                                    setDataFileTableShowTable({ ...dataFileTableShowTable, [table.table_name]: !dataFileTableShowTable[table.table_name] });
+                                }}
+                                    className={`switch-${table.table_name}`}
+                                    icon={dataFileTableShowTable[table.table_name] ? <BarChartOutlined /> : <TableOutlined />}>
+                                    {dataFileTableShowTable[table.table_name] ? 'Show Charts' : 'Show Table'}
+                                </Button>
+                                <ColumnSelector fields={table.data_dictionary.fields.filter((field: any) => field.key !== table.id_column_name)}
                                     selectedKeys={dataFileTableSelectedColumns[table.table_name] ?? []}
                                     className={`column-selector-${table.table_name}`}
-                                    title={`Select Columns for ${table.title}`}
+                                    title={`Columns`}
                                     onChange={(keys) => {
-                                        setDataFileTableSelectedColumns({ ...dataFileTableSelectedColumns, [table.table_name]: keys });
-                                    }} />
-                                <VirtualTable
-                                    className='datatable-table'
-                                    size="small"
-                                    dataSource={dataFileTableData[table.table_name] ?? []}
-                                    rowKey={(record: any, idx: any) => idx?.toString() ?? ''}
-                                    scroll={{ y: window.innerHeight - 276, x: window.innerWidth - 48 }}
-                                    pagination={{
-                                        position: ['bottomRight'],
-                                        pageSize: dataFileTablePageSize[table.table_name] ?? 100,
-                                        current: dataFileTablePage[table.table_name] ?? 1,
-                                        total: dataFileTableTotal[table.table_name] ?? 0,
-                                        onChange: (page: number, pageSize: number) => {
-                                            setDataFileTablePage({ ...dataFileTablePage, [table.table_name]: page });
-                                            setDataFileTablePageSize({ ...dataFileTablePageSize, [table.table_name]: pageSize });
-                                        },
-                                        showSizeChanger: true,
-                                        showQuickJumper: true,
-                                        pageSizeOptions: [100, 200, 300, 500, 1000],
-                                    }}
-                                    dataDictionary={dataFileTableColumns[table.table_name] ?? []}
-                                    isFileBased={false}
-                                />
+                                        // The id column must be selected for the grouped visualization.
+                                        setDataFileTableSelectedColumns({ ...dataFileTableSelectedColumns, [table.table_name]: [...keys, table.id_column_name] });
+                                    }} mode="single" />
+                                {
+                                    !dataFileTableShowTable[table.table_name] ? (
+                                        <GroupedVisualPanel fields={dataDictionary.fields.filter((field: any) => {
+                                            return selectedColumns.find((col: any) => col === field.key) && !DEFAULT_ID_COLUMN_NAMES.includes(field.key);
+                                        })} data={
+                                            mergeData(dataFileTableData[table.table_name] ?? [], data.records, {
+                                                leftOn: table.id_column_name ?? DEFAULT_ID_COLUMN_NAME,
+                                                rightOn: DEFAULT_ID_COLUMN_NAME,
+                                                how: 'left',
+                                            })}
+                                            idColumnName={table.id_column_name ?? DEFAULT_ID_COLUMN_NAME}
+                                            total={dataFileTableTotal[table.table_name] ?? 0}
+                                            selectedColumns={dataFileTableSelectedColumns[table.table_name] ?? []}
+                                            yField={pickYField(dataFileTableColumns[table.table_name] ?? [], table.id_column_name ?? DEFAULT_ID_COLUMN_NAME)}
+                                            onClose={() => { }} />
+                                    ) : (
+                                        <VirtualTable
+                                            className='datatable-table'
+                                            size="small"
+                                            dataSource={dataFileTableData[table.table_name] ?? []}
+                                            rowKey={(record: any, idx: any) => idx?.toString() ?? ''}
+                                            scroll={{ y: window.innerHeight - 276, x: window.innerWidth - 48 }}
+                                            pagination={{
+                                                position: ['bottomRight'],
+                                                pageSize: dataFileTablePageSize[table.table_name] ?? 100,
+                                                current: dataFileTablePage[table.table_name] ?? 1,
+                                                total: dataFileTableTotal[table.table_name] ?? 0,
+                                                onChange: (page: number, pageSize: number) => {
+                                                    setDataFileTablePage({ ...dataFileTablePage, [table.table_name]: page });
+                                                    setDataFileTablePageSize({ ...dataFileTablePageSize, [table.table_name]: pageSize });
+                                                },
+                                                showSizeChanger: true,
+                                                showQuickJumper: true,
+                                                pageSizeOptions: [100, 200, 300, 500, 1000],
+                                            }}
+                                            dataDictionary={dataFileTableColumns[table.table_name] ?? []}
+                                            isFileBased={false}
+                                        />
+                                    )
+                                }
                             </Row>
                         </Tabs.TabPane>
                     ))

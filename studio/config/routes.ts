@@ -51,6 +51,13 @@
     component: './SiteMap'
   },
   {
+    name: 'grouped-chart-card-example',
+    icon: 'chart',
+    path: '/grouped-chart-card-example',
+    component: './DataTable/GroupedChartCardExample',
+    hideInMenu: true,
+  },
+  {
     path: '/about',
     name: 'about',
     icon: 'question-circle',

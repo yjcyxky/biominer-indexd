@@ -13,6 +13,7 @@ const Plot = createPlotlyComponent(Plotly);
 import './ChartCard.less';
 
 export const DEFAULT_ID_COLUMN_NAME = 'sample_id';
+export const DEFAULT_ID_COLUMN_NAMES = ['patient_id', 'sample_id'];
 type ChartType = 'id' | 'table' | 'pie' | 'bar' | 'histogram' | 'linechart' | 'summary' | 'unsupported' | 'kaplan_meier';
 
 const chartTypeOptions = [

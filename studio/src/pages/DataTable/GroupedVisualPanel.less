@@ -1,0 +1,74 @@
+.grouped-visual-panel-container {
+    width: 100%;
+    height: calc(100vh - 180px);
+    display: flex;
+    flex-direction: row;
+    overflow-y: auto;
+
+    .muuri-grid {
+        width: 100%;
+        height: 100%;
+        position: relative;
+
+        .item {
+            position: absolute;
+            width: 100px; // 默认宽度，Muuri 初始化时会自动调整
+            height: 100px;
+            z-index: 1;
+
+            .item-content {
+                width: 100%;
+                height: 100%;
+                box-sizing: border-box;
+                border-radius: 6px;
+                overflow: visible; // 允许显示 resize handle
+            }
+        }
+
+        .item.muuri-item-releasing {
+            z-index: 2;
+        }
+
+        .item.muuri-item-dragging {
+            z-index: 3;
+        }
+
+        .item.muuri-item-hidden {
+            display: none !important;
+        }
+
+        .react-resizable-handle {
+            z-index: 4;
+        }
+    }
+}
+
+.resizable-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+.resize-indicator {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 0, 0, 0.15); // 半透明红底
+    border: 2px dashed red;
+    pointer-events: none; // 不影响交互
+    z-index: 5;
+}
+
+.resizable-handle {
+    width: 12px !important;
+    height: 12px !important;
+    right: 5px !important;
+    bottom: 5px !important;
+    border-radius: 2px;
+    cursor: se-resize;
+    z-index: 10;
+    background: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2IDYiIHN0eWxlPSJiYWNrZ3JvdW5kLWNvbG9yOiNmZmZmZmYwMCIgeD0iMHB4IiB5PSIwcHgiIHdpZHRoPSI2cHgiIGhlaWdodD0iNnB4Ij48ZyBvcGFjaXR5PSIwLjMwMiI+PHBhdGggZD0iTSA2IDYgTCAwIDYgTCAwIDQuMiBMIDQgNC4yIEwgNC4yIDQuMiBMIDQuMiAwIEwgNiAwIEwgNiA2IEwgNiA2IFoiIGZpbGw9IiMwMDAwMDAiLz48L2c+PC9zdmc+') no-repeat center center;
+    background-position: bottom right;
+}
