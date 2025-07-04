@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Features - BioMiner Indexd</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="styles.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="index.html">
+                <i class="fas fa-dna me-2"></i>BioMiner Indexd
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="index.html">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="features.html">Features</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="copilot.html">Copilot</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="datasets.html">Datasets</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="github.html">GitHub</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero-section-small">
+        <div class="container">
+            <div class="row align-items-center min-vh-50">
+                <div class="col-12 text-center">
+                    <h1 class="display-4 fw-bold text-primary mb-4">Features</h1>
+                    <p class="lead">Comprehensive data indexing and tracking capabilities for omics research</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Core Features -->
+    <section class="py-5">
+        <div class="container">
+            <div class="row text-center mb-5">
+                <div class="col-12">
+                    <h2 class="display-5 fw-bold">Core Features</h2>
+                    <p class="lead text-muted">Built for modern biomedical data management</p>
+                </div>
+            </div>
+            
+            <div class="row g-4 mb-5">
+                <div class="col-lg-6">
+                    <div class="feature-detail-card">
+                        <div class="feature-icon-large">
+                            <i class="fas fa-fingerprint fa-4x text-primary"></i>
+                        </div>
+                        <h3>Global Unique Identifiers</h3>
+                        <p class="text-muted">Generate and manage globally unique identifiers for each data file with comprehensive metadata tracking.</p>
+                        <ul class="feature-list">
+                            <li>UUID-based file identification</li>
+                            <li>MD5 checksum verification</li>
+                            <li>Comprehensive metadata storage</li>
+                            <li>DOI number integration</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="feature-detail-card">
+                        <div class="feature-icon-large">
+                            <i class="fas fa-map-marker-alt fa-4x text-primary"></i>
+                        </div>
+                        <h3>File Location Tracking</h3>
+                        <p class="text-muted">Track file locations across multiple repositories with automatic synchronization and status monitoring.</p>
+                        <ul class="feature-list">
+                            <li>Multi-repository support (OSS, S3, GSA, NODE, SRA, ENA)</li>
+                            <li>Automatic location synchronization</li>
+                            <li>Repository-specific metadata</li>
+                            <li>Download link management</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-4">
+                <div class="col-lg-6">
+                    <div class="feature-detail-card">
+                        <div class="feature-icon-large">
+                            <i class="fas fa-code-branch fa-4x text-primary"></i>
+                        </div>
+                        <h3>Multi-Version Management</h3>
+                        <p class="text-muted">Manage different versions of files with Base UUID indexing for comprehensive version control.</p>
+                        <ul class="feature-list">
+                            <li>Base UUID for version grouping</li>
+                            <li>Historical version tracking</li>
+                            <li>Pipeline analysis support</li>
+                            <li>Version comparison tools</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="feature-detail-card">
+                        <div class="feature-icon-large">
+                            <i class="fas fa-database fa-4x text-primary"></i>
+                        </div>
+                        <h3>Advanced Database Support</h3>
+                        <p class="text-muted">Flexible database configuration supporting both remote and local PostgreSQL deployments.</p>
+                        <ul class="feature-list">
+                            <li>Remote PostgreSQL mode (production)</li>
+                            <li>Local PostgreSQL mode (development)</li>
+                            <li>Automatic schema management</li>
+                            <li>High-performance queries</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Technical Architecture -->
+    <section class="py-5 bg-light">
+        <div class="container">
+            <div class="row text-center mb-5">
+                <div class="col-12">
+                    <h2 class="display-5 fw-bold">Technical Architecture</h2>
+                    <p class="lead text-muted">Built with modern technologies for reliability and performance</p>
+                </div>
+            </div>
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <div class="tech-card">
+                        <div class="tech-icon">
+                            <i class="fab fa-rust fa-3x text-warning"></i>
+                        </div>
+                        <h4>Rust Backend</h4>
+                        <p>High-performance, memory-safe backend built with Rust for optimal performance and reliability.</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="tech-card">
+                        <div class="tech-icon">
+                            <i class="fas fa-database fa-3x text-info"></i>
+                        </div>
+                        <h4>PostgreSQL</h4>
+                        <p>Robust relational database for storing metadata, file information, and indexing data with ACID compliance.</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="tech-card">
+                        <div class="tech-icon">
+                            <i class="fab fa-react fa-3x text-primary"></i>
+                        </div>
+                        <h4>React Frontend</h4>
+                        <p>Modern web interface built with React and Ant Design for intuitive data exploration and management.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Quick Start Guide -->
+    <section class="py-5" id="quick-start">
+        <div class="container">
+            <div class="row text-center mb-5">
+                <div class="col-12">
+                    <h2 class="display-5 fw-bold">Quick Start Guide</h2>
+                    <p class="lead text-muted">Get up and running in minutes</p>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-lg-8 mx-auto">
+                    <div class="quick-start-guide">
+                        <div class="step-card">
+                            <div class="step-header">
+                                <div class="step-number">1</div>
+                                <h4>Download BioMiner Indexd</h4>
+                            </div>
+                            <div class="step-content">
+                                <p>Download the latest release from our GitHub repository:</p>
+                                <div class="code-block">
+                                    <code># Download from GitHub releases</code><br>
+                                    <code>wget https://github.com/yjcyxky/biominer-indexd/releases/latest/download/biominer-indexd</code>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="step-card">
+                            <div class="step-header">
+                                <div class="step-number">2</div>
+                                <h4>Install PostgreSQL</h4>
+                            </div>
+                            <div class="step-content">
+                                <p>Install PostgreSQL (Recommended version: 10.x or higher):</p>
+                                <div class="code-block">
+                                    <code># Ubuntu/Debian</code><br>
+                                    <code>sudo apt-get install postgresql postgresql-contrib</code><br><br>
+                                    <code># macOS</code><br>
+                                    <code>brew install postgresql</code>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="step-card">
+                            <div class="step-header">
+                                <div class="step-number">3</div>
+                                <h4>Configure Environment</h4>
+                            </div>
+                            <div class="step-content">
+                                <p>Set up environment variables:</p>
+                                <div class="code-block">
+                                    <code># For remote PostgreSQL</code><br>
+                                    <code>export DATABASE_URL=postgres://user:password@host:5432/biominer_indexd</code><br>
+                                    <code>export BIOMIER_REGISTRY_ID=your-registry-id</code><br><br>
+                                    <code># For local PostgreSQL</code><br>
+                                    <code>export BIOMIER_REGISTRY_ID=your-registry-id</code>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="step-card">
+                            <div class="step-header">
+                                <div class="step-number">4</div>
+                                <h4>Start the Service</h4>
+                            </div>
+                            <div class="step-content">
+                                <p>Launch BioMiner Indexd:</p>
+                                <div class="code-block">
+                                    <code># Remote PostgreSQL mode</code><br>
+                                    <code>./biominer-indexd --host 0.0.0.0 --port 3000</code><br><br>
+                                    <code># Local PostgreSQL mode</code><br>
+                                    <code>./biominer-indexd --local-postgres --host 0.0.0.0 --port 3000</code>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- API Features -->
+    <section class="py-5 bg-light">
+        <div class="container">
+            <div class="row text-center mb-5">
+                <div class="col-12">
+                    <h2 class="display-5 fw-bold">API Features</h2>
+                    <p class="lead text-muted">RESTful API for seamless integration</p>
+                </div>
+            </div>
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <div class="api-card">
+                        <h4><i class="fas fa-file-upload me-2"></i>File Registration</h4>
+                        <p>Register new files with metadata and generate unique identifiers.</p>
+                        <div class="code-example">
+                            <small class="text-muted">POST /api/files</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="api-card">
+                        <h4><i class="fas fa-search me-2"></i>File Lookup</h4>
+                        <p>Search for files by UUID, MD5, or other metadata criteria.</p>
+                        <div class="code-example">
+                            <small class="text-muted">GET /api/files/{uuid}</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="api-card">
+                        <h4><i class="fas fa-list me-2"></i>Bulk Operations</h4>
+                        <p>Perform bulk file operations and batch downloads.</p>
+                        <div class="code-example">
+                            <small class="text-muted">POST /api/files/bulk</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="api-card">
+                        <h4><i class="fas fa-sync me-2"></i>Status Tracking</h4>
+                        <p>Track file status across multiple repositories.</p>
+                        <div class="code-example">
+                            <small class="text-muted">GET /api/files/{uuid}/status</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white py-4">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>BioMiner Indexd</h5>
+                    <p class="text-muted">Hash-based data indexing and tracking service for omics data.</p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <a href="https://github.com/yjcyxky/biominer-indexd" class="text-white me-3">
+                        <i class="fab fa-github fa-2x"></i>
+                    </a>
+                    <a href="https://github.com/yjcyxky/biominer-indexd/issues" class="text-white">
+                        <i class="fas fa-bug fa-2x"></i>
+                    </a>
+                </div>
+            </div>
+            <hr>
+            <div class="text-center">
+                <p class="mb-0">&copy; 2024 BioMiner Indexd. Distributed under the GNU Affero General Public License v3.0.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html> 

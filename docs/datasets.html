@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Datasets - BioMiner Indexd</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="styles.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="index.html">
+                <i class="fas fa-dna me-2"></i>BioMiner Indexd
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="index.html">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="features.html">Features</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="copilot.html">Copilot</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="datasets.html">Datasets</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="github.html">GitHub</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero-section-small">
+        <div class="container">
+            <div class="row align-items-center min-vh-50">
+                <div class="col-12 text-center">
+                    <h1 class="display-4 fw-bold text-primary mb-4">
+                        <i class="fas fa-database me-3"></i>Datasets
+                    </h1>
+                    <p class="lead">Build, manage, and explore omics datasets with BioMiner Indexd</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Featured Dataset -->
+    <section class="py-5">
+        <div class="container">
+            <div class="row text-center mb-5">
+                <div class="col-12">
+                    <h2 class="display-5 fw-bold">Featured Dataset</h2>
+                    <p class="lead text-muted">Explore our curated collection of omics datasets</p>
+                </div>
+            </div>
+            <div class="row justify-content-center">
+                <div class="col-lg-8">
+                    <div class="dataset-card featured">
+                        <div class="dataset-header">
+                            <div class="dataset-badge">Featured</div>
+                            <h3>Adenoid Cystic Carcinoma of the Breast (MSK, J Pathol. 2015)</h3>
+                            <p class="dataset-description">
+                                Whole exome sequencing of 12 breast AdCCs with comprehensive clinical and molecular data.
+                            </p>
+                        </div>
+                        <div class="dataset-meta">
+                            <div class="meta-item">
+                                <i class="fas fa-flask text-primary"></i>
+                                <span><strong>12</strong> samples</span>
+                            </div>
+                            <div class="meta-item">
+                                <i class="fas fa-tag text-primary"></i>
+                                <span>Breast Cancer</span>
+                            </div>
+                            <div class="meta-item">
+                                <i class="fas fa-calendar text-primary"></i>
+                                <span>2015</span>
+                            </div>
+                            <div class="meta-item">
+                                <i class="fas fa-building text-primary"></i>
+                                <span>MSK</span>
+                            </div>
+                        </div>
+                        <div class="dataset-content">
+                            <div class="data-types">
+                                <h5>Data Types Available:</h5>
+                                <div class="data-type-tags">
+                                    <span class="badge bg-primary">Whole Exome Sequencing</span>
+                                    <span class="badge bg-success">Clinical Data</span>
+                                    <span class="badge bg-info">Mutation Data</span>
+                                    <span class="badge bg-warning">Copy Number Alterations</span>
+                                    <span class="badge bg-secondary">Structural Variants</span>
+                                </div>
+                            </div>
+                            <div class="dataset-citation">
+                                <h5>Citation:</h5>
+                                <p><em>Martelotto et al. J Pathol 2015</em></p>
+                                <p><strong>PMID:</strong> <a href="https://pubmed.ncbi.nlm.nih.gov/26095796/" target="_blank">26095796</a></p>
+                            </div>
+                        </div>
+                        <div class="dataset-actions">
+                            <a href="https://indexd.org/datatable/acbc_mskcc_2015" class="btn btn-primary btn-lg" target="_blank">
+                                <i class="fas fa-table me-2"></i>Explore Data
+                            </a>
+                            <a href="#" class="btn btn-outline-primary btn-lg">
+                                <i class="fas fa-download me-2"></i>Download
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Dataset Building Guide -->
+    <section class="py-5 bg-light">
+        <div class="container">
+            <div class="row text-center mb-5">
+                <div class="col-12">
+                    <h2 class="display-5 fw-bold">Building Your Own Datasets</h2>
+                    <p class="lead text-muted">Learn how to create and import custom datasets into BioMiner Indexd</p>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-lg-8 mx-auto">
+                    <div class="guide-section">
+                        <h3 class="mb-4">
+                            <i class="fas fa-file-alt text-primary me-2"></i>
+                            Required Files
+                        </h3>
+                        <p>To create a dataset, you need two essential files:</p>
+                        
+                        <div class="file-requirements">
+                            <div class="file-card">
+                                <div class="file-icon">
+                                    <i class="fas fa-file-text fa-2x text-primary"></i>
+                                </div>
+                                <div class="file-info">
+                                    <h5>dataset.txt</h5>
+                                    <p>Dataset description file containing metadata and configuration</p>
+                                    <div class="file-example">
+                                        <small class="text-muted">Example:</small>
+                                        <pre><code>key: my_dataset
+name: My Research Dataset
+description: Comprehensive analysis of...
+citation: Author et al. Journal 2024
+pmid: 12345678
+groups: PUBLIC; RESEARCH;
+tags: disease:Cancer; organ:Lung;
+total: 100
+is_filebased: false
+version: v1.0.0
+license: CC-BY-4.0</code></pre>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="file-card">
+                                <div class="file-icon">
+                                    <i class="fas fa-table fa-2x text-success"></i>
+                                </div>
+                                <div class="file-info">
+                                    <h5>metadata_table.tsv</h5>
+                                    <p>Tab-separated file with sample metadata and clinical information</p>
+                                    <div class="file-example">
+                                        <small class="text-muted">Format:</small>
+                                        <pre><code>#Patient ID    Age    Gender    Diagnosis
+#Unique ID     Age    Sex       Disease
+#STRING        NUMBER STRING    STRING
+#1             1      1         1
+PATIENT_ID     AGE    GENDER    DIAGNOSIS
+SAMPLE001      45     Female    Cancer
+SAMPLE002      52     Male      Control</code></pre>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="guide-section">
+                        <h3 class="mb-4">
+                            <i class="fas fa-cogs text-primary me-2"></i>
+                            Conversion Process
+                        </h3>
+                        <p>Use our conversion script to transform your files into BioMiner-compatible format:</p>
+                        
+                        <div class="conversion-steps">
+                            <div class="step-item">
+                                <div class="step-number">1</div>
+                                <div class="step-content">
+                                    <h5>Prepare Your Files</h5>
+                                    <p>Ensure your <code>dataset.txt</code> and <code>metadata_table.tsv</code> files are properly formatted</p>
+                                </div>
+                            </div>
+                            
+                            <div class="step-item">
+                                <div class="step-number">2</div>
+                                <div class="step-content">
+                                    <h5>Run Conversion Script</h5>
+                                    <div class="code-block">
+                                        <code>python examples/build_dataset.py convert /path/to/input /path/to/output --version v1.0.0</code>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="step-item">
+                                <div class="step-number">3</div>
+                                <div class="step-content">
+                                    <h5>Generate Index</h5>
+                                    <div class="code-block">
+                                        <code>./biominer-indexd-cli index-datasets --datasets-dir datasets</code>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="step-item">
+                                <div class="step-number">4</div>
+                                <div class="step-content">
+                                    <h5>Access Your Dataset</h5>
+                                    <p>Your dataset is now available in the BioMiner interface and API</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="guide-section">
+                        <h3 class="mb-4">
+                            <i class="fas fa-file-format text-primary me-2"></i>
+                            File Format Specifications
+                        </h3>
+                        
+                        <div class="format-specs">
+                            <div class="spec-card">
+                                <h5>dataset.txt Requirements</h5>
+                                <ul>
+                                    <li><strong>key:</strong> Unique identifier (letters, numbers, underscores only)</li>
+                                    <li><strong>name:</strong> Human-readable dataset name</li>
+                                    <li><strong>description:</strong> Detailed dataset description</li>
+                                    <li><strong>citation:</strong> Publication reference (optional)</li>
+                                    <li><strong>pmid:</strong> PubMed ID (optional)</li>
+                                    <li><strong>groups:</strong> Access groups (semicolon-separated)</li>
+                                    <li><strong>tags:</strong> Classification tags (semicolon-separated)</li>
+                                    <li><strong>total:</strong> Number of samples/records</li>
+                                    <li><strong>is_filebased:</strong> true/false for file-based datasets</li>
+                                    <li><strong>version:</strong> Version identifier</li>
+                                    <li><strong>license:</strong> License information (optional)</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="spec-card">
+                                <h5>metadata_table.tsv Requirements</h5>
+                                <ul>
+                                    <li><strong>4 header rows</strong> starting with # (Name, Description, Type, Order)</li>
+                                    <li><strong>Data types:</strong> STRING, NUMBER, BOOLEAN</li>
+                                    <li><strong>Tab-separated</strong> values</li>
+                                    <li><strong>UTF-8 encoding</strong></li>
+                                    <li><strong>Consistent column count</strong> across all rows</li>
+                                    <li><strong>Sample ID column</strong> as first column (recommended)</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Best Practices -->
+    <section class="py-5">
+        <div class="container">
+            <div class="row text-center mb-5">
+                <div class="col-12">
+                    <h2 class="display-5 fw-bold">Best Practices</h2>
+                    <p class="lead text-muted">Guidelines for creating high-quality datasets</p>
+                </div>
+            </div>
+            <div class="row g-4">
+                <div class="col-md-6 col-lg-4">
+                    <div class="practice-card">
+                        <div class="practice-icon">
+                            <i class="fas fa-folder-open fa-3x text-primary"></i>
+                        </div>
+                        <h4>Organize Your Data</h4>
+                        <p>Keep raw data separate from processed files. Use clear, consistent naming conventions for all files.</p>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-4">
+                    <div class="practice-card">
+                        <div class="practice-icon">
+                            <i class="fas fa-check-circle fa-3x text-success"></i>
+                        </div>
+                        <h4>Validate Your Data</h4>
+                        <p>Ensure data quality by checking for missing values, format consistency, and logical relationships.</p>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-4">
+                    <div class="practice-card">
+                        <div class="practice-icon">
+                            <i class="fas fa-book fa-3x text-info"></i>
+                        </div>
+                        <h4>Document Everything</h4>
+                        <p>Provide comprehensive documentation including data collection methods, processing steps, and quality metrics.</p>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-4">
+                    <div class="practice-card">
+                        <div class="practice-icon">
+                            <i class="fas fa-shield-alt fa-3x text-warning"></i>
+                        </div>
+                        <h4>Privacy & Ethics</h4>
+                        <p>Ensure compliance with data privacy regulations and obtain proper consent for data sharing.</p>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-4">
+                    <div class="practice-card">
+                        <div class="practice-icon">
+                            <i class="fas fa-sync fa-3x text-secondary"></i>
+                        </div>
+                        <h4>Version Control</h4>
+                        <p>Use semantic versioning for dataset updates and maintain backward compatibility when possible.</p>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-4">
+                    <div class="practice-card">
+                        <div class="practice-icon">
+                            <i class="fas fa-users fa-3x text-danger"></i>
+                        </div>
+                        <h4>Community Standards</h4>
+                        <p>Follow established community standards for data formats, metadata, and sharing practices.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Resources -->
+    <section class="py-5 bg-light">
+        <div class="container">
+            <div class="row text-center mb-5">
+                <div class="col-12">
+                    <h2 class="display-5 fw-bold">Additional Resources</h2>
+                    <p class="lead text-muted">Tools and documentation to help you get started</p>
+                </div>
+            </div>
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <div class="resource-card">
+                        <h4><i class="fas fa-book me-2 text-primary"></i>Documentation</h4>
+                        <p>Comprehensive guides and tutorials for dataset creation and management.</p>
+                        <a href="build_dataset_en.md" class="btn btn-outline-primary">Read Documentation</a>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="resource-card">
+                        <h4><i class="fas fa-tools me-2 text-primary"></i>Conversion Tools</h4>
+                        <p>Download our conversion scripts and utilities for dataset preparation.</p>
+                        <a href="https://github.com/yjcyxky/biominer-indexd/tree/main/examples" class="btn btn-outline-primary">Get Tools</a>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="resource-card">
+                        <h4><i class="fas fa-question-circle me-2 text-primary"></i>Support</h4>
+                        <p>Get help from our community and find answers to common questions.</p>
+                        <a href="https://github.com/yjcyxky/biominer-indexd/issues" class="btn btn-outline-primary">Get Support</a>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="resource-card">
+                        <h4><i class="fas fa-users me-2 text-primary"></i>Community</h4>
+                        <p>Connect with other researchers and share best practices.</p>
+                        <a href="https://github.com/yjcyxky/biominer-indexd/discussions" class="btn btn-outline-primary">Join Community</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white py-4">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>BioMiner Indexd</h5>
+                    <p class="text-muted">Hash-based data indexing and tracking service for omics data.</p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <a href="https://github.com/yjcyxky/biominer-indexd" class="text-white me-3">
+                        <i class="fab fa-github fa-2x"></i>
+                    </a>
+                    <a href="https://github.com/yjcyxky/biominer-indexd/issues" class="text-white">
+                        <i class="fas fa-bug fa-2x"></i>
+                    </a>
+                </div>
+            </div>
+            <hr>
+            <div class="text-center">
+                <p class="mb-0">&copy; 2024 BioMiner Indexd. Distributed under the GNU Affero General Public License v3.0.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html> 

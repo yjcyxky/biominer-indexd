@@ -1,0 +1,257 @@
+# GitHub Pages Configuration for BioMiner Indexd Documentation
+
+# Site settings
+title: BioMiner Indexd
+description: Hash-based data indexing and tracking service for omics data
+url: "https://yjcyxky.github.io"
+baseurl: "/biominer-indexd"
+
+# Build settings
+markdown: kramdown
+highlighter: rouge
+permalink: pretty
+
+# Collections
+collections:
+  docs:
+    output: true
+    permalink: /:collection/:name/
+
+# Defaults
+defaults:
+  - scope:
+      path: ""
+      type: "docs"
+    values:
+      layout: "default"
+
+# Plugins
+plugins:
+  - jekyll-seo-tag
+  - jekyll-sitemap
+
+# Exclude from processing
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor/bundle/
+  - vendor/cache/
+  - vendor/gems/
+  - vendor/ruby/
+
+# Include files
+include:
+  - _pages
+  - _posts
+  - _drafts
+
+# Pagination
+paginate: 10
+paginate_path: "/blog/page:num/"
+
+# Author information
+author:
+  name: "BioMiner Team"
+  email: "contact@biominer.org"
+  bio: "Building the future of omics data management"
+  location: "Global"
+  links:
+    - label: "GitHub"
+      icon: "fab fa-github"
+      url: "https://github.com/yjcyxky/biominer-indexd"
+
+# Social media
+social:
+  - name: "GitHub"
+    url: "https://github.com/yjcyxky/biominer-indexd"
+    icon: "fab fa-github"
+  - name: "Issues"
+    url: "https://github.com/yjcyxky/biominer-indexd/issues"
+    icon: "fas fa-bug"
+
+# Navigation
+navigation:
+  - title: "Home"
+    url: "/"
+  - title: "Features"
+    url: "/features.html"
+  - title: "Copilot"
+    url: "/copilot.html"
+  - title: "Datasets"
+    url: "/datasets.html"
+  - title: "GitHub"
+    url: "/github.html"
+
+# Footer
+footer:
+  - title: "Documentation"
+    links:
+      - name: "Quick Start"
+        url: "/features.html#quick-start"
+      - name: "API Reference"
+        url: "/features.html#api"
+      - name: "Dataset Guide"
+        url: "/datasets.html"
+  - title: "Community"
+    links:
+      - name: "GitHub"
+        url: "https://github.com/yjcyxky/biominer-indexd"
+      - name: "Issues"
+        url: "https://github.com/yjcyxky/biominer-indexd/issues"
+      - name: "Discussions"
+        url: "https://github.com/yjcyxky/biominer-indexd/discussions"
+  - title: "Legal"
+    links:
+      - name: "License"
+        url: "/github.html#license"
+      - name: "Privacy"
+        url: "/privacy.html"
+
+# SEO
+seo:
+  title: "BioMiner Indexd - Hash-based Data Indexing Service"
+  description: "A hash-based data indexing and tracking service providing globally unique identifiers for omics data files."
+  keywords: ["bioinformatics", "omics", "data management", "indexing", "genomics", "proteomics", "metabolomics"]
+  author: "BioMiner Team"
+  image: "/assets/images/og-image.png"
+  twitter:
+    card: "summary_large_image"
+    site: "@biominer_team"
+  facebook:
+    app_id: "your-facebook-app-id"
+
+# Analytics (optional)
+analytics:
+  google: "your-google-analytics-id"
+  gtag: "your-gtag-id"
+
+# Comments (optional)
+comments:
+  provider: "disqus"
+  disqus:
+    shortname: "biominer-indexd"
+
+# Search
+search:
+  provider: "algolia"
+  algolia:
+    application_id: "your-algolia-app-id"
+    search_only_api_key: "your-algolia-search-key"
+    index_name: "biominer-indexd"
+
+# Theme settings
+theme_settings:
+  # Meta
+  meta:
+    keywords: "bioinformatics, omics, data management, indexing, genomics, proteomics, metabolomics"
+    author: "BioMiner Team"
+  
+  # Header
+  header:
+    logo: "/assets/images/logo.png"
+    logo_alt: "BioMiner Indexd"
+    show_title: true
+    show_description: true
+  
+  # Navigation
+  navigation:
+    main:
+      - title: "Home"
+        url: "/"
+      - title: "Features"
+        url: "/features.html"
+      - title: "Copilot"
+        url: "/copilot.html"
+      - title: "Datasets"
+        url: "/datasets.html"
+      - title: "GitHub"
+        url: "/github.html"
+  
+  # Footer
+  footer:
+    copyright: "© 2024 BioMiner Indexd. Distributed under the GNU Affero General Public License v3.0."
+    powered_by: false
+    show_social: true
+  
+  # Sidebar
+  sidebar:
+    enabled: true
+    nav:
+      - title: "Getting Started"
+        children:
+          - title: "Quick Start"
+            url: "/features.html#quick-start"
+          - title: "Installation"
+            url: "/features.html#installation"
+          - title: "Configuration"
+            url: "/features.html#configuration"
+      - title: "Features"
+        children:
+          - title: "Core Features"
+            url: "/features.html#core-features"
+          - title: "API Reference"
+            url: "/features.html#api"
+          - title: "Technical Architecture"
+            url: "/features.html#architecture"
+      - title: "Datasets"
+        children:
+          - title: "Building Datasets"
+            url: "/datasets.html#building"
+          - title: "Format Specifications"
+            url: "/datasets.html#specifications"
+          - title: "Best Practices"
+            url: "/datasets.html#practices"
+      - title: "Development"
+        children:
+          - title: "Contributing"
+            url: "/github.html#contributing"
+          - title: "Development Setup"
+            url: "/github.html#setup"
+          - title: "License"
+            url: "/github.html#license"
+  
+  # Search
+  search:
+    enabled: true
+    provider: "algolia"
+    algolia:
+      application_id: "your-algolia-app-id"
+      search_only_api_key: "your-algolia-search-key"
+      index_name: "biominer-indexd"
+  
+  # Comments
+  comments:
+    provider: "disqus"
+    disqus:
+      shortname: "biominer-indexd"
+  
+  # Social
+  social:
+    - name: "GitHub"
+      url: "https://github.com/yjcyxky/biominer-indexd"
+      icon: "fab fa-github"
+    - name: "Issues"
+      url: "https://github.com/yjcyxky/biominer-indexd/issues"
+      icon: "fas fa-bug"
+    - name: "Discussions"
+      url: "https://github.com/yjcyxky/biominer-indexd/discussions"
+      icon: "fas fa-comments"
+  
+  # Analytics
+  analytics:
+    google: "your-google-analytics-id"
+    gtag: "your-gtag-id"
+  
+  # SEO
+  seo:
+    title: "BioMiner Indexd - Hash-based Data Indexing Service"
+    description: "A hash-based data indexing and tracking service providing globally unique identifiers for omics data files."
+    keywords: ["bioinformatics", "omics", "data management", "indexing", "genomics", "proteomics", "metabolomics"]
+    author: "BioMiner Team"
+    image: "/assets/images/og-image.png"
+    twitter:
+      card: "summary_large_image"
+      site: "@biominer_team"
+    facebook:
+      app_id: "your-facebook-app-id" 

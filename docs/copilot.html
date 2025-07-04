@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Copilot - BioMiner Indexd</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="styles.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="index.html">
+                <i class="fas fa-dna me-2"></i>BioMiner Indexd
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="index.html">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="features.html">Features</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="copilot.html">Copilot</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="datasets.html">Datasets</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="github.html">GitHub</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero-section-small">
+        <div class="container">
+            <div class="row align-items-center min-vh-50">
+                <div class="col-12 text-center">
+                    <h1 class="display-4 fw-bold text-primary mb-4">
+                        <i class="fas fa-robot me-3"></i>AI Copilot
+                    </h1>
+                    <p class="lead">Your intelligent assistant for exploring and understanding omics data</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Copilot Overview -->
+    <section class="py-5">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-6">
+                    <h2 class="display-5 fw-bold mb-4">Meet Your AI Assistant</h2>
+                    <p class="lead mb-4">
+                        BioMiner Copilot is an AI-powered assistant that helps you navigate and understand complex omics datasets. 
+                        Ask questions in natural language and get intelligent insights about your data.
+                    </p>
+                    <div class="copilot-features">
+                        <div class="feature-item">
+                            <i class="fas fa-comments text-primary me-3"></i>
+                            <span>Natural language queries</span>
+                        </div>
+                        <div class="feature-item">
+                            <i class="fas fa-brain text-primary me-3"></i>
+                            <span>Intelligent dataset recommendations</span>
+                        </div>
+                        <div class="feature-item">
+                            <i class="fas fa-chart-line text-primary me-3"></i>
+                            <span>Real-time data analysis</span>
+                        </div>
+                        <div class="feature-item">
+                            <i class="fas fa-search text-primary me-3"></i>
+                            <span>Advanced search capabilities</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="copilot-preview">
+                        <div class="chat-interface">
+                            <div class="chat-header">
+                                <i class="fas fa-robot me-2"></i>
+                                <span>AI Copilot</span>
+                            </div>
+                            <div class="chat-messages">
+                                <div class="message user-message">
+                                    <div class="message-content">
+                                        What datasets contain RNA-seq data for breast cancer?
+                                    </div>
+                                </div>
+                                <div class="message assistant-message">
+                                    <div class="message-content">
+                                        I found several datasets with RNA-seq data for breast cancer. The most relevant ones include:
+                                        <br><br>
+                                        • <strong>acbc_mskcc_2015</strong> - Adenoid Cystic Carcinoma of the Breast (12 samples)
+                                        <br>
+                                        • <strong>brca_tcga</strong> - Breast Cancer TCGA dataset (1,100+ samples)
+                                        <br><br>
+                                        Would you like me to show you more details about any of these datasets?
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="chat-input">
+                                <input type="text" placeholder="Ask me anything about the data..." disabled>
+                                <button class="btn btn-primary" disabled>
+                                    <i class="fas fa-paper-plane"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Key Capabilities -->
+    <section class="py-5 bg-light">
+        <div class="container">
+            <div class="row text-center mb-5">
+                <div class="col-12">
+                    <h2 class="display-5 fw-bold">Key Capabilities</h2>
+                    <p class="lead text-muted">What you can do with AI Copilot</p>
+                </div>
+            </div>
+            <div class="row g-4">
+                <div class="col-md-6 col-lg-4">
+                    <div class="capability-card">
+                        <div class="capability-icon">
+                            <i class="fas fa-question-circle fa-3x text-primary"></i>
+                        </div>
+                        <h4>Dataset Discovery</h4>
+                        <p>Find relevant datasets by asking questions about disease types, sample sizes, data types, and more.</p>
+                        <div class="example-query">
+                            <small class="text-muted">"Show me datasets with mutation data for lung cancer"</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-4">
+                    <div class="capability-card">
+                        <div class="capability-icon">
+                            <i class="fas fa-chart-bar fa-3x text-primary"></i>
+                        </div>
+                        <h4>Data Analysis</h4>
+                        <p>Get insights about data distributions, correlations, and statistical summaries across datasets.</p>
+                        <div class="example-query">
+                            <small class="text-muted">"What's the age distribution in the breast cancer dataset?"</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-4">
+                    <div class="capability-card">
+                        <div class="capability-icon">
+                            <i class="fas fa-download fa-3x text-primary"></i>
+                        </div>
+                        <h4>Download Guidance</h4>
+                        <p>Get step-by-step instructions for downloading and accessing specific datasets and files.</p>
+                        <div class="example-query">
+                            <small class="text-muted">"How do I download the mutation data from acbc_mskcc_2015?"</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-4">
+                    <div class="capability-card">
+                        <div class="capability-icon">
+                            <i class="fas fa-code fa-3x text-primary"></i>
+                        </div>
+                        <h4>Code Generation</h4>
+                        <p>Generate code snippets for data loading, analysis, and visualization using popular bioinformatics tools.</p>
+                        <div class="example-query">
+                            <small class="text-muted">"Generate R code to load the clinical data"</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-4">
+                    <div class="capability-card">
+                        <div class="capability-icon">
+                            <i class="fas fa-file-upload fa-3x text-primary"></i>
+                        </div>
+                        <h4>File Management</h4>
+                        <p>Upload and manage your own data files with intelligent metadata extraction and organization.</p>
+                        <div class="example-query">
+                            <small class="text-muted">"Upload my RNA-seq data and create a new dataset"</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-4">
+                    <div class="capability-card">
+                        <div class="capability-icon">
+                            <i class="fas fa-history fa-3x text-primary"></i>
+                        </div>
+                        <h4>Conversation History</h4>
+                        <p>Maintain conversation context and access previous queries for seamless workflow continuity.</p>
+                        <div class="example-query">
+                            <small class="text-muted">"Show me my previous analysis of the breast cancer data"</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How to Use -->
+    <section class="py-5">
+        <div class="container">
+            <div class="row text-center mb-5">
+                <div class="col-12">
+                    <h2 class="display-5 fw-bold">How to Use Copilot</h2>
+                    <p class="lead text-muted">Simple steps to get started with AI-powered data exploration</p>
+                </div>
+            </div>
+            <div class="row g-4">
+                <div class="col-lg-3 col-md-6">
+                    <div class="step-card-simple">
+                        <div class="step-number">1</div>
+                        <h5>Access Copilot</h5>
+                        <p>Navigate to the Copilot interface in the BioMiner web application</p>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <div class="step-card-simple">
+                        <div class="step-number">2</div>
+                        <h5>Ask Questions</h5>
+                        <p>Type your questions in natural language about datasets, data types, or analysis needs</p>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <div class="step-card-simple">
+                        <div class="step-number">3</div>
+                        <h5>Get Insights</h5>
+                        <p>Receive intelligent responses with relevant datasets, analysis suggestions, and code examples</p>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <div class="step-card-simple">
+                        <div class="step-number">4</div>
+                        <h5>Take Action</h5>
+                        <p>Download data, run analyses, or explore further based on Copilot's recommendations</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Example Conversations -->
+    <section class="py-5 bg-light">
+        <div class="container">
+            <div class="row text-center mb-5">
+                <div class="col-12">
+                    <h2 class="display-5 fw-bold">Example Conversations</h2>
+                    <p class="lead text-muted">See how Copilot can help with real research questions</p>
+                </div>
+            </div>
+            <div class="row g-4">
+                <div class="col-lg-6">
+                    <div class="conversation-example">
+                        <h5 class="text-primary mb-3">
+                            <i class="fas fa-microscope me-2"></i>Dataset Discovery
+                        </h5>
+                        <div class="conversation">
+                            <div class="user-msg">
+                                <strong>You:</strong> I need RNA-seq data for triple-negative breast cancer studies
+                            </div>
+                            <div class="assistant-msg">
+                                <strong>Copilot:</strong> I found several relevant datasets:
+                                <br>• <strong>fuscc_tnbc_465</strong> - Chinese TNBC cohort (465 samples)
+                                <br>• <strong>brca_tcga_tnbc</strong> - TCGA TNBC subset (150+ samples)
+                                <br><br>Both include RNA-seq, mutation, and clinical data. Would you like details on either?
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="conversation-example">
+                        <h5 class="text-primary mb-3">
+                            <i class="fas fa-chart-line me-2"></i>Data Analysis
+                        </h5>
+                        <div class="conversation">
+                            <div class="user-msg">
+                                <strong>You:</strong> What's the survival rate correlation with TP53 mutations in breast cancer?
+                            </div>
+                            <div class="assistant-msg">
+                                <strong>Copilot:</strong> I can help analyze this! Let me:
+                                <br>1. Load the breast cancer datasets
+                                <br>2. Filter for TP53 mutation data
+                                <br>3. Correlate with survival outcomes
+                                <br><br>Here's the R code to get started...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="conversation-example">
+                        <h5 class="text-primary mb-3">
+                            <i class="fas fa-download me-2"></i>Data Access
+                        </h5>
+                        <div class="conversation">
+                            <div class="user-msg">
+                                <strong>You:</strong> How do I download the clinical data from acbc_mskcc_2015?
+                            </div>
+                            <div class="assistant-msg">
+                                <strong>Copilot:</strong> Here's how to access the clinical data:
+                                <br>1. Go to the dataset page
+                                <br>2. Click "Download Clinical Data"
+                                <br>3. Choose your preferred format (TSV/CSV)
+                                <br><br>Direct link: <a href="https://indexd.org/datatable/acbc_mskcc_2015">View Dataset</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="conversation-example">
+                        <h5 class="text-primary mb-3">
+                            <i class="fas fa-code me-2"></i>Code Generation
+                        </h5>
+                        <div class="conversation">
+                            <div class="user-msg">
+                                <strong>You:</strong> Generate Python code to load and visualize the mutation data
+                            </div>
+                            <div class="assistant-msg">
+                                <strong>Copilot:</strong> Here's Python code to load and visualize the data:
+                                <br><br><code>import pandas as pd<br>import matplotlib.pyplot as plt<br><br># Load mutation data<br>mutations = pd.read_csv('mutations.tsv', sep='\t')<br># Create visualization...</code>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Integration -->
+    <section class="py-5">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-6">
+                    <h2 class="display-5 fw-bold mb-4">Seamless Integration</h2>
+                    <p class="lead mb-4">
+                        Copilot integrates seamlessly with the BioMiner ecosystem, providing direct access to datasets, 
+                        analysis tools, and download capabilities.
+                    </p>
+                    <div class="integration-features">
+                        <div class="integration-item">
+                            <i class="fas fa-link text-primary me-3"></i>
+                            <span>Direct dataset access</span>
+                        </div>
+                        <div class="integration-item">
+                            <i class="fas fa-table text-primary me-3"></i>
+                            <span>Interactive data tables</span>
+                        </div>
+                        <div class="integration-item">
+                            <i class="fas fa-download text-primary me-3"></i>
+                            <span>One-click downloads</span>
+                        </div>
+                        <div class="integration-item">
+                            <i class="fas fa-chart-pie text-primary me-3"></i>
+                            <span>Built-in visualizations</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="integration-preview">
+                        <img src="https://via.placeholder.com/600x400/007bff/ffffff?text=Integration+Preview" alt="Integration Preview" class="img-fluid rounded">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Call to Action -->
+    <section class="py-5 bg-primary text-white">
+        <div class="container text-center">
+            <h2 class="display-5 fw-bold mb-4">Ready to Try Copilot?</h2>
+            <p class="lead mb-4">
+                Start exploring your omics data with AI-powered assistance. 
+                Get instant insights and accelerate your research workflow.
+            </p>
+            <a href="https://indexd.org/chatbot" class="btn btn-light btn-lg me-3">
+                <i class="fas fa-robot me-2"></i>Launch Copilot
+            </a>
+            <a href="datasets.html" class="btn btn-outline-light btn-lg">
+                <i class="fas fa-database me-2"></i>Browse Datasets
+            </a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white py-4">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>BioMiner Indexd</h5>
+                    <p class="text-muted">Hash-based data indexing and tracking service for omics data.</p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <a href="https://github.com/yjcyxky/biominer-indexd" class="text-white me-3">
+                        <i class="fab fa-github fa-2x"></i>
+                    </a>
+                    <a href="https://github.com/yjcyxky/biominer-indexd/issues" class="text-white">
+                        <i class="fas fa-bug fa-2x"></i>
+                    </a>
+                </div>
+            </div>
+            <hr>
+            <div class="text-center">
+                <p class="mb-0">&copy; 2024 BioMiner Indexd. Distributed under the GNU Affero General Public License v3.0.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html> 
