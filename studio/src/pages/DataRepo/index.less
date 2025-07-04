@@ -3,6 +3,11 @@
 
   .ant-page-header {
     padding: 16px 16px 16px 16px;
+    background-color: #fff;
+
+    .ant-page-header-heading {
+      padding: 0px;
+    }
   }
 
   .datarepo-page-header {
@@ -11,6 +16,18 @@
     .ant-pro-statistic-card {
       .ant-pro-card-body {
         padding: 0px;
+      }
+    }
+  }
+
+  .ant-pro-page-container-children-container {
+    padding: 0px;
+
+    .ant-table-wrapper {
+      .ant-pagination {
+        margin: 0px;
+        margin-bottom: 10px;
+        margin-left: 10px;
       }
     }
   }
@@ -44,6 +61,11 @@
       .ant-statistic-title {
         font-size: 16px;
       }
+
+      .ant-statistic-content-value-int,
+      .ant-statistic-content-value {
+        font-size: 16px;
+      }
     }
   }
 
@@ -63,7 +85,7 @@
     .ant-pro-table-list-toolbar-container {
       float: right;
       position: absolute;
-      top: 10px;
+      top: -10px;
       right: 10px;
       z-index: 100;
     }

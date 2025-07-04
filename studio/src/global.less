@@ -1,5 +1,3 @@
-@import '~antd/es/style/variable.less';
-
 html,
 body,
 #root {
@@ -15,10 +13,12 @@ body,
 }
 
 .ant-layout {
-  min-height: 100vh;
+  min-height: 100vh !important;
 
   .ant-layout-content {
-    margin: 24px 24px 0px 24px;
+    margin: 5px !important;
+    padding: 0 !important;
+    width: unset !important;
   }
 }
 
@@ -41,7 +41,7 @@ ol {
   list-style: none;
 }
 
-@media (max-width: @screen-xs) {
+@media (max-width: 480px) {
   .ant-table {
     width: 100%;
     overflow-x: auto;

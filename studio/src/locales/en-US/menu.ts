@@ -48,4 +48,5 @@ export default {
   'menu.datatable': 'Data Table',
   'menu.about': 'About',
   'menu.site-map': 'Site Map',
+  'menu.chatbot': 'AI Copilot',
 };

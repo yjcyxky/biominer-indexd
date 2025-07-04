@@ -1,8 +1,3 @@
-// import {
-//   default as axios,
-//   AxiosRequestConfig,
-//   AxiosRequestHeaders,
-// } from 'axios';
 import { map } from 'lodash';
 import { DownloadOutlined } from '@ant-design/icons';
 import { Button, message, Drawer, Typography, Divider, Tag, Row, Col, notification, Spin } from 'antd';
@@ -35,7 +30,7 @@ const isValidGuid = (guid: string | null) => {
   }
 };
 
-const determinRepo = (url?: API.URL) => {
+const determinRepo = (url?: any) => {
   if (typeof url !== 'undefined') {
     return url.url.split(':')[0]
   } else {
@@ -125,6 +120,7 @@ const FileList: React.FC = () => {
     const customHeaders: Object[] = map(apiSignData.header, (item: string) => {
       const m: Object = {}
       const itemLst = item.split(":")
+      // @ts-ignore
       m[itemLst[0]] = itemLst[1].trim()
       return m
     });
@@ -132,6 +128,7 @@ const FileList: React.FC = () => {
     const data: Object[] = map(apiSignData.data, (item: string) => {
       const m: Object = {}
       const itemLst = item.split("=")
+      // @ts-ignore
       m[itemLst[0]] = itemLst[1].trim()
       return m
     });
@@ -139,6 +136,7 @@ const FileList: React.FC = () => {
     const params: Object[] = map(apiSignData.params, (item: string) => {
       const m: Object = {}
       const itemLst = item.split("=")
+      // @ts-ignore
       m[itemLst[0]] = itemLst[1].trim()
       return m
     });
@@ -165,7 +163,7 @@ const FileList: React.FC = () => {
       }
     }
 
-    notification.warn({
+    notification.warning({
       message: 'Warning',
       description: <p>Cannot be downloaded via browser, you can use <a href='http://indexd.org/about' target='_blank'>biominer-aget</a>.</p>
     })
@@ -174,7 +172,7 @@ const FileList: React.FC = () => {
   const downloadSelectedFile = (entity: API.File) => {
     console.log('Download file ', entity);
     // TODO: How to select prefered repo?
-    const filtered_urls = entity.urls?.filter(url => !url.url.startsWith("node"))
+    const filtered_urls = entity.urls?.filter((url: any) => !url.url.startsWith("node"))
     const url = filtered_urls ? filtered_urls[0] : undefined
     const which_repo = determinRepo(url);
 
@@ -183,7 +181,7 @@ const FileList: React.FC = () => {
       downloadFileFromURL(url?.url || '', entity.filename);
     } else {
       const id = entity.guid.split('/')[1];
-      biominerAPI.File.signFile({
+      biominerAPI.file.signFile({
         id: id,
         which_repo: which_repo
       }).then((response: API.SignResponse) => {
@@ -192,7 +190,7 @@ const FileList: React.FC = () => {
       }).catch(async (error: ResponseError) => {
         let detail = '';
         try {
-          detail = await error.response?.text?.() || error.message;
+          detail = (await error.response?.text?.()) || error.message;
         } catch (_) {
           detail = error.message;
         }
@@ -304,8 +302,8 @@ const FileList: React.FC = () => {
       }),
       render: (dom, entity) => {
         return entity.hashes
-          ?.filter((hash) => hash.hash_type === 'md5')
-          .map((hash) => {
+          ?.filter((hash: API.Hash) => hash.hash_type === 'md5')
+          .map((hash: API.Hash) => {
             return (
               <Typography.Text key={hash.hash} copyable>
                 {hash.hash}
@@ -389,7 +387,7 @@ const FileList: React.FC = () => {
       render: (dom, entity) => {
         return (
           <Row style={{ display: 'flex', flexDirection: 'row', width: '100%' }}>
-            {entity.tags?.map((tag) => {
+            {entity.tags?.map((tag: API.AddFileTag) => {
               return (
                 <Col
                   key={tag.field_name}
@@ -592,7 +590,7 @@ const FileList: React.FC = () => {
       render: (dom, entity) => {
         return (
           <Row style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-            {entity.aliases?.map((alias) => {
+            {entity.aliases?.map((alias: any) => {
               return (
                 <Col key={alias.name} style={{ marginBottom: '5px' }}>
                   <Tag>{alias.name}</Tag>
@@ -619,7 +617,7 @@ const FileList: React.FC = () => {
       render: (dom, entity) => {
         return (
           <Row style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-            {entity.hashes?.map((hash) => {
+            {entity.hashes?.map((hash: API.Hash) => {
               return (
                 <Col key={hash.hash} style={{ marginBottom: '5px' }}>
                   <Tag>{hash.hash_type}</Tag>
@@ -649,7 +647,7 @@ const FileList: React.FC = () => {
       render: (dom, entity) => {
         return (
           <Row style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-            {entity.urls?.map((url) => {
+            {entity.urls?.map((url: any) => {
               return (
                 <Col key={url.url} style={{ marginBottom: '5px' }}>
                   <Tag>{url.uploader}</Tag>
@@ -696,7 +694,7 @@ const FileList: React.FC = () => {
   ];
 
   return (
-    <PageContainer
+    (<PageContainer
       className="datarepo"
       header={{
         title: undefined,
@@ -713,7 +711,7 @@ const FileList: React.FC = () => {
       }
     >
       <ProTable<API.File, API.fetchFilesParams>
-        scroll={{ x: 1500 }}
+        scroll={{ x: 1500, y: 'calc(100vh - 290px)' }}
         pagination={{ position: ['topLeft'] }}
         actionRef={actionRef}
         rowKey="guid"
@@ -771,7 +769,7 @@ const FileList: React.FC = () => {
       )}
       <Drawer
         width={'70%'}
-        visible={showDetail}
+        open={showDetail}
         onClose={() => {
           setCurrentRow(undefined);
           setShowDetail(false);
@@ -802,7 +800,7 @@ const FileList: React.FC = () => {
             ))
         }
       </form>
-    </PageContainer>
+    </PageContainer>)
   );
 };
 

@@ -161,7 +161,7 @@ const TableComponent: FC<{
         <Table
             dataSource={tableData}
             columns={columns}
-            rowKey={(record, index) => `${record[field.key]}-${index}`}
+            rowKey={(record) => `${record[field.key]}`}
             // rowSelection={{
             //     type: 'checkbox',
             //     selectedRowKeys: tableData.map((r) => r[field.key]),
@@ -558,10 +558,14 @@ const ChartCard: React.FC<ChartCardProps> = ({ field, data, isFileBased, total, 
                         <Popover
                             placement="topRight"
                             content={
-                                <TableComponent tableData={plotData} field={field} total={total} />
+                                plotData.length <= 200 ? (
+                                    <TableComponent tableData={plotData} field={field} total={total} />
+                                ) : (
+                                    <Empty description={`Too many data to show (${plotData.length})`} className="chart-empty" />
+                                )
                             }
                             title={false} style={{ width: '300px' }} prefixCls='chart-card-table-popover'
-                            trigger="click" destroyTooltipOnHide
+                            trigger="click" destroyOnHidden
                         >
                             <Button type="text" size="small" icon={<EyeFilled />} />
                         </Popover>

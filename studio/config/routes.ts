@@ -39,6 +39,12 @@
     hideInMenu: true,
   },
   {
+    name: 'chatbot',
+    icon: 'message',
+    path: '/chatbot',
+    component: './Chatbot',
+  },
+  {
     name: 'data-repo',
     icon: 'file',
     path: '/data-repo',

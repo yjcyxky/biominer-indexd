@@ -56,4 +56,5 @@ export default {
   'menu.datatable': '数据表',
   'menu.about': '帮助',
   'menu.site-map': '站点地图',
+  'menu.chatbot': 'AI 助手',
 };

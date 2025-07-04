@@ -94,6 +94,23 @@
             width: 100%;
             height: 100%;
 
+            .dataset-list-wrapper {
+                height: calc(100% - 73px);
+                width: 100%;
+                position: relative;
+
+                // 虚拟列表样式
+                .dataset-virtual-list {
+                    overflow-y: auto !important;
+                    overflow-x: hidden !important;
+
+                    // 列表项容器
+                    >div {
+                        width: 100%;
+                    }
+                }
+            }
+
             .dataset-right-sider {
                 // The height of the explore button is 73px
                 height: calc(100% - 73px);
@@ -135,6 +152,64 @@
                 }
             }
 
+            // 统一的列表项样式
+            .dataset-item {
+                border-bottom: 1px solid #e8e8e8;
+                margin: 0 16px;
+                height: 120px;
+                display: flex;
+                align-items: center;
+                padding: 12px 0;
+
+                .ant-list-item-meta {
+                    align-self: flex-start;
+                    flex: 1;
+                    min-width: 0; // 防止内容撑开
+
+                    .ant-list-item-meta-title {
+                        font-size: 16px;
+                        font-weight: 400;
+                        margin-bottom: 4px;
+                        display: flex;
+                        align-items: center;
+                    }
+
+                    .dataset-description {
+                        .dataset-description-text {
+                            color: #666;
+                            font-size: 14px;
+                            line-height: 1.5em;
+
+                            // Webkit 内核浏览器
+                            display: -webkit-box;
+                            -webkit-box-orient: vertical;
+                            -webkit-line-clamp: 2;
+
+                            // 标准属性
+                            overflow: hidden;
+                            text-overflow: ellipsis;
+                        }
+                    }
+                }
+
+                .ant-list-item-action {
+                    display: flex;
+                    margin-left: 16px;
+                    align-self: center;
+
+                    >li {
+                        padding: 0 4px;
+                    }
+                }
+
+                .sample-file-count {
+                    margin-left: 10px;
+                    font-size: 14px;
+                    color: #999;
+                    white-space: nowrap;
+                }
+            }
+
             .dataset-explore-button {
                 position: absolute;
                 bottom: 0px;
@@ -158,4 +233,11 @@
         height: 50vh;
         overflow: scroll;
     }
+}
+
+.dataset-description-tooltip {
+    width: 600px;
+    max-width: 600px;
+    max-height: 300px;
+    overflow: scroll;
 }

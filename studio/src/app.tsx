@@ -1,14 +1,12 @@
 import type { Settings as LayoutSettings } from '@ant-design/pro-layout';
-import { SettingDrawer } from '@ant-design/pro-layout';
-import { PageLoading } from '@ant-design/pro-layout';
-import type { RunTimeLayoutConfig } from 'umi';
-import { history, Link, RequestConfig } from 'umi';
+import type { RunTimeLayoutConfig } from '@umijs/max';
+import { history, Link, RequestConfig } from '@umijs/max';
 import RightContent from '@/components/RightContent';
 import Footer from '@/components/Footer';
-import { currentUser as queryCurrentUser } from './services/biominer-indexd-studio/api';
+// import { currentUser as queryCurrentUser } from './services/biominer-indexd-studio/api';
 import {
   BookOutlined, DatabaseOutlined, FileOutlined, GlobalOutlined,
-  HomeOutlined, LinkOutlined, QuestionCircleOutlined, TableOutlined
+  HomeOutlined, LinkOutlined, MessageOutlined, QuestionCircleOutlined, TableOutlined
 } from '@ant-design/icons';
 import defaultSettings from '../config/defaultSettings';
 import routes from '../config/routes';
@@ -19,6 +17,7 @@ const iconMap: Record<string, React.ReactNode> = {
   file: <FileOutlined />,
   global: <GlobalOutlined />,
   'question-circle': <QuestionCircleOutlined />,
+  message: <MessageOutlined />,
   table: <TableOutlined />,
   // You must add the icon which you want to use in the menu here.
 };
@@ -41,22 +40,19 @@ console.log("apiPrefix", process.env, apiPrefix);
 
 export const request: RequestConfig = {
   timeout: 30000,
-  // More details on ./config/proxy.ts or ./config/config.cloud.ts
-  prefix: apiPrefix,
-  errorHandler: (error: any) => {
-    // console.log("error", error);
-    // We don't want to handle the error globally, just throw it.
-    throw error;
+  baseURL: apiPrefix,
+  errorConfig: {
+    errorHandler: (error: any) => {
+      // console.log("error", error);
+      // We don't want to handle the error globally, just throw it.
+      throw error;
+    },
+    errorThrower: (res: any) => {
+      throw res;
+    },
   },
-  errorConfig: {},
-  middlewares: [],
   requestInterceptors: [],
   responseInterceptors: [],
-};
-
-/** 获取用户信息比较慢的时候会展示一个 loading */
-export const initialStateConfig = {
-  loading: <PageLoading />,
 };
 
 /**
@@ -69,12 +65,12 @@ export async function getInitialState(): Promise<{
   fetchUserInfo?: () => Promise<API.CurrentUser | undefined>;
 }> {
   const fetchUserInfo = async () => {
-    try {
-      const msg = await queryCurrentUser();
-      return msg.data;
-    } catch (error) {
-      history.push(loginPath);
-    }
+    // try {
+    //   const msg = await queryCurrentUser();
+    //   return msg.data;
+    // } catch (error) {
+    //   history.push(loginPath);
+    // }
     return undefined;
   };
   // 如果不是登录页面，执行

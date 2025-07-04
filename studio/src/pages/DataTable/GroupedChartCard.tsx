@@ -983,7 +983,7 @@ const GroupedChartCard: React.FC<GroupedChartCardProps> = ({
                             style={{ width: '800px' }}
                             prefixCls='grouped-chart-card-table-popover'
                             trigger="click"
-                            destroyTooltipOnHide
+                            destroyOnHidden
                         >
                             <Button type="text" size="small" icon={<EyeFilled />} />
                         </Popover>

@@ -39,7 +39,7 @@ const SiteMapContainer: React.FC = () => {
         <Row className="site-map-container">
             <Card
                 title="Why BioMiner Indexd and how to install your own instance?"
-                style={{ flex: '1 1 500px', minWidth: '500px' }}
+                style={{ flex: '1 1 500px', minWidth: '500px', borderRight: '0px' }}
             >
                 <img src={require('@/assets/images/framework.png')} alt="System Framework" style={{ width: '100%', display: 'block' }} />
                 <p style={{ fontSize: '14px', color: '#999', marginTop: '16px' }}>

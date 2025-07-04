@@ -32,7 +32,7 @@ const DataDownloader: React.FC<{
             className="datatable-data-info-modal"
             open={open}
             width={800}
-            destroyOnClose={true}
+            destroyOnHidden={true}
             onCancel={onClose}
             title={<Typography.Title level={4}>Download Dataset</Typography.Title>}
             footer={<div>

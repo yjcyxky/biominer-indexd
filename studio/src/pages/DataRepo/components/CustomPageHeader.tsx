@@ -1,7 +1,8 @@
 import React, { ReactNode } from 'react';
 import { useIntl, history } from 'umi';
 import { FileSearchOutlined, ImportOutlined, SearchOutlined, ShareAltOutlined } from '@ant-design/icons';
-import { Tag, Button, Row, PageHeader } from 'antd';
+import { PageHeader } from '@ant-design/pro-layout';
+import { Tag, Button, Row } from 'antd';
 import HeaderContent from './HeaderContent';
 import DataStatisticsCard from './DataStatisticsCard';
 

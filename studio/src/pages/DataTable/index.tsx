@@ -516,7 +516,7 @@ const DataTable: React.FC<{ key: string | undefined }> = ({ key }) => {
                 <p style={{ width: '100%', overflow: 'hidden', margin: 0, textOverflow: 'ellipsis', maxHeight: 45 }}
                     dangerouslySetInnerHTML={{ __html: datasetMetadata?.description ?? '' }} />
             </Row>
-            <Tabs defaultActiveKey="summary" activeKey={activeTab} onChange={(key) => { setActiveTab(key) }} destroyInactiveTabPane={true}
+            <Tabs defaultActiveKey="summary" activeKey={activeTab} onChange={(key) => { setActiveTab(key) }} destroyOnHidden={true}
                 className='datatable-tabs' tabBarExtraContent={
                     <Row className='datatable-tabs-extra-content'>
                         <Col className="datatable-tabs-extra-content-left">

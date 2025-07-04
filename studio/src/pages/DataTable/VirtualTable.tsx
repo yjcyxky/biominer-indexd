@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import ResizeObserver from 'rc-resize-observer';
-import { Spin, Table, Space, Tooltip, Button, Popover } from 'antd';
+import { Table, Space, Tooltip, Button, Popover } from 'antd';
 import { VariableSizeGrid as Grid } from 'react-window';
 import type { TableProps } from 'antd';
 import { InfoCircleOutlined, BarChartOutlined } from '@ant-design/icons';
@@ -44,7 +43,7 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
                         </Tooltip>
                         <Popover content={<ChartCard className='chart-card-popover' allowChangeChartType={true}
                             field={col} data={dataSource} isFileBased={isFileBased} total={dataSource.length} />}
-                            trigger="click" destroyTooltipOnHide>
+                            trigger="click" destroyOnHidden>
                             <Button size="small" icon={<BarChartOutlined />} type="primary" />
                         </Popover>
                     </Space>
@@ -66,7 +65,12 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
     const [connectObject] = useState(() => {
         const obj = {};
         Object.defineProperty(obj, 'scrollLeft', {
-            get: () => null,
+            get: () => {
+                if (gridRef.current) {
+                    return gridRef.current.state?.scrollLeft || 0;
+                }
+                return 0;
+            },
             set: (scrollLeft: number) => {
                 if (gridRef.current) {
                     gridRef.current.scrollTo({ scrollLeft });
@@ -97,7 +101,9 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
     });
 
     const renderVirtualList = (rawData: any[], { scrollbarSize, ref, onScroll }: { scrollbarSize: number, ref: any, onScroll: any }) => {
-        ref.current = connectObject;
+        if (ref && typeof ref === 'object') {
+            ref.current = connectObject;
+        }
 
         return (
             <div>
@@ -120,6 +126,7 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
                 </div>
 
                 {/* 虚拟表格 */}
+                {/* @ts-ignore */}
                 <Grid
                     className="datatable-table-grid"
                     ref={gridRef}
@@ -130,7 +137,9 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
                     rowHeight={() => rowHeight}
                     width={scroll?.x as number}
                     onScroll={({ scrollLeft }) => {
-                        onScroll({ scrollLeft });
+                        if (typeof onScroll === 'function') {
+                            onScroll({ scrollLeft });
+                        }
                         if (headerRef.current) {
                             headerRef.current.scrollLeft = scrollLeft;
                         }
